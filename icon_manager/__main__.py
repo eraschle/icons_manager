@@ -40,17 +40,13 @@ def get_namespace_from_args() -> argparse.Namespace:
     description = 'Helper to add icons to folders defined in a external JSON file.'
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('--folders-config', '-f', dest='folders_config', action='store',
-                        default=get_folders_path(),
-                        help='Absolute Path to JSON file with folders configuration')
+                        default=get_folders_path(), help='Absolute Path to JSON file with folders configuration')
     parser.add_argument('--icons-config', '-i', dest='icons_config', action='store',
-                        default=get_icons_path(),
-                        help='Absolute Path to JSON file with icons configuration')
-    parser.add_argument('--remove-existing', '-r', dest='remove_existing', action='store',
-                        default=False,
+                        default=get_icons_path(), help='Absolute Path to JSON file with icons configuration')
+    parser.add_argument('--remove-existing', '-r', action='store_true',
                         help='Absolute Path to export the app configuration as a template')
     parser.add_argument('--export-config', '-e', dest='export_path', action='store',
-                        default=None,
-                        help='Absolute Path to export the configuration as a template')
+                        default=None, help='Absolute Path to export the configuration as a template')
     return parser.parse_args()
 
 
@@ -78,7 +74,7 @@ def main(*args):
     if namespace.remove_existing:
         service.remove_existing_models()
 
-    elif service.can_add_icons_to_folders():
+    if service.can_add_icons_to_folders():
         service.read_config()
         service.collect_folder_to_add_icons()
         writer = WriteConfigManager()
