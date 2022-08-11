@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Iterable
+from typing import Iterable, List, Protocol, Union
+
+from icon_manager.utils.path import get_path_names
 
 # region RULES INTERFACE
 
@@ -20,7 +22,13 @@ def get_operator(operator_value: str) -> Operator:
     return Operator.UNKNOWN
 
 
-class FolderRule(ABC):
+class FilterRule(Protocol):
+
+    def is_allowed(self, folder: object) -> bool:
+        ...
+
+
+class FolderRule(ABC, FilterRule):
     def __init__(self, attribute: str, values: Iterable[str], operator: str,
                  case_sensitive: bool) -> None:
         self.attribute = attribute
@@ -47,8 +55,18 @@ class FolderRule(ABC):
         if attribute_value is None or self.operator == Operator.UNKNOWN:
             return False
         attribute_value = self.get_case_sensitive_value(attribute_value)
-        bool_mask = self.is_value_allowed(attribute_value)
+        attribute_values = get_path_names(attribute_value)
+        bool_mask = self.are_values_allowed(attribute_values)
         return all(bool_mask) if self.operator == Operator.ALL else any(bool_mask)
+
+    def are_values_allowed(self, attribute_value: Union[str, Iterable[str]]) -> Iterable[bool]:
+        if not isinstance(attribute_value, str):
+            bool_mask: List[bool] = []
+            for value in attribute_value:
+                result = self.are_values_allowed(value)
+                bool_mask.extend(result)
+            return bool_mask
+        return self.is_value_allowed(attribute_value)
 
     @abstractmethod
     def is_value_allowed(self, attribute_value: str) -> Iterable[bool]:
@@ -81,6 +99,19 @@ class NotContainsRule(ContainsRule):
     def is_value_allowed(self, attribute_value: str) -> Iterable[bool]:
         bool_mask = super().is_value_allowed(attribute_value)
         return [value is False for value in bool_mask]
+
+
+class ChainedRules(FilterRule):
+
+    def __init__(self, rules: Iterable[FolderRule], operator: str) -> None:
+        self.rules = rules
+        self.operator = get_operator(operator)
+
+    def is_allowed(self, folder: object) -> bool:
+        results: List[bool] = []
+        for rule in self.rules:
+            results.append(rule.is_allowed(folder))
+        return all(results) if self.operator == Operator.ALL else any(results)
 
 
 # endregion

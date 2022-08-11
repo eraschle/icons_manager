@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "folder_manager"
+name = "icon_manager"
 version = "0.1.0"
 description = "Adds icons to specified folders"
 authors = ["Erich Raschle <erichraschle@gmail.com>"]

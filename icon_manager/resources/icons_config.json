@@ -1,10 +1,10 @@
 {
-    "no_further": {
+    "rules": {
         "equals": "Are the rule values equals with the current attribute",
         "contains": "Does the attribute values contains the rule values",
         "not_contains": "Does the attribute values NOT contains the rule values"
     },
-    "exclude": {
+    "template": {
         "config_name": {
             "icon": "icon name > must exists in icon_path (not case sensitive)",
             "apply_to_root": "'true' or 'false' apply on root search folder >> default: true",
@@ -21,11 +21,9 @@
             ]
         }
     },
-    "folders": {
-        "icon_path": "C:\\Users\\erasc\\OneDrive\\Bilder\\Icons",
+    "config": {
         "copy_icon": true,
-        "stop_if_git": true,
-        "workspace_local": {
+        "Workspace-Local": {
             "icon": "workspace",
             "apply_to_root": true,
             "order": 1,
@@ -45,11 +43,11 @@
                         "workspaces"
                     ],
                     "case_sensitive": false,
-                    "operator": "all"
+                    "operator": "any"
                 }
             ]
         },
-        "workspace_cloud": {
+        "Workspace-Cloud": {
             "icon": "workspace_cloud",
             "apply_to_root": true,
             "order": 1,
@@ -69,11 +67,11 @@
                         "workspaces"
                     ],
                     "case_sensitive": false,
-                    "operator": "all"
+                    "operator": "any"
                 }
             ]
         },
-        "python": {
+        "Python": {
             "icon": "python",
             "apply_to_root": true,
             "order": 1,
@@ -88,8 +86,8 @@
                 }
             ]
         },
-        "dynamo": {
-            "icon": "dynamo",
+        "Dynamo": {
+            "icon": "dynamo-logo",
             "apply_to_root": true,
             "order": 1,
             "rules": [
@@ -103,46 +101,88 @@
                 }
             ]
         },
-        "backup_contains": {
-            "icon": "backup",
+        "Dynamo-Script": {
+            "icon": "dynamo-script",
             "apply_to_root": true,
             "order": 1,
             "rules": [
                 {
-                    "attribute": "name",
-                    "contains": [
-                        "backup",
-                        "_bkp",
-                        " bkp",
-                        "_bkp",
-                        "bkp_",
-                        "-bkp",
-                        "bkp-"
+                    "attribute": "path",
+                    "equals": [
+                        "dynamo"
                     ],
                     "case_sensitive": false,
                     "operator": "any"
-                }
-            ]
-        },
-        "backup_equals": {
-            "icon": "backup",
-            "apply_to_root": true,
-            "order": 1,
-            "rules": [
+                },
                 {
                     "attribute": "name",
                     "equals": [
-                        "BKP"
+                        "scripts"
                     ],
                     "case_sensitive": false,
                     "operator": "any"
                 }
             ]
         },
-        "revit": {
-            "icon": "revit",
+        "Dynamo-Packages": {
+            "icon": "dynamo-develop",
             "apply_to_root": true,
             "order": 1,
+            "rules": [
+                {
+                    "attribute": "path",
+                    "equals": [
+                        "dynamo"
+                    ],
+                    "case_sensitive": false,
+                    "operator": "any"
+                },
+                {
+                    "attribute": "name",
+                    "equals": [
+                        "packages"
+                    ],
+                    "case_sensitive": false,
+                    "operator": "any"
+                }
+            ]
+        },
+        "Backup": {
+            "icon": "backup",
+            "apply_to_root": true,
+            "order": 1,
+            "rules": [
+                {
+                    "attribute": "name",
+                    "chained": [
+                        {
+                            "contains": [
+                                "backup",
+                                "_bkp",
+                                " bkp",
+                                "_bkp",
+                                "bkp_",
+                                "-bkp",
+                                "bkp-"
+                            ],
+                            "operator": "any"
+                        },
+                        {
+                            "equals": [
+                                "BKP"
+                            ],
+                            "operator": "any"
+                        }
+                    ],
+                    "case_sensitive": false,
+                    "operator": "any"
+                }
+            ]
+        },
+        "Revit": {
+            "icon": "revit",
+            "apply_to_root": true,
+            "order": 6,
             "rules": [
                 {
                     "attribute": "name",
@@ -155,7 +195,26 @@
                 }
             ]
         },
-        "revit-families": {
+        "Revit-Shared-Parameter": {
+            "icon": "param_shared",
+            "apply_to_root": false,
+            "order": 6,
+            "rules": [
+                {
+                    "attribute": "name",
+                    "contains": [
+                        "Shared Parameter",
+                        "Shared-Param",
+                        "Shared_Param",
+                        "SharedParam",
+                        "GGP"
+                    ],
+                    "case_sensitive": false,
+                    "operator": "any"
+                }
+            ]
+        },
+        "Revit-Families": {
             "icon": "revit_family",
             "apply_to_root": true,
             "order": 1,
@@ -174,10 +233,53 @@
                 }
             ]
         },
-        "autodesk": {
-            "icon": "acad",
-            "apply_to_root": true,
+        "Civil-3D": {
+            "icon": "C3D",
+            "apply_to_root": false,
             "order": 1,
+            "rules": [
+                {
+                    "attribute": "name",
+                    "chained": [
+                        {
+                            "contains": [
+                                "civil",
+                                "3d"
+                            ],
+                            "operator": "all"
+                        },
+                        {
+                            "equals": [
+                                "c3d"
+                            ],
+                            "operator": "all"
+                        }
+                    ],
+                    "case_sensitive": false,
+                    "operator": "any"
+                }
+            ]
+        },
+        "Autocad": {
+            "icon": "acad",
+            "apply_to_root": false,
+            "order": 1,
+            "rules": [
+                {
+                    "attribute": "name",
+                    "equals": [
+                        "Autocad",
+                        "acad"
+                    ],
+                    "case_sensitive": false,
+                    "operator": "any"
+                }
+            ]
+        },
+        "Autodesk": {
+            "icon": "Autodesk",
+            "apply_to_root": true,
+            "order": 7,
             "rules": [
                 {
                     "attribute": "name",
@@ -190,14 +292,14 @@
                 }
             ]
         },
-        "project": {
+        "Projekt": {
             "icon": "projekt",
             "apply_to_root": true,
             "order": 1,
             "rules": [
                 {
                     "attribute": "name",
-                    "contains": [
+                    "equals": [
                         "projekt",
                         "project"
                     ],
@@ -361,7 +463,7 @@
                 {
                     "attribute": "name",
                     "contains": [
-                        "reminde"
+                        "redmine"
                     ],
                     "case_sensitive": false,
                     "operator": "any"

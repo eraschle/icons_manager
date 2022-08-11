@@ -1,13 +1,14 @@
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Iterable, List, Optional
 
-from dir_man.commands.config_command import (ConfigCommand,
-                                             DesktopAttributeCommand,
-                                             IconCommand)
-from dir_man.data.ini_writer import DesktopFileWriter
-from dir_man.models.config import IconConfig
-from dir_man.models.container import ConfiguredContainer, FolderContainer
-from dir_man.models.path import FolderModel, PathModel
-from dir_man.services.factories import ConfigFactory
+from icon_manager.commands.config_command import (ConfigCommand,
+                                                  DesktopAttributeCommand,
+                                                  IconCommand)
+from icon_manager.config.config import ConfigManager
+from icon_manager.data.ini_writer import DesktopFileWriter
+from icon_manager.models.config import IconConfig
+from icon_manager.models.container import ConfiguredContainer, FolderContainer, SearchOption
+from icon_manager.models.path import FolderModel, JsonFile, PathModel
+from icon_manager.services.factories import ConfigFactory
 
 WRITE_CONFIG_COMMANDS: Iterable[ConfigCommand] = [
     IconCommand(),
@@ -33,22 +34,22 @@ class WriteConfigManager:
         return self.execute_commands(container, 'post_command')
 
 
-class FolderManager:
-    def __init__(self) -> None:
+class IconFolderService:
+    def __init__(self, config: ConfigManager) -> None:
+        self.config = config
         self.folder_configs: List[IconConfig] = []
         self.icon_folders: List[ConfiguredContainer] = []
-        self.copy_icon = False
-        self.stop_if_git = True
 
-    def read_config(self, user_config: Dict[str, Any]):
+    def can_add_icons_to_folders(self) -> bool:
+        return (len(self.config.folder_configs()) > 0
+                and len(self.config.folder_containers()) > 0)
+
+    def read_config(self):
         configs = []
-        config_section = user_config.pop('config')
-        self.copy_icon = config_section.pop('copy_icon', False)
-        self.stop_if_git = config_section.pop('stop_if_git', True)
-        factory = ConfigFactory(config_section)
-        for name, folder_config in config_section.items():
-            config = factory.create(folder_config, name=name)
-            configs.append(config)
+        factory = ConfigFactory(self.config)
+        for name, folder_config in self.config.folder_configs().items():
+            icon_config = factory.create(folder_config, name=name)
+            configs.append(icon_config)
         self.folder_configs = sorted(configs, key=lambda cnf: cnf.order_key())
 
     def remove_existing_models_in(self, container: FolderContainer) -> Iterable[PathModel]:
@@ -58,9 +59,9 @@ class FolderManager:
             removed.append(model)
         return removed
 
-    def remove_existing_models(self, containers: Iterable[FolderContainer]):
+    def remove_existing_models(self):
         removed: List[PathModel] = []
-        for container in containers:
+        for container in self.config.folder_containers():
             start_count = len(removed)
             removed.extend(self.remove_existing_models_in(container))
             end_count = len(removed)
@@ -79,11 +80,12 @@ class FolderManager:
         config = self.get_config_for(folder, is_root)
         if config is None:
             return
-        icon_folder = ConfiguredContainer(folder, config, self.copy_icon)
+        copy_icon = self.config.copy_icon_to_container()
+        icon_folder = ConfiguredContainer(folder, config, copy_icon)
         self.icon_folders.append(icon_folder)
 
-    def collect_folder_to_add_icons(self, containers: Iterable[FolderContainer]):
-        for container in containers:
+    def collect_folder_to_add_icons(self):
+        for container in self.config.folder_containers():
             start_count = len(self.icon_folders)
             self.collect_folder_to_add_icon(container, is_root=True)
             for folder_path in container.get_content():
@@ -101,3 +103,12 @@ class FolderManager:
                 continue
             errors.append(icon_folder)
         return errors
+
+    def copy_template_config(self, container: FolderContainer, template: JsonFile) -> None:
+        export_config = container.create_file(template.name, JsonFile)
+        template.copy_to(export_config)
+
+    def export_template_config(self, export_path: str) -> None:
+        container = FolderContainer(export_path, SearchOption())
+        self.copy_template_config(container, self.config.icon_config_file)
+        self.copy_template_config(container, self.config.folder_config_file)

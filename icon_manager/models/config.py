@@ -1,11 +1,11 @@
 from typing import Collection, Tuple
 
-from dir_man.models.path import FolderModel, IconFile
-from dir_man.models.rules import FolderRule
+from icon_manager.models.path import FolderModel, IconFile
+from icon_manager.models.rules import FilterRule
 
 
 class IconConfig:
-    def __init__(self, name: str, icon: IconFile, rules: Collection[FolderRule],
+    def __init__(self, name: str, icon: IconFile, rules: Collection[FilterRule],
                  apply_to_root: bool, order_weight: int) -> None:
         self.name = name
         self.icon = icon

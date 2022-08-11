@@ -1,6 +1,6 @@
 from typing import Iterable
 
-from dir_man.models.container import ConfiguredContainer
+from icon_manager.models.container import ConfiguredContainer
 
 
 class DesktopFileWriter:

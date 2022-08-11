@@ -13,10 +13,29 @@
 			"**/.DS_Store": true,
 			"**/Thumbs.db": true,
 			"**/__pycache__": true,
+			"**/__icon__": true,
+			"**/*.ini": true,
+			"**/*.ico": true,
 			"**/.mypy_cache": true
 		},
 		"editor.formatOnSave": true,
 		"editor.formatOnPaste": true,
 		"python.linting.mypyEnabled": true
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "Python-Modul",
+				"type": "python",
+				"request": "launch",
+				"module": "icon_manager",
+				"justMyCode": true,
+				"args": [
+					"-e",
+					"C:\\Users\\erasc\\OneDrive\\Bilder\\Icons\\_check"
+				]
+			}
+		]
 	}
 }

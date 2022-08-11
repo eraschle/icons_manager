@@ -2,20 +2,14 @@ import os
 from abc import abstractmethod
 from typing import Dict, Generic, Iterable, List, Optional, Set, Type, TypeVar
 
-from dir_man.models.config import IconConfig
-from dir_man.models.path import (DesktopIniFile, FileModel, FolderModel,
-                                 IconFile, LocalIconFolder, PathModel)
+from icon_manager.models.config import IconConfig
+from icon_manager.models.path import (DesktopIniFile, FileModel, FolderModel,
+                                      IconFile, LocalIconFolder, PathModel)
+from icon_manager.utils.path import get_path_names
 
 TPath = TypeVar('TPath', bound=PathModel)
 TFile = TypeVar('TFile', bound=FileModel)
 TFolder = TypeVar('TFolder', bound=FolderModel)
-
-
-def get_path_names(path: str) -> List[str]:
-    splitted = path.split('/')
-    if len(splitted) == 1:
-        splitted = path.split('\\')
-    return splitted
 
 
 def create_path(model: PathModel, name: str, path_type: Type[TPath]) -> TPath:

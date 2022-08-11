@@ -1,6 +1,6 @@
 from typing import Generic, Protocol, TypeVar
 
-from dir_man.models.container import ConfiguredContainer
+from icon_manager.models.container import ConfiguredContainer
 
 TModel = TypeVar('TModel', contravariant=True)
 
