@@ -1,0 +1,215 @@
+import os
+from abc import abstractmethod
+from typing import Dict, Generic, Iterable, List, Optional, Set, Type, TypeVar
+
+from dir_man.models.config import IconConfig
+from dir_man.models.path import (DesktopIniFile, FileModel, FolderModel,
+                                 IconFile, LocalIconFolder, PathModel)
+
+TPath = TypeVar('TPath', bound=PathModel)
+TFile = TypeVar('TFile', bound=FileModel)
+TFolder = TypeVar('TFolder', bound=FolderModel)
+
+
+def get_path_names(path: str) -> List[str]:
+    splitted = path.split('/')
+    if len(splitted) == 1:
+        splitted = path.split('\\')
+    return splitted
+
+
+def create_path(model: PathModel, name: str, path_type: Type[TPath]) -> TPath:
+    file_path = os.path.join(model.path, name)
+    return path_type(file_path)
+
+
+class SearchOption:
+    def __init__(self, stop_search: Optional[Iterable[str]] = None,
+                 excluded: Optional[Iterable[str]] = None) -> None:
+        self.excluded = excluded
+        self.stop_search = stop_search
+
+    def is_excluded(self, path: str) -> bool:
+        if self.excluded is None:
+            return False
+        path_names = get_path_names(path)
+        return any(exclude in path_names for exclude in self.excluded)
+
+    def do_search_sub_folders(self, current_path: str, folder_names: Iterable[str]) -> bool:
+        if self.stop_search is None:
+            return True
+        # return any(stop in folder_names for stop in self.stop_search) is False
+        # if any(stop in folder_names for stop in self.stop_search):
+        #     return False
+        names = get_path_names(current_path)
+        last_name = names[-1]
+        return last_name not in self.stop_search
+
+
+class ContainerModel(FolderModel, Generic[TPath]):
+    def __init__(self, full_path: str, options: SearchOption) -> None:
+        super().__init__(full_path)
+        self.options = options
+
+    def create_file(self, file_name: str, file_type: Type[TFile]) -> TFile:
+        return create_path(self, file_name, file_type)
+
+    def create_folder(self, folder_name: str, folder_type: Type[TFolder]) -> TFolder:
+        return create_path(self, folder_name, folder_type)
+
+    @abstractmethod
+    def build_content(self, root_path: str, folder_names: Iterable[str], file_names: Iterable[str]) -> Iterable[TPath]:
+        pass
+
+    def is_path_excluded_already(self, current_path: str, excluded: Iterable[str]) -> bool:
+        return any(current_path.startswith(path) for path in excluded)
+
+    def get_content(self) -> Iterable[TPath]:
+        do_not_sub_path: Set[str] = set()
+        content_items: List[TPath] = []
+        for root_path, folder_names, file_names in os.walk(self.path, topdown=True):
+            if self.is_path_excluded_already(root_path, do_not_sub_path):
+                continue
+            if not self.options.do_search_sub_folders(root_path, folder_names):
+                if not self.is_path_excluded_already(root_path, do_not_sub_path):
+                    do_not_sub_path.add(root_path)
+                continue
+            content = self.build_content(root_path, folder_names, file_names)
+            content_items.extend(content)
+        return content_items
+
+    def build_existing(self, root_path: str, folder_names: Iterable[str], file_names: Iterable[str]) -> Iterable[PathModel]:
+        raise NotImplementedError
+
+    def get_existing(self) -> Iterable[PathModel]:
+        existing_items: List[PathModel] = []
+        for root_path, folders, files in os.walk(self.path, topdown=True):
+            try:
+                existing = self.build_existing(root_path, folders, files)
+                existing_items.extend(existing)
+            except NotImplementedError:
+                break
+        return existing_items
+
+
+class IconContainer(ContainerModel[IconFile]):
+
+    def __init__(self, full_path: str, options: SearchOption = SearchOption()) -> None:
+        super().__init__(full_path, options)
+
+    def build_content(self, root_path: str, _: Iterable[str], file_names: Iterable[str]) -> Iterable[IconFile]:
+        icons: List[IconFile] = []
+        for file_name in file_names:
+            if not file_name.endswith(IconFile.extension()):
+                continue
+            file_path = os.path.join(root_path, file_name)
+            icon = IconFile(file_path)
+            icons.append(icon)
+        return icons
+
+
+class FolderModelContainer(ContainerModel[TPath]):
+
+    def build_content(self, root_path: str, folder_names: Iterable[str], _: Iterable[str]) -> Iterable[FolderModel]:
+        folders = []
+        for folder_name in folder_names:
+            folder_path = os.path.join(root_path, folder_name)
+            folder = FolderModel(folder_path)
+            folders.append(folder)
+        return folders
+
+    def build_existing_folders(self, root_path: str, folder_names: Iterable[str]) -> Iterable[PathModel]:
+        existing = []
+        for folder_name in folder_names:
+            folder_path = os.path.join(root_path, folder_name)
+            if not LocalIconFolder.is_model(folder_path):
+                continue
+            existing.append(LocalIconFolder(folder_path))
+        return existing
+
+    def build_existing_files(self, root_path: str, file_names: Iterable[str]) -> Iterable[PathModel]:
+        existing = []
+        for file_name in file_names:
+            file_path = os.path.join(root_path, file_name)
+            if not DesktopIniFile.is_model(file_path):
+                continue
+            existing.append(DesktopIniFile(file_path))
+        return existing
+
+    def build_existing(self, root_path: str, folder_names: Iterable[str], file_names: Iterable[str]) -> Iterable[PathModel]:
+        existing: List[PathModel] = []
+        existing.extend(self.build_existing_folders(root_path, folder_names))
+        existing.extend(self.build_existing_files(root_path, file_names))
+        return existing
+
+
+class FolderContainer(FolderModelContainer):
+
+    def build_content(self, root_path: str, folder_names: Iterable[str], _: Iterable[str]) -> Iterable[FolderModel]:
+        if self.options.is_excluded(root_path):
+            return []
+        folders = []
+        for folder_name in folder_names:
+            if self.options.is_excluded(folder_name):
+                continue
+            folder_path = os.path.join(root_path, folder_name)
+            folder = FolderModel(folder_path)
+            folders.append(folder)
+        return folders
+
+
+class ConfiguredContainer(FolderModelContainer):
+    def __init__(self, folder: FolderModel, config: IconConfig, copy_icon: bool) -> None:
+        super().__init__(folder.path, SearchOption())
+        self.ini_file = self.create_file(
+            DesktopIniFile.file_name, DesktopIniFile)
+        self.config = config
+        self.copy_icon = copy_icon
+        self.errors: Dict[str, Exception] = {}
+
+    def config_icon_path(self) -> str:
+        icon_path = self.config.icon.path
+        if not self.copy_icon:
+            return icon_path
+        return os.path.relpath(icon_path, self.path)
+
+    def copy_icon_to_local_folder(self) -> IconFile:
+        copy_file = self.local_icon_file()
+        if copy_file.exists():
+            copy_file.remove()
+        self.config.icon.copy_to(copy_file)
+        return copy_file
+
+    def local_icon_folder(self) -> LocalIconFolder:
+        folder_name = LocalIconFolder.folder_name
+        folder = self.create_folder(folder_name, LocalIconFolder)
+        if not folder.exists():
+            folder.create()
+        return folder
+
+    def local_icon_file(self) -> IconFile:
+        local_folder = self.local_icon_folder()
+        icon_name = self.config.icon.name
+        return create_path(local_folder, icon_name, IconFile)
+
+    def has_errors(self) -> bool:
+        return len(self.errors) > 0
+
+    def add_error(self, message: str, exception: Exception):
+        self.errors[message] = exception
+
+    def error_messages(self) -> Iterable[str]:
+        messages = []
+        for message, exception in self.errors.items():
+            error_msg = f'ERROR: {self.path}: {message} >> {exception}'
+            messages.append(error_msg)
+        return messages
+
+    def error_message(self) -> str:
+        return '\n'.join(self.error_messages())
+
+    def __str__(self) -> str:
+        return f'{self.name} [{self.config}]'
+
+    def __repr__(self) -> str:
+        return self.__str__()
