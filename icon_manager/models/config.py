@@ -1,29 +1,32 @@
-from typing import Collection, Tuple
+from typing import Iterable, Tuple
 
 from icon_manager.models.path import FolderModel, IconFile
-from icon_manager.models.rules import FilterRule
+from icon_manager.models.rules import FilterRuleManager
 
 
 class IconConfig:
-    def __init__(self, name: str, icon: IconFile, rules: Collection[FilterRule],
-                 apply_to_root: bool, order_weight: int) -> None:
-        self.name = name
-        self.icon = icon
-        self.rules = rules
-        self.apply_to_root = apply_to_root
-        self.order_weight = order_weight
+    def __init__(self, icon_file: IconFile,
+                 managers: Iterable[FilterRuleManager],
+                 weight: int) -> None:
+        self.icon_file = icon_file
+        self.managers = managers
+        self.order_weight = weight
 
     def order_key(self) -> Tuple[str, str]:
         weight = f'{self.order_weight:02d}'
-        return (weight, self.name)
+        return (weight, self.icon_file.name_wo_extension)
 
-    def is_config_for(self, folder: FolderModel, is_root_folder: bool) -> bool:
-        if not self.apply_to_root and is_root_folder:
-            return False
-        return all(rule.is_allowed(folder) for rule in self.rules)
+    def is_empty(self) -> bool:
+        return all(manager.is_empty() for manager in self.managers)
+
+    def is_config_for(self, folder: FolderModel) -> bool:
+        return all(manager.is_allowed(folder) for manager in self.managers)
 
     def __str__(self) -> str:
-        return f'Config: {self.name}'
+        return f'Config: {self.icon_file.name_wo_extension}'
 
     def __repr__(self) -> str:
-        return f'{self.__str__()} [Rules: {len(self.rules)}]'
+        output = self.__str__()
+        for manager in self.managers:
+            output = f'{output} {manager.attribute} [{manager.rule_count()}]'
+        return output

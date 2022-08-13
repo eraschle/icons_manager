@@ -1,12 +1,14 @@
-from abc import abstractmethod
 import os
 import re
+from abc import abstractmethod
 from typing import Any, Collection, Dict, Iterable, Protocol, Type
-from xml.dom import ValidationErr
+
+from icon_manager.controller.search import SearchController
 from icon_manager.data.json_source import JsonSource
-from icon_manager.models.container import FolderContainer, SearchOption
+from icon_manager.models.container import FolderContainer
 from icon_manager.models.path import JsonFile
-from icon_manager.models.rules import ChainedRules, ContainsRule, EqualsRule, FilterRule, FolderRule, NotContainsRule
+from icon_manager.models.rules import (ChainedRules, ContainsRule, EqualsRule,
+                                       FilterRule, NotContainsRule)
 
 
 class Config(Protocol):
@@ -63,7 +65,7 @@ class FolderConfig(AppConfig):
     def __init__(self) -> None:
         super().__init__()
         self.icons_path: str = ''
-        self.no_further_sub_folders: Iterable[str] = []
+        self.code_project_names: Iterable[str] = []
         self.exclude_folder_names: Iterable[str] = []
         self.folder_paths: Iterable[str] = []
 
@@ -73,26 +75,22 @@ class FolderConfig(AppConfig):
     def validate(self):
         icons_path = self.config.pop('icons_path', None)
         if icons_path is None:
-            raise ValidationErr('Icon path could not be found')
+            raise ValueError('Icon path could not be found')
         self.icons_path = self.__class__.get_folder_path(icons_path)
-        no_further_sub_folders = self.config.pop('no_further_sub_folders', [])
+        code_project_names = self.config.pop('code_project_names', [])
         exclude_folder_names = self.config.pop('exclude_folder_names', [])
         folder_paths = self.config.pop('folder_paths', None)
         if folder_paths is None:
-            raise ValidationErr('No directories specified to set the icons')
-        self.no_further_sub_folders = no_further_sub_folders
+            raise ValueError('No directories specified to set the icons')
+        self.code_project_names = code_project_names
         self.exclude_folder_names = exclude_folder_names
         self.folder_paths = folder_paths
-
-    def get_search_options(self) -> SearchOption:
-        return SearchOption(self.no_further_sub_folders, self.exclude_folder_names)
 
     def get_folder_containers(self) -> Collection[FolderContainer]:
         containers = []
         for folder_path in self.folder_paths:
             folder_path = self.__class__.get_folder_path(folder_path)
-            search_option = self.get_search_options()
-            containers.append(FolderContainer(folder_path, search_option))
+            containers.append(FolderContainer(folder_path))
         return containers
 
 
@@ -122,6 +120,8 @@ class ConfigManager(Config):
     def validate(self):
         self.icons.validate()
         self.folders.validate()
+        SearchController.project_folder_names = self.folders.code_project_names
+        SearchController.excluded_folder_names = self.folders.exclude_folder_names
 
     def copy_icon_to_container(self) -> bool:
         return self.icons.copy_icon
@@ -134,6 +134,3 @@ class ConfigManager(Config):
 
     def rule_mapping(self) -> Dict[str, Type[FilterRule]]:
         return RULE_MAP
-
-    def folder_configs(self) -> Dict[str, Dict[str, Any]]:
-        return self.icons.folder_configs()

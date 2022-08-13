@@ -88,6 +88,10 @@ class PathModel(ABC):
 class FileModel(PathModel, ABC):
 
     @ classmethod
+    def is_model(cls, path: str) -> bool:
+        return path.endswith(cls.extension())
+
+    @ classmethod
     def extension(cls) -> str:
         raise NotImplementedError
 

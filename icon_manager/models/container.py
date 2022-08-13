@@ -1,11 +1,11 @@
 import os
 from abc import abstractmethod
-from typing import Dict, Generic, Iterable, List, Optional, Set, Type, TypeVar
+from typing import Dict, Generic, Iterable, List, Set, Type, TypeVar
 
+from icon_manager.controller.search import SearchController
 from icon_manager.models.config import IconConfig
 from icon_manager.models.path import (DesktopIniFile, FileModel, FolderModel,
                                       IconFile, LocalIconFolder, PathModel)
-from icon_manager.utils.path import get_path_names
 
 TPath = TypeVar('TPath', bound=PathModel)
 TFile = TypeVar('TFile', bound=FileModel)
@@ -17,33 +17,15 @@ def create_path(model: PathModel, name: str, path_type: Type[TPath]) -> TPath:
     return path_type(file_path)
 
 
-class SearchOption:
-    def __init__(self, stop_search: Optional[Iterable[str]] = None,
-                 excluded: Optional[Iterable[str]] = None) -> None:
-        self.excluded = excluded
-        self.stop_search = stop_search
-
-    def is_excluded(self, path: str) -> bool:
-        if self.excluded is None:
-            return False
-        path_names = get_path_names(path)
-        return any(exclude in path_names for exclude in self.excluded)
-
-    def do_search_sub_folders(self, current_path: str, folder_names: Iterable[str]) -> bool:
-        if self.stop_search is None:
-            return True
-        # return any(stop in folder_names for stop in self.stop_search) is False
-        # if any(stop in folder_names for stop in self.stop_search):
-        #     return False
-        names = get_path_names(current_path)
-        last_name = names[-1]
-        return last_name not in self.stop_search
+def is_code_project(current_path: str, folder_names: Iterable[str]) -> bool:
+    if SearchController.is_known_project(current_path):
+        return True
+    return SearchController.is_project_path(folder_names)
 
 
 class ContainerModel(FolderModel, Generic[TPath]):
-    def __init__(self, full_path: str, options: SearchOption) -> None:
+    def __init__(self, full_path: str) -> None:
         super().__init__(full_path)
-        self.options = options
 
     def create_file(self, file_name: str, file_type: Type[TFile]) -> TFile:
         return create_path(self, file_name, file_type)
@@ -64,7 +46,7 @@ class ContainerModel(FolderModel, Generic[TPath]):
         for root_path, folder_names, file_names in os.walk(self.path, topdown=True):
             if self.is_path_excluded_already(root_path, do_not_sub_path):
                 continue
-            if not self.options.do_search_sub_folders(root_path, folder_names):
+            if not is_code_project(root_path, folder_names):
                 if not self.is_path_excluded_already(root_path, do_not_sub_path):
                     do_not_sub_path.add(root_path)
                 continue
@@ -88,13 +70,13 @@ class ContainerModel(FolderModel, Generic[TPath]):
 
 class IconContainer(ContainerModel[IconFile]):
 
-    def __init__(self, full_path: str, options: SearchOption = SearchOption()) -> None:
-        super().__init__(full_path, options)
+    def __init__(self, full_path: str) -> None:
+        super().__init__(full_path)
 
     def build_content(self, root_path: str, _: Iterable[str], file_names: Iterable[str]) -> Iterable[IconFile]:
         icons: List[IconFile] = []
         for file_name in file_names:
-            if not file_name.endswith(IconFile.extension()):
+            if not IconFile.is_model(file_name):
                 continue
             file_path = os.path.join(root_path, file_name)
             icon = IconFile(file_path)
@@ -125,7 +107,7 @@ class FolderModelContainer(ContainerModel[TPath]):
         existing = []
         for file_name in file_names:
             file_path = os.path.join(root_path, file_name)
-            if not DesktopIniFile.is_model(file_path):
+            if not DesktopIniFile.is_model(file_name):
                 continue
             existing.append(DesktopIniFile(file_path))
         return existing
@@ -140,11 +122,11 @@ class FolderModelContainer(ContainerModel[TPath]):
 class FolderContainer(FolderModelContainer):
 
     def build_content(self, root_path: str, folder_names: Iterable[str], _: Iterable[str]) -> Iterable[FolderModel]:
-        if self.options.is_excluded(root_path):
+        if SearchController.is_folder_excluded(root_path):
             return []
         folders = []
         for folder_name in folder_names:
-            if self.options.is_excluded(folder_name):
+            if SearchController.is_folder_excluded(folder_name):
                 continue
             folder_path = os.path.join(root_path, folder_name)
             folder = FolderModel(folder_path)
@@ -154,7 +136,7 @@ class FolderContainer(FolderModelContainer):
 
 class ConfiguredContainer(FolderModelContainer):
     def __init__(self, folder: FolderModel, config: IconConfig, copy_icon: bool) -> None:
-        super().__init__(folder.path, SearchOption())
+        super().__init__(folder.path)
         self.ini_file = self.create_file(
             DesktopIniFile.file_name, DesktopIniFile)
         self.config = config
@@ -162,7 +144,7 @@ class ConfiguredContainer(FolderModelContainer):
         self.errors: Dict[str, Exception] = {}
 
     def config_icon_path(self) -> str:
-        icon_path = self.config.icon.path
+        icon_path = self.config.icon_file.path
         if not self.copy_icon:
             return icon_path
         return os.path.relpath(icon_path, self.path)
@@ -171,7 +153,7 @@ class ConfiguredContainer(FolderModelContainer):
         copy_file = self.local_icon_file()
         if copy_file.exists():
             copy_file.remove()
-        self.config.icon.copy_to(copy_file)
+        self.config.icon_file.copy_to(copy_file)
         return copy_file
 
     def local_icon_folder(self) -> LocalIconFolder:
@@ -183,7 +165,7 @@ class ConfiguredContainer(FolderModelContainer):
 
     def local_icon_file(self) -> IconFile:
         local_folder = self.local_icon_folder()
-        icon_name = self.config.icon.name
+        icon_name = self.config.icon_file.name
         return create_path(local_folder, icon_name, IconFile)
 
     def has_errors(self) -> bool:

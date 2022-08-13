@@ -29,7 +29,7 @@ class IconCommand(ConfigCommand):
             return
         try:
             copied_icon = container.copy_icon_to_local_folder()
-            container.config.icon = copied_icon
+            container.config.icon_file = copied_icon
         except Exception as ex:
             container.add_error('copy icon to local', ex)
 

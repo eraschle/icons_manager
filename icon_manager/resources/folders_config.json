@@ -1,5 +1,5 @@
 {
-    "no_further_sub_folders": [
+    "code_project_names": [
         ".git",
         ".svn",
         ".venv",

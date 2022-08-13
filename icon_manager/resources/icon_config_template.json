@@ -1,0 +1,46 @@
+{
+    "rules": {
+        "equals": "Is the attribute value equals with a rule value",
+        "starts_with": "Does the attribute value starts a the rule value",
+        "ends_with": "Does the attribute value ends with a rule value",
+        "start_or_ends_with": "Does the attribute value start or ends with a rule value",
+        "contains": "Does the attribute value contains in the rule values",
+        "not_contains": "Does the attribute value NOT contains in the rule values"
+    },
+    "template": {
+        "order": "Integer number to adjust order of config execution. The smaller the earlier it will be executed >> default 5",
+        "path": {
+            "operator": "'any' or 'all' rules must be TRUE >> default: any",
+            "rules": [
+                {
+                    "rule_to_apply": [
+                        "Values for the rule to check"
+                    ],
+                    "operator": "'any' or 'all' rule values must be TRUE >> default: any",
+                    "case_sensitive": "'true' or 'false' for rule >> default: false"
+                }
+            ]
+        },
+        "name": {
+            "operator": "'any' or 'all' rules must be TRUE >> default: any",
+            "rules": [
+                {
+                    "rule_to_apply": [
+                        "Values for the rule to check"
+                    ],
+                    "operator": "'any' or 'all' rule values must be TRUE >> default: any",
+                    "case_sensitive": "'true' or 'false' for rule >> default: false"
+                }
+            ]
+        }
+    },
+    "config": {
+        "order": 5,
+        "path": {
+            "rules": []
+        },
+        "name": {
+            "rules": []
+        }
+    }
+}

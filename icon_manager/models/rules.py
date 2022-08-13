@@ -1,8 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Iterable, List, Protocol, Union
-
-from icon_manager.utils.path import get_path_names
+from typing import Collection, Iterable, Protocol
 
 # region RULES INTERFACE
 
@@ -13,15 +11,6 @@ class Operator(str, Enum):
     ALL = 'all'
 
 
-def get_operator(operator_value: str) -> Operator:
-    operator_value = operator_value.lower()
-    for operator in Operator:
-        if operator != operator_value:
-            continue
-        return operator
-    return Operator.UNKNOWN
-
-
 class FilterRule(Protocol):
 
     def is_allowed(self, folder: object) -> bool:
@@ -29,11 +18,11 @@ class FilterRule(Protocol):
 
 
 class FolderRule(ABC, FilterRule):
-    def __init__(self, attribute: str, values: Iterable[str], operator: str,
-                 case_sensitive: bool) -> None:
+    def __init__(self, attribute: str, values: Iterable[str],
+                 operator: Operator, case_sensitive: bool) -> None:
         self.attribute = attribute
         self.__values = values
-        self.operator = get_operator(operator)
+        self.operator = operator
         self.case_sensitive = case_sensitive
 
     def get_case_sensitive_value(self, value: str) -> str:
@@ -47,7 +36,7 @@ class FolderRule(ABC, FilterRule):
         return [self.get_case_sensitive_value(value) for value in values]
 
     @property
-    def values(self) -> Iterable[str]:
+    def rule_values(self) -> Iterable[str]:
         return self.get_case_sensitive_values(self.__values)
 
     def is_allowed(self, folder: object) -> bool:
@@ -55,25 +44,20 @@ class FolderRule(ABC, FilterRule):
         if attribute_value is None or self.operator == Operator.UNKNOWN:
             return False
         attribute_value = self.get_case_sensitive_value(attribute_value)
-        attribute_values = get_path_names(attribute_value)
-        bool_mask = self.are_values_allowed(attribute_values)
-        return all(bool_mask) if self.operator == Operator.ALL else any(bool_mask)
-
-    def are_values_allowed(self, attribute_value: Union[str, Iterable[str]]) -> Iterable[bool]:
-        if not isinstance(attribute_value, str):
-            bool_mask: List[bool] = []
-            for value in attribute_value:
-                result = self.are_values_allowed(value)
-                bool_mask.extend(result)
-            return bool_mask
-        return self.is_value_allowed(attribute_value)
+        if self.operator == Operator.ALL:
+            return self.are_all_values_allowed(attribute_value)
+        return self.are_any_values_allowed(attribute_value)
 
     @abstractmethod
-    def is_value_allowed(self, attribute_value: str) -> Iterable[bool]:
+    def are_any_values_allowed(self, attribute_value: str) -> bool:
+        pass
+
+    @abstractmethod
+    def are_all_values_allowed(self, attribute_value: str) -> bool:
         pass
 
     def __str__(self) -> str:
-        return f'{self.__class__.__name__}: {self.attribute} {self.values}'
+        return f'{self.__class__.__name__}: {self.attribute} {self.rule_values}'
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -86,32 +70,92 @@ class FolderRule(ABC, FilterRule):
 
 
 class EqualsRule(FolderRule):
-    def is_value_allowed(self, attribute_value: str) -> Iterable[bool]:
-        return [value == attribute_value for value in self.values]
+
+    def are_any_values_allowed(self, attribute_value: str) -> bool:
+        return any(value == attribute_value for value in self.rule_values)
+
+    def are_all_values_allowed(self, attribute_value: str) -> bool:
+        return all(value == attribute_value for value in self.rule_values)
 
 
 class ContainsRule(FolderRule):
-    def is_value_allowed(self, attribute_value: str) -> Iterable[bool]:
-        return [value in attribute_value for value in self.values]
+
+    def are_any_values_allowed(self, attribute_value: str) -> bool:
+        return any(value in attribute_value for value in self.rule_values)
+
+    def are_all_values_allowed(self, attribute_value: str) -> bool:
+        return all(value in attribute_value for value in self.rule_values)
 
 
 class NotContainsRule(ContainsRule):
-    def is_value_allowed(self, attribute_value: str) -> Iterable[bool]:
-        bool_mask = super().is_value_allowed(attribute_value)
-        return [value is False for value in bool_mask]
+
+    def are_any_values_allowed(self, attribute_value: str) -> bool:
+        return any(value not in attribute_value for value in self.rule_values)
+
+    def are_all_values_allowed(self, attribute_value: str) -> bool:
+        return all(value not in attribute_value for value in self.rule_values)
+
+
+class StartswithRule(FolderRule):
+
+    def are_any_values_allowed(self, attribute_value: str) -> bool:
+        return any(attribute_value.startswith(value) for value in self.rule_values)
+
+    def are_all_values_allowed(self, attribute_value: str) -> bool:
+        return all(attribute_value.startswith(value) for value in self.rule_values)
+
+
+class EndswithRule(FolderRule):
+
+    def are_any_values_allowed(self, attribute_value: str) -> bool:
+        return any(attribute_value.endswith(value) for value in self.rule_values)
+
+    def are_all_values_allowed(self, attribute_value: str) -> bool:
+        return all(attribute_value.endswith(value) for value in self.rule_values)
+
+
+class StartsOrEndswithRule(FolderRule):
+
+    def __is_allowed(self, attr_value: str, value: str) -> bool:
+        return attr_value.startswith(value) or attr_value.endswith(value)
+
+    def are_any_values_allowed(self, attribute_value: str) -> bool:
+        return any(self.__is_allowed(attribute_value, value) for value in self.rule_values)
+
+    def are_all_values_allowed(self, attribute_value: str) -> bool:
+        return all(self.__is_allowed(attribute_value, value) for value in self.rule_values)
 
 
 class ChainedRules(FilterRule):
 
-    def __init__(self, rules: Iterable[FolderRule], operator: str) -> None:
+    def __init__(self, rules: Iterable[FolderRule], operator: Operator) -> None:
         self.rules = rules
-        self.operator = get_operator(operator)
+        self.operator = operator
 
     def is_allowed(self, folder: object) -> bool:
-        results: List[bool] = []
-        for rule in self.rules:
-            results.append(rule.is_allowed(folder))
-        return all(results) if self.operator == Operator.ALL else any(results)
+        if self.operator == Operator.ALL:
+            return all(rule.is_allowed(folder) for rule in self.rules)
+        return any(rule.is_allowed(folder) for rule in self.rules)
 
 
 # endregion
+
+
+class FilterRuleManager(FilterRule):
+    def __init__(self, attribute: str, rules: Collection[FilterRule], operator: Operator) -> None:
+        self.attribute = attribute
+        self.rules = rules
+        self.operator = operator
+
+    def is_empty(self) -> bool:
+        return self.rule_count() == 0
+
+    def rule_count(self) -> int:
+        return len(self.rules)
+
+    def is_allowed(self, folder: object) -> bool:
+        if self.rule_count() == 0:
+            return True
+        if self.operator == Operator.ALL:
+            return all(rule.is_allowed(folder) for rule in self.rules)
+        return any(rule.is_allowed(folder) for rule in self.rules)

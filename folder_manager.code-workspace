@@ -32,8 +32,7 @@
 				"module": "icon_manager",
 				"justMyCode": true,
 				"args": [
-					"-e",
-					"C:\\Users\\erasc\\OneDrive\\Bilder\\Icons\\_check"
+					"-e"
 				]
 			}
 		]
