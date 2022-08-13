@@ -1,6 +1,5 @@
 from abc import ABC
 from typing import Generic, Iterable, Type, TypeVar
-from icon_manager.controller.search import SearchController
 
 from icon_manager.models.path import FileModel
 from icon_manager.tasks.find_folders import FindOptions, FindPathTask
@@ -13,20 +12,15 @@ class BaseController(ABC, Generic[TFile]):
         self.full_path = full_path
         self.file_type = file_type
 
-    def get_content(self, paths: Iterable[str]) -> Iterable[TFile]:
-        return [self.file_type(path) for path in paths]
-
-    def is_folder_allowed_callback(self, value: str) -> bool:
-        return not SearchController.is_excluded_or_project_folder(value)
-
-    def is_file_allowed_callback(self, value: str) -> bool:
-        return self.file_type.is_model(value)
-
     def get_find_options(self) -> FindOptions:
-        return FindOptions(is_folder_allowed=self.is_folder_allowed_callback,
-                           is_file_allowed=self.is_file_allowed_callback,
-                           do_stop_recursive=SearchController.is_code_project_folder)
+        return FindOptions(is_folder_allowed=None,
+                           is_folder_excluded=FindOptions.default_excluded,
+                           is_file_allowed=self.file_type.is_model,
+                           do_stop_recursive=FindOptions.default_stop_recursive)
 
     def files(self) -> Iterable[TFile]:
         find_task = FindPathTask(self.full_path, self.get_find_options())
-        return self.get_content(find_task.files())
+        return self.get_files(find_task.files())
+
+    def get_files(self, paths: Iterable[str]) -> Iterable[TFile]:
+        return [self.file_type(path) for path in paths]

@@ -63,10 +63,7 @@ def main():
         service.create_icon_config_templates(overwrite)
 
     if namespace.remove_existing:
-        service.remove_existing_models()
-
-    if namespace.remove_existing:
-        service.remove_existing_models()
+        service.remove_existing_configs()
 
     if namespace.add_icons:
         service.read_config()

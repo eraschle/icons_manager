@@ -32,7 +32,8 @@
 				"module": "icon_manager",
 				"justMyCode": true,
 				"args": [
-					"-e"
+					// "-e",
+					"--remove-existing"
 				]
 			}
 		]

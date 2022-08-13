@@ -4,6 +4,7 @@ from icon_manager.commands.config_command import (ConfigCommand,
                                                   DesktopAttributeCommand,
                                                   IconCommand)
 from icon_manager.config.config import ConfigManager
+from icon_manager.controller.config import FolderConfigController
 from icon_manager.controller.icons import IconsController
 from icon_manager.data.ini_writer import DesktopFileWriter
 from icon_manager.models.container import ConfiguredContainer, FolderContainer
@@ -45,22 +46,11 @@ class IconFolderService:
     def read_config(self):
         self.icon_controller.create_icon_config()
 
-    def remove_existing_models_in(self, container: FolderContainer) -> Iterable[PathModel]:
-        removed: List[PathModel] = []
-        for model in container.get_existing():
-            model.remove()
-            removed.append(model)
-        return removed
-
-    def remove_existing_models(self):
-        removed: List[PathModel] = []
-        for container in self.config.folder_containers():
-            start_count = len(removed)
-            removed.extend(self.remove_existing_models_in(container))
-            end_count = len(removed)
-            amount = end_count - start_count
-            print(f'Removed "{amount}" in {container.path}')
-        return removed
+    def remove_existing_configs(self):
+        for path in self.config.folders.get_folder_paths():
+            controller = FolderConfigController(path)
+            removed = controller.remove_existing_configs()
+            print(f'Removed "{len(removed)}" in {controller.full_path}')
 
     def collect_folder_to_add_icon(self, folder: FolderModel):
         config = self.icon_controller.icon_config_for(folder)

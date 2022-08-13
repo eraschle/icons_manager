@@ -1,7 +1,7 @@
 import os
 import shutil
 from abc import ABC
-from typing import Dict, Iterable
+from typing import Dict, Iterable, Optional
 
 
 def get_attr_bit_dict(attributes: Iterable[str], is_enable: bool) -> Dict[str, str]:
@@ -85,6 +85,24 @@ class PathModel(ABC):
         return self.__str__()
 
 
+class FolderModel(PathModel, ABC):
+
+    def create(self):
+        os.makedirs(self.path, exist_ok=True)
+
+
+class LocalIconFolder(FolderModel):
+
+    folder_name: str = '__icon__'
+
+    @ classmethod
+    def is_model(cls, path: str) -> bool:
+        return path.endswith(cls.folder_name)
+
+    def __str__(self) -> str:
+        return f'ICON: {self.name}'
+
+
 class FileModel(PathModel, ABC):
 
     @ classmethod
@@ -123,33 +141,22 @@ class IconFile(FileModel):
 
 class DesktopIniFile(FileModel):
 
-    @ classmethod
-    def extension(cls) -> str:
-        return 'ini'
-
     file_name = 'desktop.ini'
 
     @ classmethod
     def is_model(cls, path: str) -> bool:
         return path.endswith(cls.file_name)
 
+    @ classmethod
+    def extension(cls) -> str:
+        return 'ini'
+
+    def __init__(self, full_path: str, icon_folder: Optional[LocalIconFolder] = None) -> None:
+        super().__init__(full_path)
+        self.icon_folder = icon_folder
+
     def set_protected_and_hidden(self) -> None:
         self.set_attrib({'s': '+', 'h': '+'})
 
     def set_writeable_and_visible(self) -> None:
         self.set_attrib({'s': '-', 'h': '-'})
-
-
-class FolderModel(PathModel, ABC):
-
-    def create(self):
-        os.makedirs(self.path, exist_ok=True)
-
-
-class LocalIconFolder(FolderModel):
-
-    folder_name: str = '__icon__'
-
-    @ classmethod
-    def is_model(cls, path: str) -> bool:
-        return path.endswith(cls.folder_name)

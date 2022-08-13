@@ -17,8 +17,13 @@ class IconsController(BaseController[IconFile]):
         self.config_factory = ConfigFactory(config.rule_mapping())
         self.icon_configs: Iterable[IconConfig] = []
 
-    def is_folder_allowed_callback(self, value: str) -> bool:
-        return super().is_folder_allowed_callback(value) and value not in ['_check']
+    def is_folder_excluded(self, value: str) -> bool:
+        return FindOptions.default_excluded(value) and value not in ['_check']
+
+    def get_find_options(self) -> FindOptions:
+        options = super().get_find_options()
+        options.is_folder_excluded = self.is_folder_excluded
+        return options
 
     def get_config_path(self, icon: IconFile) -> JsonFile:
         file_path = icon.path
@@ -34,9 +39,13 @@ class IconsController(BaseController[IconFile]):
                 continue
             template.copy_to(icon_config)
 
+    def get_config_find_options(self) -> FindOptions:
+        options = self.get_find_options()
+        options.is_file_allowed = JsonFile.is_model
+        return options
+
     def get_icon_configs(self) -> Iterable[JsonFile]:
-        options = FindOptions(is_folder_allowed=self.is_folder_allowed_callback,
-                              is_file_allowed=JsonFile.is_model)
+        options = self.get_config_find_options()
         find_task = FindPathTask(self.full_path, options)
         config_files = [JsonFile(path) for path in find_task.files()]
         return config_files

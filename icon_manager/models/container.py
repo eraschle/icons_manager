@@ -54,72 +54,8 @@ class ContainerModel(FolderModel, Generic[TPath]):
             content_items.extend(content)
         return content_items
 
-    def build_existing(self, root_path: str, folder_names: Iterable[str], file_names: Iterable[str]) -> Iterable[PathModel]:
-        raise NotImplementedError
 
-    def get_existing(self) -> Iterable[PathModel]:
-        existing_items: List[PathModel] = []
-        for root_path, folders, files in os.walk(self.path, topdown=True):
-            try:
-                existing = self.build_existing(root_path, folders, files)
-                existing_items.extend(existing)
-            except NotImplementedError:
-                break
-        return existing_items
-
-
-class IconContainer(ContainerModel[IconFile]):
-
-    def __init__(self, full_path: str) -> None:
-        super().__init__(full_path)
-
-    def build_content(self, root_path: str, _: Iterable[str], file_names: Iterable[str]) -> Iterable[IconFile]:
-        icons: List[IconFile] = []
-        for file_name in file_names:
-            if not IconFile.is_model(file_name):
-                continue
-            file_path = os.path.join(root_path, file_name)
-            icon = IconFile(file_path)
-            icons.append(icon)
-        return icons
-
-
-class FolderModelContainer(ContainerModel[TPath]):
-
-    def build_content(self, root_path: str, folder_names: Iterable[str], _: Iterable[str]) -> Iterable[FolderModel]:
-        folders = []
-        for folder_name in folder_names:
-            folder_path = os.path.join(root_path, folder_name)
-            folder = FolderModel(folder_path)
-            folders.append(folder)
-        return folders
-
-    def build_existing_folders(self, root_path: str, folder_names: Iterable[str]) -> Iterable[PathModel]:
-        existing = []
-        for folder_name in folder_names:
-            folder_path = os.path.join(root_path, folder_name)
-            if not LocalIconFolder.is_model(folder_path):
-                continue
-            existing.append(LocalIconFolder(folder_path))
-        return existing
-
-    def build_existing_files(self, root_path: str, file_names: Iterable[str]) -> Iterable[PathModel]:
-        existing = []
-        for file_name in file_names:
-            file_path = os.path.join(root_path, file_name)
-            if not DesktopIniFile.is_model(file_name):
-                continue
-            existing.append(DesktopIniFile(file_path))
-        return existing
-
-    def build_existing(self, root_path: str, folder_names: Iterable[str], file_names: Iterable[str]) -> Iterable[PathModel]:
-        existing: List[PathModel] = []
-        existing.extend(self.build_existing_folders(root_path, folder_names))
-        existing.extend(self.build_existing_files(root_path, file_names))
-        return existing
-
-
-class FolderContainer(FolderModelContainer):
+class FolderContainer(ContainerModel[FolderModel]):
 
     def build_content(self, root_path: str, folder_names: Iterable[str], _: Iterable[str]) -> Iterable[FolderModel]:
         if SearchController.is_folder_excluded(root_path):
@@ -134,7 +70,7 @@ class FolderContainer(FolderModelContainer):
         return folders
 
 
-class ConfiguredContainer(FolderModelContainer):
+class ConfiguredContainer(FolderContainer):
     def __init__(self, folder: FolderModel, config: IconConfig, copy_icon: bool) -> None:
         super().__init__(folder.path)
         self.ini_file = self.create_file(

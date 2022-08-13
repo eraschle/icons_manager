@@ -86,10 +86,16 @@ class FolderConfig(AppConfig):
         self.exclude_folder_names = exclude_folder_names
         self.folder_paths = folder_paths
 
-    def get_folder_containers(self) -> Collection[FolderContainer]:
+    def get_folder_paths(self) -> Collection[str]:
         containers = []
         for folder_path in self.folder_paths:
             folder_path = self.__class__.get_folder_path(folder_path)
+            containers.append(folder_path)
+        return containers
+
+    def get_folder_containers(self) -> Collection[FolderContainer]:
+        containers = []
+        for folder_path in self.get_folder_paths():
             containers.append(FolderContainer(folder_path))
         return containers
 
