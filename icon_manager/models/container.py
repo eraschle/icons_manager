@@ -20,7 +20,10 @@ def create_path(model: PathModel, name: str, path_type: Type[TPath]) -> TPath:
 def is_code_project(current_path: str, folder_names: Iterable[str]) -> bool:
     if SearchController.is_known_project(current_path):
         return True
-    return SearchController.is_project_path(folder_names)
+    if SearchController.is_project_folder(folder_names):
+        SearchController.known_projects.add(current_path)
+        return True
+    return False
 
 
 class ContainerModel(FolderModel, Generic[TPath]):

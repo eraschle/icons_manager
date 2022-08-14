@@ -1,62 +1,33 @@
 from typing import Iterable, List
 
-from icon_manager.commands.config_command import (ConfigCommand,
-                                                  DesktopAttributeCommand,
-                                                  IconCommand)
-from icon_manager.config.config import ConfigManager
-from icon_manager.controller.config import FolderConfigController
+from icon_manager.config.config import AppConfig
+from icon_manager.config.creator import ConfigCreator
+from icon_manager.controller.config import LocalConfigController
 from icon_manager.controller.icons import IconsController
-from icon_manager.data.ini_writer import DesktopFileWriter
-from icon_manager.models.container import ConfiguredContainer, FolderContainer
-from icon_manager.models.path import FolderModel, JsonFile, PathModel
-
-WRITE_CONFIG_COMMANDS: Iterable[ConfigCommand] = [
-    IconCommand(),
-    DesktopAttributeCommand()
-]
-
-
-class WriteConfigManager:
-    def __init__(self, writer: DesktopFileWriter = DesktopFileWriter(),
-                 commands: Iterable[ConfigCommand] = WRITE_CONFIG_COMMANDS) -> None:
-        self.writer = writer
-        self.commands = commands
-
-    def execute_commands(self, container: ConfiguredContainer, func_name: str) -> ConfiguredContainer:
-        for command in self.commands:
-            function = getattr(command, func_name)
-            function(container)
-        return container
-
-    def write_config(self, container: ConfiguredContainer) -> ConfiguredContainer:
-        container = self.execute_commands(container, 'pre_command')
-        container = self.writer.write_config(container)
-        return self.execute_commands(container, 'post_command')
+from icon_manager.models.container import ConfiguredContainer
+from icon_manager.models.path import FolderModel
 
 
 class IconFolderService:
-    def __init__(self, config: ConfigManager) -> None:
+    def __init__(self, config: AppConfig) -> None:
         self.config = config
         self.icon_controller = IconsController(config)
         self.icon_folders: List[ConfiguredContainer] = []
-
-    def can_add_icons_to_folders(self) -> bool:
-        return len(self.config.folder_containers()) > 0
 
     def read_config(self):
         self.icon_controller.create_icon_config()
 
     def remove_existing_configs(self):
         for path in self.config.folders.get_folder_paths():
-            controller = FolderConfigController(path)
-            removed = controller.remove_existing_configs()
+            controller = LocalConfigController(path)
+            removed = controller.delete_existing_configs()
             print(f'Removed "{len(removed)}" in {controller.full_path}')
 
     def collect_folder_to_add_icon(self, folder: FolderModel):
         config = self.icon_controller.icon_config_for(folder)
         if config is None:
             return
-        copy_icon = self.config.copy_icon_to_container()
+        copy_icon = self.config.copy_icon_to_folder()
         icon_folder = ConfiguredContainer(folder, config, copy_icon)
         self.icon_folders.append(icon_folder)
 
@@ -70,21 +41,18 @@ class IconFolderService:
             amount = end_count - start_count
             print(f'Collected "{amount}" in {container.path}')
 
-    def add_icons_to_folders(self, manager: WriteConfigManager) -> Iterable[ConfiguredContainer]:
+    def add_icons_to_folders(self, creator: ConfigCreator) -> Iterable[ConfiguredContainer]:
         errors = []
         for icon_folder in self.icon_folders:
-            icon_folder = manager.write_config(icon_folder)
+            icon_folder = creator.write_config(icon_folder)
             print(f'Add icon to {icon_folder.path}')
             if not icon_folder.has_errors():
                 continue
             errors.append(icon_folder)
         return errors
 
-    def copy_template_config(self, container: FolderContainer, template: JsonFile) -> None:
-        export_config = container.create_file(template.name, JsonFile)
-        template.copy_to(export_config)
-
-    def create_icon_config_templates(self, overwrite: bool) -> None:
-        self.icon_controller.create_icon_config_files(overwrite)
-        # self.copy_template_config(container, self.config.icon_config_file)
-        # self.copy_template_config(container, self.config.folder_config_file)
+    def export_config_templates(self, overwrite: bool, update: bool) -> None:
+        if update:
+            self.icons_ctrl.update_icon_config_files()
+        else:
+            self.icons_ctrl.create_icon_config_files(overwrite)

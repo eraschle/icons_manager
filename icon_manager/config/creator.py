@@ -1,19 +1,10 @@
-from typing import Generic, Protocol, TypeVar
+from typing import Iterable, Protocol
 
+from icon_manager.data.ini_writer import DesktopFileWriter
 from icon_manager.models.container import ConfiguredContainer
 
-TModel = TypeVar('TModel', contravariant=True)
 
-
-class PrePostCommand(Protocol, Generic[TModel]):
-    def pre_command(self, model: TModel):
-        pass
-
-    def post_command(self, model: TModel):
-        pass
-
-
-class ConfigCommand(PrePostCommand[ConfiguredContainer]):
+class ConfigCommand(Protocol):
 
     def pre_command(self, container: ConfiguredContainer):
         pass
@@ -64,3 +55,27 @@ class DesktopAttributeCommand(ConfigCommand):
             container.set_read_only(is_read_only=True)
         except Exception as ex:
             container.add_error('after apply config', ex)
+
+
+WRITE_CONFIG_COMMANDS: Iterable[ConfigCommand] = [
+    IconCommand(),
+    DesktopAttributeCommand()
+]
+
+
+class ConfigCreator:
+    def __init__(self, writer: DesktopFileWriter = DesktopFileWriter(),
+                 commands: Iterable[ConfigCommand] = WRITE_CONFIG_COMMANDS) -> None:
+        self.writer = writer
+        self.commands = commands
+
+    def execute_commands(self, container: ConfiguredContainer, func_name: str) -> ConfiguredContainer:
+        for command in self.commands:
+            function = getattr(command, func_name)
+            function(container)
+        return container
+
+    def write_config(self, container: ConfiguredContainer) -> ConfiguredContainer:
+        container = self.execute_commands(container, 'pre_command')
+        container = self.writer.write_config(container)
+        return self.execute_commands(container, 'post_command')

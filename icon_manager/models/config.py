@@ -1,4 +1,4 @@
-from typing import Iterable, Tuple
+from typing import Collection, Tuple
 
 from icon_manager.models.path import FolderModel, IconFile
 from icon_manager.models.rules import FilterRuleManager
@@ -6,9 +6,11 @@ from icon_manager.models.rules import FilterRuleManager
 
 class IconConfig:
     def __init__(self, icon_file: IconFile,
-                 managers: Iterable[FilterRuleManager],
+                 managers: Collection[FilterRuleManager],
+                 copy_icon: bool,
                  weight: int) -> None:
         self.icon_file = icon_file
+        self.copy_icon = copy_icon
         self.managers = managers
         self.order_weight = weight
 
@@ -17,6 +19,8 @@ class IconConfig:
         return (weight, self.icon_file.name_wo_extension)
 
     def is_empty(self) -> bool:
+        if len(self.managers) == 0:
+            return True
         return all(manager.is_empty() for manager in self.managers)
 
     def is_config_for(self, folder: FolderModel) -> bool:

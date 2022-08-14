@@ -18,5 +18,6 @@
         "%OneDriveConsumer%\\Develop",
         "%OneDriveConsumer%\\Software"
     ],
-    "icons_path": "%OneDriveConsumer%\\Bilder\\Icons"
+    "icons_path": "%OneDriveConsumer%\\Bilder\\Icons",
+    "copy_icon": true
 }

@@ -1,4 +1,4 @@
-from typing import (Any, Collection, Dict, Generic, Iterable, Protocol, Type,
+from typing import (Any, Collection, Dict, Generic, Iterable, List, Protocol, Type,
                     TypeVar)
 
 from icon_manager.models.config import IconConfig
@@ -128,20 +128,23 @@ class RuleManagerFactory(Factory[FilterRuleManager]):
 
 class ConfigFactory(Factory[IconConfig]):
 
-    def __init__(self, rule_mapping: Dict[str, Type[FilterRule]]) -> None:
+    def __init__(self, rule_mapping: Dict[str, Type[FilterRule]], copy_icon: bool) -> None:
         self.manager_factory = RuleManagerFactory(rule_mapping)
+        self.copy_icon = copy_icon
 
     def create(self, config: Dict[str, Any], **kwargs) -> IconConfig:
         icon_file = kwargs.get('icon_file', None)
         if icon_file is None:
-            raise ValueError('icon attribute does NOT exist')
+            raise ValueError('Attribute "icon_file" attribute does NOT exist')
         config = config.get('config', None)
         if config is None:
             raise ValueError('Icon config does NOT exists')
         order = config.pop('order', 5)
-        managers = []
+        managers: List[FilterRuleManager] = []
         for attribute, rules_dict in config.items():
             manager = self.manager_factory.create(config=rules_dict,
                                                   attribute=attribute)
+            if manager.is_empty():
+                continue
             managers.append(manager)
-        return IconConfig(icon_file, managers, order)
+        return IconConfig(icon_file, managers, self. copy_icon, order)

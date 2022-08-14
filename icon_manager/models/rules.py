@@ -78,6 +78,15 @@ class EqualsRule(FolderRule):
         return all(value == attribute_value for value in self.rule_values)
 
 
+class NotEqualsRule(FolderRule):
+
+    def are_any_values_allowed(self, attribute_value: str) -> bool:
+        return any(value != attribute_value for value in self.rule_values)
+
+    def are_all_values_allowed(self, attribute_value: str) -> bool:
+        return all(value != attribute_value for value in self.rule_values)
+
+
 class ContainsRule(FolderRule):
 
     def are_any_values_allowed(self, attribute_value: str) -> bool:

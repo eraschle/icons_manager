@@ -14,7 +14,7 @@ class ProjectsController:
         self.total_paths: List[str] = []
 
     def is_project_folder(self, folder_names: Iterable[str]) -> bool:
-        return SearchController.is_code_project_folder(folder_names)
+        return SearchController.is_project_folder(folder_names)
 
     def is_known_code_project(self, path: str) -> bool:
         return any(path.startswith(project) for project in self.projects)
@@ -32,7 +32,7 @@ class ProjectsController:
 
     def collect_projects_in_path(self, current_path: str):
         folder_names = self.get_folders(current_path)
-        if SearchController.is_code_project_folder(folder_names):
+        if SearchController.is_project_folder(folder_names):
             self.projects.add(current_path)
             return
         for name in folder_names:
