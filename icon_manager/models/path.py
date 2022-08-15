@@ -90,6 +90,9 @@ class FolderModel(PathModel, ABC):
     def create(self):
         os.makedirs(self.path, exist_ok=True)
 
+    def __str__(self) -> str:
+        return f'Folder: {self.name}'
+
 
 class LocalIconFolder(FolderModel):
 
@@ -98,9 +101,6 @@ class LocalIconFolder(FolderModel):
     @ classmethod
     def is_model(cls, path: str) -> bool:
         return path.endswith(cls.folder_name)
-
-    def __str__(self) -> str:
-        return f'ICON: {self.name}'
 
 
 class FileModel(PathModel, ABC):
@@ -119,7 +119,7 @@ class FileModel(PathModel, ABC):
         return self.name.replace(extension, '')
 
     def __str__(self) -> str:
-        return f'{self.__class__.__name__}: {self.name}'
+        return f'File: {self.name_wo_extension}'
 
     def __repr__(self) -> str:
         return f'{self.__str__()} [{self.__class__.extension()}]'

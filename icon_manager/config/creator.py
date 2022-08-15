@@ -1,22 +1,22 @@
 from typing import Iterable, Protocol
 
 from icon_manager.data.ini_writer import DesktopFileWriter
-from icon_manager.models.container import ConfiguredContainer
+from icon_manager.models.container import IconContainer
 
 
 class ConfigCommand(Protocol):
 
-    def pre_command(self, container: ConfiguredContainer):
+    def pre_command(self, container: IconContainer):
         pass
 
-    def post_command(self, container: ConfiguredContainer):
+    def post_command(self, container: IconContainer):
         pass
 
 
 class IconCommand(ConfigCommand):
 
-    def pre_command(self, container: ConfiguredContainer):
-        if not container.copy_icon:
+    def pre_command(self, container: IconContainer):
+        if not container.config.copy_icon:
             return
         try:
             copied_icon = container.copy_icon_to_local_folder()
@@ -24,8 +24,8 @@ class IconCommand(ConfigCommand):
         except Exception as ex:
             container.add_error('copy icon to local', ex)
 
-    def post_command(self, container: ConfiguredContainer):
-        if not container.copy_icon:
+    def post_command(self, container: IconContainer):
+        if not container.config.copy_icon:
             return
         try:
             local_folder = container.local_icon_folder()
@@ -39,7 +39,7 @@ class IconCommand(ConfigCommand):
 
 class DesktopAttributeCommand(ConfigCommand):
 
-    def pre_command(self, container: ConfiguredContainer):
+    def pre_command(self, container: IconContainer):
         if not container.ini_file.exists():
             return
         try:
@@ -47,7 +47,7 @@ class DesktopAttributeCommand(ConfigCommand):
         except Exception as ex:
             container.add_error('before apply config', ex)
 
-    def post_command(self, container: ConfiguredContainer):
+    def post_command(self, container: IconContainer):
         if not container.ini_file.exists():
             return
         try:
@@ -69,13 +69,13 @@ class ConfigCreator:
         self.writer = writer
         self.commands = commands
 
-    def execute_commands(self, container: ConfiguredContainer, func_name: str) -> ConfiguredContainer:
+    def execute_commands(self, container: IconContainer, func_name: str) -> IconContainer:
         for command in self.commands:
             function = getattr(command, func_name)
             function(container)
         return container
 
-    def write_config(self, container: ConfiguredContainer) -> ConfiguredContainer:
+    def write_config(self, container: IconContainer) -> IconContainer:
         container = self.execute_commands(container, 'pre_command')
         container = self.writer.write_config(container)
         return self.execute_commands(container, 'post_command')

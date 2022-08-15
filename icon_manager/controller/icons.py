@@ -1,19 +1,19 @@
 from typing import Iterable, List, Optional, Tuple
 
 from icon_manager.config.config import AppConfig
-from icon_manager.controller.base import BaseController
+from icon_manager.controller.base import FileBaseController
 from icon_manager.data.json_source import JsonSource
 from icon_manager.models.config import IconConfig
-from icon_manager.models.path import FolderModel, IconFile, JsonFile
+from icon_manager.models.path import IconFile, JsonFile
 from icon_manager.services.factories import ConfigFactory
 from icon_manager.tasks.find_folders import File, FindOptions, Folder
 from icon_manager.utils.resources import icon_config_template_file
 
 
-class IconsController(BaseController[IconFile, FolderModel]):
+class IconsController(FileBaseController[IconFile]):
 
     def __init__(self, config: AppConfig) -> None:
-        super().__init__(config.icons_path(), file_type=IconFile)
+        super().__init__(config.icons_path(), IconFile)
         self.config_factory = ConfigFactory(config.rule_mapping(),
                                             config.copy_icon_to_folder())
         self.icon_configs: Iterable[IconConfig] = []
@@ -28,12 +28,12 @@ class IconsController(BaseController[IconFile, FolderModel]):
         options.add_folder_excluded(self.check_folder_excluded)
         return options
 
-    def get_files(self, folders: Iterable[Folder], files: Iterable[File]) -> Iterable[IconFile]:
+    def create_files(self, folders: Iterable[Folder], files: Iterable[File]) -> Iterable[IconFile]:
         for file in files:
             if not JsonFile.is_model(file.full_path):
                 continue
             self.config_files.append(JsonFile(file.full_path))
-        return super().get_files(folders, files)
+        return super().create_files(folders, files)
 
     def get_config_path(self, icon: IconFile) -> JsonFile:
         file_path = icon.path
@@ -43,7 +43,7 @@ class IconsController(BaseController[IconFile, FolderModel]):
 
     def create_icon_config_files(self, overwrite: bool):
         template = icon_config_template_file()
-        for icon_file in self.files():
+        for icon_file in self.get_files():
             icon_config = self.get_config_path(icon_file)
             if not overwrite and icon_config.exists():
                 continue
@@ -78,7 +78,7 @@ class IconsController(BaseController[IconFile, FolderModel]):
         return config_files
 
     def icon_and_config_files(self) -> Iterable[Tuple[IconFile, JsonFile]]:
-        return zip(self.files(), self.get_config_files())
+        return zip(self.get_files(), self.get_config_files())
 
     def create_icon_config(self) -> None:
         configs = []
@@ -91,10 +91,3 @@ class IconsController(BaseController[IconFile, FolderModel]):
                 continue
             configs.append(icon_config)
         self.icon_configs = sorted(configs, key=lambda cnf: cnf.order_key())
-
-    def icon_config_for(self, folder: FolderModel) -> Optional[IconConfig]:
-        for config in self.icon_configs:
-            if not config.is_config_for(folder):
-                continue
-            return config
-        return None

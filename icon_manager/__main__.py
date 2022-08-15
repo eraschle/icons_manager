@@ -59,7 +59,8 @@ def main():
 
     if namespace.add_icons:
         service.read_config()
-        service.collect_folder_to_add_icons()
+        overwrite = namespace.overwrite
+        service.collect_folder_to_add_icons(overwrite)
         creator = ConfigCreator()
         with_error = service.add_icons_to_folders(creator)
         for folder in with_error:

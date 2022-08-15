@@ -1,11 +1,11 @@
 from typing import Iterable
 
-from icon_manager.models.container import ConfiguredContainer
+from icon_manager.models.container import IconContainer
 
 
 class DesktopFileWriter:
 
-    def get_ini_lines(self, container: ConfiguredContainer) -> Iterable[str]:
+    def get_ini_lines(self, container: IconContainer) -> Iterable[str]:
         icon_path = container.config_icon_path()
         return [
             '[.ShellClassInfo]',
@@ -16,18 +16,18 @@ class DesktopFileWriter:
             'FolderType=Generic'
         ]
 
-    def get_ini_content(self, container: ConfiguredContainer) -> str:
+    def get_ini_content(self, container: IconContainer) -> str:
         content_lines = self.get_ini_lines(container)
         return '\n'.join(content_lines)
 
-    def write_file(self, container: ConfiguredContainer) -> None:
+    def write_file(self, container: IconContainer) -> None:
         ini_path = container.ini_file
         with open(ini_path.path, 'w') as file:
             content = self.get_ini_content(container)
             file.write(content)
             file.close()
 
-    def write_config(self, container: ConfiguredContainer) -> ConfiguredContainer:
+    def write_config(self, container: IconContainer) -> IconContainer:
         try:
             self.write_file(container)
         except Exception as ex:

@@ -201,7 +201,8 @@ class FindPathTask:
         folders = self.get_valid_folders(full_path)
         files = self.get_valid_files(full_path)
         self.__fire_on_found(folders, files)
-        folder_names = self.options.get_not_excluded_folder_names(full_path)
+        folder_names = get_folders(full_path)
+        folder_names = self.options.get_not_excluded_folder_names(folder_names)
         for folder_path in get_paths(full_path, folder_names):
             sub_folders, sub_files = self.walk_tree(folder_path)
             folders.extend(sub_folders)
@@ -214,8 +215,8 @@ class FindPathTask:
         if self.options.is_folder_path_valid(self.root):
             name = os.path.basename(self.root)
             folder = Folder(full_path=self.root, name=name)
-            self.__fire_on_found(folders, files)
             folders.append(folder)
+            self.__fire_on_found(folders, files)
         sub_folders, sub_files = self.walk_tree(self.root)
         folders.extend(sub_folders)
         files.extend(sub_files)

@@ -63,17 +63,11 @@ class FolderConfig(Config):
         self.exclude_folder_names = exclude_folder_names
         self.folder_paths = folder_paths
 
-    def get_folder_paths(self) -> Collection[str]:
+    def get_search_folder_paths(self) -> Collection[str]:
         containers = []
         for folder_path in self.folder_paths:
             folder_path = self.__class__.get_folder_path(folder_path)
             containers.append(folder_path)
-        return containers
-
-    def get_folder_containers(self) -> Collection[FolderContainer]:
-        containers = []
-        for folder_path in self.get_folder_paths():
-            containers.append(FolderContainer(folder_path))
         return containers
 
 
@@ -108,8 +102,8 @@ class AppConfig(Config):
     def icons_path(self) -> str:
         return self.folders.icons_path
 
-    def folder_containers(self) -> Collection[FolderContainer]:
-        return self.folders.get_folder_containers()
+    def search_folder_paths(self) -> Collection[str]:
+        return self.folders.get_search_folder_paths()
 
     def rule_mapping(self) -> Dict[str, Type[FilterRule]]:
         return RULE_MAP
