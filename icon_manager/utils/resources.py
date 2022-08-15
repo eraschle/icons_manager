@@ -10,10 +10,6 @@ def __resources_path(file_name: str) -> str:
     return os.path.join(*paths)
 
 
-def icons_config_path() -> str:
-    return __resources_path('icons_config.json')
-
-
 def icon_config_template_path() -> str:
     return __resources_path('icon_config_template.json')
 

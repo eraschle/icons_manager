@@ -214,8 +214,8 @@ class FindPathTask:
         files: List[File] = []
         if self.options.is_folder_path_valid(self.root):
             name = os.path.basename(self.root)
-            folder = Folder(full_path=self.root, name=name)
-            folders.append(folder)
+            folders.append(Folder(full_path=self.root, name=name))
+            files = self.get_valid_files(self.root)
             self.__fire_on_found(folders, files)
         sub_folders, sub_files = self.walk_tree(self.root)
         folders.extend(sub_folders)

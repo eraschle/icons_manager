@@ -33,9 +33,10 @@ class BaseController(ABC):
         self.__searched_for_files_and_folders = True
 
 
-class AFileBaseController(BaseController, Generic[TFile]):
-    def __init__(self, file_type: Type[TFile]) -> None:
+class FileBaseController(BaseController, Generic[TFile]):
+    def __init__(self, full_path: str, file_type: Type[TFile]) -> None:
         super().__init__()
+        self.full_path = full_path
         self.file_type = file_type
         self.files: List[TFile] = []
 
@@ -49,27 +50,15 @@ class AFileBaseController(BaseController, Generic[TFile]):
     def create_files(self, _: Iterable[Folder], files: Iterable[File]) -> Iterable[TFile]:
         return [self.file_type(file.full_path) for file in files if self.file_type.is_model(file.full_path)]
 
-    @abstractmethod
     def get_files(self, search_again: bool = False) -> Iterable[TFile]:
-        ...
-
-
-class FileBaseController(AFileBaseController[TFile]):
-    def __init__(self, full_path: str, file_type: Type[TFile]) -> None:
-        super().__init__(file_type)
-        self.full_path = full_path
-
-    def search_for_files(self, search_again: bool = False) -> None:
         self.search_for_folders_and_files(self.full_path, search_again)
-
-    def get_files(self, search_again: bool = False) -> Iterable[TFile]:
-        self.search_for_files(search_again)
         return self.files
 
 
-class AFolderBaseController(BaseController, Generic[TFolder]):
-    def __init__(self, folder_type: Type[TFolder]) -> None:
+class FolderBaseController(BaseController, Generic[TFolder]):
+    def __init__(self, full_path: str, folder_type: Type[TFolder]) -> None:
         super().__init__()
+        self.full_path = full_path
         self.folder_type = folder_type
         self.folders: List[TFolder] = []
 
@@ -84,22 +73,6 @@ class AFolderBaseController(BaseController, Generic[TFolder]):
     def create_folders(self, folders: Iterable[Folder], _: Iterable[File]) -> Iterable[TFolder]:
         return [self.folder_type(folder.full_path) for folder in folders if self.folder_type.is_model(folder.full_path)]
 
-    @abstractmethod
     def get_folders(self, search_again: bool = False) -> Iterable[TFolder]:
-        ...
-
-
-class FolderBaseController(AFolderBaseController[TFolder]):
-    def __init__(self, full_path: str, folder_type: Type[TFolder]) -> None:
-        super().__init__(folder_type)
-        self.full_path = full_path
-
-    def search_for_folders(self, search_again: bool = False) -> None:
         self.search_for_folders_and_files(self.full_path, search_again)
-
-    def get_folders(self, search_again: bool = False) -> Iterable[TFolder]:
-        self.search_for_folders(search_again)
         return self.folders
-
-    def get_folders(self, folders: Iterable[Folder], _: Iterable[File]) -> Iterable[TFolder]:
-        return [self.folder_type(folder.full_path) for folder in folders if self.file_type.is_model(folder.full_path)]

@@ -1,8 +1,8 @@
 from typing import Iterable, List, Optional
 
 from icon_manager.controller.base import BaseController
+from icon_manager.handler.icon_config import IconFolderHandler
 from icon_manager.models.config import IconConfig
-from icon_manager.models.container import IconContainer
 from icon_manager.models.path import (DesktopIniFile, FolderModel,
                                       LocalIconFolder)
 from icon_manager.tasks.find_folders import File, FindOptions, Folder
@@ -14,7 +14,7 @@ class IconFolderController(BaseController):
     def __init__(self) -> None:
         super().__init__()
         self.icon_configs: Iterable[IconConfig] = []
-        self.icon_folders: List[IconContainer] = []
+        self.icon_folders: List[IconFolderHandler] = []
 
     def get_find_options(self) -> FindOptions:
         options = FindOptions(add_default=True,
@@ -38,17 +38,17 @@ class IconFolderController(BaseController):
         for folder in folder_models:
             if not self.overwrite and self.config_exists_already(folder):
                 continue
-            icon_folder = self.get_icon_folder(folder)
+            icon_folder = self.get_icon_config_for(folder)
             if icon_folder is None:
                 continue
             print(f'Added {folder.name} >> {icon_folder.icon_file.name}')
             self.icon_folders.append(icon_folder)
 
-    def get_icon_folder(self, folder: FolderModel) -> Optional[IconContainer]:
+    def get_icon_config_for(self, folder: FolderModel) -> Optional[IconFolderHandler]:
         config = self.icon_config_for(folder)
         if config is None:
             return None
-        return IconContainer(folder, config)
+        return IconFolderHandler(folder, config)
 
     def icon_config_for(self, folder: FolderModel) -> Optional[IconConfig]:
         for config in self.icon_configs:

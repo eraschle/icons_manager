@@ -1,5 +1,5 @@
-from typing import (Any, Collection, Dict, Generic, Iterable, List, Protocol, Type,
-                    TypeVar)
+from typing import (Any, Collection, Dict, Generic, Iterable, List, Protocol,
+                    Type, TypeVar)
 
 from icon_manager.models.config import IconConfig
 from icon_manager.models.rules import (ChainedRules, FilterRule,
@@ -120,9 +120,8 @@ class RuleManagerFactory(Factory[FilterRuleManager]):
         if attribute is None:
             raise ValueError('No attribute argument found')
         self.attribute = attribute
-        manager_config: Dict[str, Any] = config.get(attribute, {})
-        operator = pop_operator(manager_config)
-        rules = self.rule_factory.create(manager_config, **kwargs)
+        operator = get_operator(config)
+        rules = self.rule_factory.create(config, **kwargs)
         return FilterRuleManager(attribute, rules, operator)
 
 

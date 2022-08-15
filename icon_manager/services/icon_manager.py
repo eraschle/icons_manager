@@ -1,11 +1,11 @@
 from typing import Iterable
 
 from icon_manager.config.config import AppConfig
-from icon_manager.config.creator import ConfigCreator
 from icon_manager.controller.config import LocalConfigController
 from icon_manager.controller.folder import IconFolderController
 from icon_manager.controller.icons import IconsController
-from icon_manager.models.container import IconContainer
+from icon_manager.handler.desktop_ini import DesktopIniHandler
+from icon_manager.handler.icon_config import IconFolderHandler
 
 
 class IconFolderService:
@@ -30,7 +30,7 @@ class IconFolderService:
                                                    overwrite)
             # print(f'Collected "{amount}" in {folder_path.path}')
 
-    def add_icons_to_folders(self, creator: ConfigCreator) -> Iterable[IconContainer]:
+    def add_icons_to_folders(self, creator: DesktopIniHandler) -> Iterable[IconFolderHandler]:
         errors = []
         for icon_folder in self.folders_ctrl.icon_folders:
             icon_folder = creator.write_config(icon_folder)

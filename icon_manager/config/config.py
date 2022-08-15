@@ -3,7 +3,8 @@ import re
 from typing import Any, Collection, Dict, Iterable, Protocol, Type
 
 from icon_manager.controller.search import SearchController
-from icon_manager.data.json_source import JsonSource
+from icon_manager.source.json_source import JsonSource
+from icon_manager.models.path import JsonFile
 from icon_manager.models.rules import (ChainedRules, ContainsRule,
                                        EndswithRule, EqualsRule, FilterRule,
                                        NotContainsRule, NotEqualsRule,
@@ -36,9 +37,9 @@ class FolderConfig(Config):
             return folder_path
         return folder_path.replace(match_value, env_value)
 
-    def __init__(self, file_path: str) -> None:
+    def __init__(self, config_file: JsonFile) -> None:
         super().__init__()
-        self.file_path = file_path
+        self.config_file = config_file
         self.config: Dict[str, Any] = {}
         self.icons_path: str = ''
         self.code_project_names: Iterable[str] = []
@@ -46,7 +47,7 @@ class FolderConfig(Config):
         self.folder_paths: Iterable[str] = []
 
     def read_config(self, reader: JsonSource):
-        self.config = reader.read(self.file_path)
+        self.config = reader.read(self.config_file)
 
     def validate(self):
         icons_path = self.config.pop('icons_path', None)
@@ -85,8 +86,8 @@ RULE_MAP: Dict[str, Type[FilterRule]] = {
 
 class AppConfig(Config):
 
-    def __init__(self, file_path: str) -> None:
-        self.folders = FolderConfig(file_path)
+    def __init__(self, config_file: JsonFile) -> None:
+        self.folders = FolderConfig(config_file)
 
     def read_config(self, reader: JsonSource):
         self.folders.read_config(reader)

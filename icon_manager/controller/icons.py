@@ -2,7 +2,7 @@ from typing import Iterable, List, Optional, Tuple
 
 from icon_manager.config.config import AppConfig
 from icon_manager.controller.base import FileBaseController
-from icon_manager.data.json_source import JsonSource
+from icon_manager.source.json_source import JsonSource
 from icon_manager.models.config import IconConfig
 from icon_manager.models.path import IconFile, JsonFile
 from icon_manager.services.factories import ConfigFactory
@@ -52,14 +52,14 @@ class IconsController(FileBaseController[IconFile]):
     def update_icon_config_files(self):
         source = JsonSource()
         template = icon_config_template_file()
-        template_config = source.read(template.path)
+        template_config = source.read(template)
         for config_file in self.get_config_files():
-            config = source.read(config_file.path)
+            config = source.read(config_file)
             for section, values in template_config.items():
                 if section == 'config':
                     continue
                 config[section] = values
-            source.write(config_file.path, config)
+            source.write(config_file, config)
 
     def config_by_name(self, icon_file: IconFile) -> Optional[JsonFile]:
         for config_file in self.config_files:
@@ -84,7 +84,7 @@ class IconsController(FileBaseController[IconFile]):
         configs = []
         json_reader = JsonSource()
         for icon_file, config_file in self.icon_and_config_files():
-            config_dict = json_reader.read(config_file.path)
+            config_dict = json_reader.read(config_file)
             icon_config = self.config_factory.create(config_dict,
                                                      icon_file=icon_file)
             if icon_config.is_empty():

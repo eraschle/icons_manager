@@ -1,8 +1,9 @@
 import argparse
 
 from icon_manager.config.config import AppConfig
-from icon_manager.config.creator import ConfigCreator
-from icon_manager.data.json_source import JsonSource
+from icon_manager.source.json_source import JsonSource
+from icon_manager.handler.desktop_ini import DesktopIniHandler
+from icon_manager.models.path import JsonFile
 from icon_manager.services.icon_manager import IconFolderService
 from icon_manager.utils.resources import folder_config_path
 
@@ -33,7 +34,8 @@ def get_namespace_from_args() -> argparse.Namespace:
 
 
 def get_config(namespace: argparse.Namespace) -> AppConfig:
-    manager = AppConfig(get_folder_file(namespace))
+    config_file = JsonFile(get_folder_file(namespace))
+    manager = AppConfig(config_file)
     manager.read_config(JsonSource())
     manager.validate()
     return manager
@@ -61,7 +63,7 @@ def main():
         service.read_config()
         overwrite = namespace.overwrite
         service.collect_folder_to_add_icons(overwrite)
-        creator = ConfigCreator()
+        creator = DesktopIniHandler()
         with_error = service.add_icons_to_folders(creator)
         for folder in with_error:
             print(folder.error_message())
