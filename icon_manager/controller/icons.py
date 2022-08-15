@@ -4,11 +4,11 @@ from typing import Iterable, List, Optional, Tuple
 from icon_manager.config.config import AppConfig
 from icon_manager.controller.base import FileBaseController
 from icon_manager.data.json_source import JsonSource
+from icon_manager.helpers.resource import icon_config_template
 from icon_manager.managers.find import File, FindOptions, Folder
 from icon_manager.models.config import IconConfig
 from icon_manager.models.path import IconFile, JsonFile
 from icon_manager.services.factories import ConfigFactory
-from icon_manager.resources.resource import icon_config_template
 
 log = logging.getLogger(__name__)
 

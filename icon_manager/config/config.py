@@ -1,6 +1,7 @@
+from ast import List
 import os
 import re
-from typing import Any, Collection, Dict, Iterable, Protocol, Type
+from typing import Any, Collection, Dict, Iterable, Optional, Protocol, Type
 
 from icon_manager.controller.search import SearchController
 from icon_manager.data.json_source import JsonSource
@@ -19,6 +20,11 @@ class Config(Protocol):
 
     def validate(self):
         ...
+
+
+USER_CONFIG_SECTION = 'app'
+USER_CONFIG_FILE_PATH = 'file_path'
+APP_CONFIG_SECTION = 'config'
 
 
 class FolderConfig(Config):
@@ -50,22 +56,30 @@ class FolderConfig(Config):
     def read_config(self, reader: JsonSource):
         config = reader.read(self.config_file)
         # remove the template part of the config file
+        self.app_config = dict(config)
         self.config = config.get('config', {})
 
     def validate(self):
-        icons_path = self.config.pop('icons_path', None)
+        icons_path = self.config.get('icons_path', None)
         if icons_path is None:
             raise ValueError('Icon path could not be found')
         self.icons_path = self.__class__.get_folder_path(icons_path)
         self.copy_icon = self.config.get('copy_icon', False)
-        code_project_names = self.config.pop('code_project_names', [])
-        exclude_folder_names = self.config.pop('exclude_folder_names', [])
-        folder_paths = self.config.pop('folder_paths', None)
+        code_project_names = self.config.get('code_project_names', [])
+        exclude_folder_names = self.config.get('exclude_folder_names', [])
+        folder_paths = self.config.get('folder_paths', None)
         if folder_paths is None:
             raise ValueError('No directories specified to set the icons')
+        self.user_config_path = self.get_user_config_path()
         self.code_project_names = code_project_names
         self.exclude_folder_names = exclude_folder_names
         self.folder_paths = folder_paths
+
+    def get_user_config_path(self) -> Optional[str]:
+        user_config = self.app_config.get(USER_CONFIG_SECTION, None)
+        if user_config is None:
+            return None
+        return user_config.get(USER_CONFIG_FILE_PATH, None)
 
     def get_search_folder_paths(self) -> Collection[str]:
         containers = []
@@ -109,6 +123,41 @@ class AppConfig(Config):
 
     def search_folder_paths(self) -> Collection[str]:
         return self.folders.get_search_folder_paths()
+
+    def get_user_app_config_path(self) -> Optional[str]:
+        return self.folders.user_config_path
+
+    def get_user_app_config_file(self) -> Optional[JsonFile]:
+        config_path = self.get_user_app_config_path()
+        if config_path is None:
+            return None
+        return JsonFile(config_path)
+
+    def __set_user_config_path(self, config_file: JsonFile):
+        config = dict(self.folders.app_config)
+        if USER_CONFIG_SECTION not in config:
+            config[USER_CONFIG_SECTION] = {}
+        if USER_CONFIG_FILE_PATH not in config[USER_CONFIG_SECTION]:
+            config[USER_CONFIG_SECTION][USER_CONFIG_FILE_PATH] = ''
+        config[USER_CONFIG_SECTION][USER_CONFIG_FILE_PATH] = config_file.path
+        return config
+
+    def get_app_config_with_user(self, config_file: JsonFile) -> Dict[str, Any]:
+        return self.__set_user_config_path(config_file)
+
+    def get_user_config_template(self, develop: bool) -> Dict[str, Any]:
+        config = dict(self.folders.app_config)
+        config.pop(USER_CONFIG_SECTION, None)
+        if develop:
+            return config
+        for section, values in config.get(APP_CONFIG_SECTION, {}).items():
+            if isinstance(values, List):
+                config[APP_CONFIG_SECTION][section] = []
+            elif isinstance(values, str):
+                config[APP_CONFIG_SECTION][section] = ''
+            elif isinstance(values, bool):
+                config[APP_CONFIG_SECTION][section] = False
+        return config
 
     def rule_mapping(self) -> Dict[str, Type[FilterRule]]:
         return RULE_MAP

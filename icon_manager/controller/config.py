@@ -2,37 +2,51 @@ import logging
 import os
 from typing import Iterable, List, Optional, Tuple
 
+from icon_manager.config.config import AppConfig
 from icon_manager.controller.base import FileBaseController
 from icon_manager.data.json_source import JsonSource
+from icon_manager.helpers.resource import app_config_and_template
 from icon_manager.managers.desktop import DesktopFileManager
 from icon_manager.managers.find import File, FindOptions, Folder
 from icon_manager.models.path import (DesktopIniFile, FileModel, FolderModel,
                                       JsonFile, LocalIconFolder)
-from icon_manager.resources.resource import folder_config_template
 
 log = logging.getLogger(__name__)
 
 
 class AppConfigController(FileBaseController[JsonFile]):
 
-    def __init__(self, full_path: str) -> None:
-        super().__init__(full_path, JsonFile)
+    config_file_name = 'config.json'
 
-    def export_app_config(self) -> None:
-        source = JsonSource()
-        config_file = folder_config_template()
-        config = 'config'
-        template_config = source.read(config_file)
-        for section, values in template_config.get(config, {}).items():
-            if isinstance(values, List):
-                template_config[config][section] = []
-            elif isinstance(values, str):
-                template_config[config][section] = ''
-            elif isinstance(values, bool):
-                template_config[config][section] = False
-        file_path = os.path.join(self.full_path, config_file.name)
-        export_file = JsonFile(file_path)
-        source.write(export_file, template_config)
+    def __init__(self, full_path: str, config: AppConfig) -> None:
+        super().__init__(full_path, JsonFile)
+        self.config = config
+        self.source = JsonSource()
+
+    def get_or_create_user_config_file(self) -> JsonFile:
+        path = self.full_path
+        name = AppConfigController.config_file_name
+        if self.full_path.endswith(JsonFile.extension()):
+            name = os.path.basename(self.full_path)
+            path = os.path.dirname(self.full_path)
+            folder = FolderModel(path)
+            if not folder.exists():
+                folder.create()
+        file_path = os.path.join(path, name)
+        return JsonFile(file_path)
+
+    def get_or_create_user_config(self) -> JsonFile:
+        app_file = app_config_and_template()
+        user_file = self.config.get_user_app_config_file()
+        if user_file is None:
+            user_file = self.get_or_create_user_config_file()
+            config = self.config.get_app_config_with_user(user_file)
+            self.source.write(app_file, config)
+        return user_file
+
+    def export_user_app_config(self, config_file: JsonFile, develop: bool) -> None:
+        user_config = self.config.get_user_config_template(develop)
+        self.source.write(config_file, user_config)
 
 
 class LocalConfigController(FileBaseController[DesktopIniFile]):

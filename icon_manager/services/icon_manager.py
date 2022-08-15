@@ -1,16 +1,22 @@
 import logging
+from typing import Optional
 
 from icon_manager.config.config import AppConfig
 from icon_manager.controller.config import (AppConfigController,
                                             LocalConfigController)
 from icon_manager.controller.folder import IconFolderController
 from icon_manager.controller.icons import IconsController
+from icon_manager.data.json_source import JsonSource
+from icon_manager.helpers.resource import app_config_and_template
+from icon_manager.helpers.string import HUNDRED, fixed_length
 from icon_manager.managers.desktop import DesktopFileManager
+from icon_manager.models.path import JsonFile
 
 log = logging.getLogger(__name__)
 
 
 class IconFolderService:
+
     def __init__(self, config: AppConfig,
                  manager: DesktopFileManager = DesktopFileManager()) -> None:
         self.config = config
@@ -25,7 +31,9 @@ class IconFolderService:
         for path in self.config.folders.get_search_folder_paths():
             controller = LocalConfigController(path)
             folders, files = controller.delete_existing_configs(self.manager)
-            message = f'Deleted Files [{len(files)}] / Folders [{len(folders)}] in {controller.full_path}'
+            files_count = fixed_length(str(len(files)), HUNDRED)
+            folders_count = fixed_length(str(len(folders)), HUNDRED)
+            message = f'Deleted Files: "{files_count}" Folders: "{folders_count}" in {controller.full_path}'
             log.info(message)
 
     def add_icons_to_folders(self, overwrite: bool):
@@ -34,6 +42,7 @@ class IconFolderService:
             start = len(self.folders_ctrl.icon_folders)
             self.folders_ctrl.add_icon_folders(folder_path, overwrite)
             amount = len(self.folders_ctrl.icon_folders) - start
+            amount = fixed_length(str(amount), HUNDRED)
             log.info(f'Added "{amount}" icons in {folder_path}')
 
     def create_icon_config_templates(self, overwrite: bool, update: bool) -> None:
@@ -42,6 +51,56 @@ class IconFolderService:
         else:
             self.icons_ctrl.create_icon_config_files(overwrite)
 
-    def export_app_config_template(self, export_path: str) -> None:
-        controller = AppConfigController(export_path)
-        controller.export_app_config()
+
+DEVELOP = True
+
+
+def ask_user_export_path() -> str:
+    return input("Enter path for loading config: ")
+
+
+def ask_user_config_not_exist(config: AppConfig) -> str:
+    message = "Saved config file path does not exists: Change y / n: "
+    answer = input(message)
+    if answer in ('y', 'Y', 'j', 'J'):
+        return ask_user_export_path()
+    path = config.get_user_app_config_path()
+    if path is None:
+        raise RuntimeError('Should not be possible')
+    return path
+
+
+def get_app_config(config_file: JsonFile) -> AppConfig:
+    config = AppConfig(config_file)
+    config.read_config(JsonSource())
+    config.validate()
+    return config
+
+
+def ask_user_about_export(config_file: Optional[JsonFile], config: AppConfig):
+    if config_file is None:
+        return ask_user_export_path()
+    return ask_user_config_not_exist(config)
+
+
+def export_user_config(config_path: str, config: AppConfig) -> JsonFile:
+    controller = AppConfigController(config_path, config)
+    config_file = controller.get_or_create_user_config()
+    controller.export_user_app_config(config_file, DEVELOP)
+    return config_file
+
+
+def get_user_config(config: AppConfig) -> AppConfig:
+    config_file = config.get_user_app_config_file()
+    if config_file is None or not config_file.exists():
+        config_path = ask_user_about_export(config_file, config)
+        config_file = export_user_config(config_path, config)
+    return get_app_config(config_file)
+
+
+def get_service() -> IconFolderService:
+    config_file = app_config_and_template()
+    app_config = get_app_config(config_file)
+    user_config = get_user_config(app_config)
+    service = IconFolderService(user_config)
+    return service

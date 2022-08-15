@@ -1,6 +1,6 @@
 from typing import Iterable, Union
 
-from icon_manager.utils.path import get_path_names
+from icon_manager.helpers.path import get_path_names
 
 
 def path_contains_names(values: Iterable[str], full_path: Union[str, Iterable[str]]) -> bool:

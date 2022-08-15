@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Callable, Iterable, List, Optional, Tuple
 
 from icon_manager.controller.search import SearchController
-from icon_manager.utils.path import get_files, get_folders, get_paths
+from icon_manager.helpers.path import get_files, get_folders, get_paths
 
 
 def duration_message(values: list, searched: str, start: datetime):
