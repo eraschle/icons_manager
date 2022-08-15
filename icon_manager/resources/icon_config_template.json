@@ -7,7 +7,8 @@
         "start_or_ends_with": "Does the attribute value start or ends with a rule value",
         "contains": "Does the attribute value contains in the rule values",
         "not_contains": "Does the attribute value NOT contains in the rule values",
-        "chained": "Does the attribute value NOT contains in the rule values"
+        "chained": "Does the attribute value NOT contains in the rule values",
+        "contains_files": "Does files with the EXTENSIONS (rule values) exists. ONLY ON PATH ATTRIBUTE."
     },
     "template": {
         "order": "Integer number to adjust order of config execution. The smaller the earlier it will be executed >> default 5",
@@ -31,7 +32,8 @@
                         "Values for the rule to check"
                     ],
                     "operator": "'any' or 'all' rule values must be TRUE >> default: any",
-                    "case_sensitive": "'true' or 'false' for rule >> default: false"
+                    "case_sensitive": "'true' or 'false' for rule >> default: false",
+                    "level": "'Only for contains_extension >> default: 1"
                 }
             ]
         }

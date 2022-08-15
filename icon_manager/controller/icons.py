@@ -1,13 +1,16 @@
+import logging
 from typing import Iterable, List, Optional, Tuple
 
 from icon_manager.config.config import AppConfig
 from icon_manager.controller.base import FileBaseController
-from icon_manager.source.json_source import JsonSource
 from icon_manager.models.config import IconConfig
 from icon_manager.models.path import IconFile, JsonFile
 from icon_manager.services.factories import ConfigFactory
+from icon_manager.source.json_source import JsonSource
 from icon_manager.tasks.find_folders import File, FindOptions, Folder
-from icon_manager.utils.resources import icon_config_template_file
+from icon_manager.utils.resources import icon_config_template
+
+log = logging.getLogger(__name__)
 
 
 class IconsController(FileBaseController[IconFile]):
@@ -42,24 +45,28 @@ class IconsController(FileBaseController[IconFile]):
         return JsonFile(file_path)
 
     def create_icon_config_files(self, overwrite: bool):
-        template = icon_config_template_file()
+        template = icon_config_template()
         for icon_file in self.get_files():
             icon_config = self.get_config_path(icon_file)
             if not overwrite and icon_config.exists():
                 continue
             template.copy_to(icon_config)
+            log.info(f'Exported config for {icon_file.name_wo_extension}')
 
     def update_icon_config_files(self):
         source = JsonSource()
-        template = icon_config_template_file()
+        template = icon_config_template()
         template_config = source.read(template)
         for config_file in self.get_config_files():
             config = source.read(config_file)
             for section, values in template_config.items():
                 if section == 'config':
                     continue
+                if config[section] == values:
+                    continue
                 config[section] = values
             source.write(config_file, config)
+            log.info(f'Updated config {config_file.name_wo_extension}')
 
     def config_by_name(self, icon_file: IconFile) -> Optional[JsonFile]:
         for config_file in self.config_files:

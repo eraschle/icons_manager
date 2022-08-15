@@ -1,61 +1,71 @@
-from typing import Iterable, Optional, Protocol
+import logging
+from typing import Iterable, Protocol
 
-from icon_manager.source.ini_source import DesktopFileSource
 from icon_manager.handler.icon_config import IconFolderHandler
 from icon_manager.models.path import DesktopIniFile
+from icon_manager.source.ini_source import DesktopFileSource
+
+log = logging.getLogger(__name__)
 
 
 class ConfigCommand(Protocol):
 
-    def pre_command(self, container: IconFolderHandler):
+    def pre_command(self, manager: IconFolderHandler):
         pass
 
-    def post_command(self, container: IconFolderHandler):
+    def post_command(self, manager: IconFolderHandler):
         pass
+
+
+def error_message(manager: IconFolderHandler, message: str) -> str:
+    return f'{manager.name} >> "{message}"'
 
 
 class IconCommand(ConfigCommand):
 
-    def pre_command(self, container: IconFolderHandler):
-        if not container.config.copy_icon:
+    def pre_command(self, manager: IconFolderHandler):
+        if not manager.config.copy_icon:
             return
         try:
-            copied_icon = container.copy_icon_to_local_folder()
-            container.config.icon_file = copied_icon
+            copied_icon = manager.copy_icon_to_local_folder()
+            manager.config.icon_file = copied_icon
         except Exception as ex:
-            container.add_error('copy icon to local', ex)
+            log.exception(error_message(manager, 'copy icon to local'), ex)
 
-    def post_command(self, container: IconFolderHandler):
-        if not container.config.copy_icon:
+    def post_command(self, manager: IconFolderHandler):
+        if not manager.config.copy_icon:
             return
         try:
-            local_folder = container.local_icon_folder()
+            local_folder = manager.local_icon_folder()
             local_folder.set_hidden(is_hidden=True)
+        except Exception as ex:
+            log.exception(error_message(manager, 'folder attribute'), ex)
             # local_folder.set_read_only(is_read_only=True)
-            local_icon = container.local_icon_file()
+        try:
+            local_icon = manager.local_icon_file()
             local_icon.set_hidden(is_hidden=True)
         except Exception as ex:
-            container.add_error('set attribute local icon container', ex)
+            log.exception(error_message(manager, 'file attribute'), ex)
 
 
 class DesktopAttributeCommand(ConfigCommand):
 
-    def pre_command(self, container: IconFolderHandler):
-        if not container.ini_file.exists():
+    def pre_command(self, manager: IconFolderHandler):
+        if not manager.ini_file.exists():
             return
         try:
-            container.ini_file.set_writeable_and_visible()
+            manager.ini_file.set_writeable_and_visible()
         except Exception as ex:
-            container.add_error('before apply config', ex)
+            log.exception(error_message(manager, 'before apply config'), ex)
 
-    def post_command(self, container: IconFolderHandler):
-        if not container.ini_file.exists():
+    def post_command(self, manager: IconFolderHandler):
+        if not manager.ini_file.exists():
             return
         try:
-            container.ini_file.set_protected_and_hidden()
-            container.set_read_only(is_read_only=True)
+            manager.ini_file.set_protected_and_hidden()
+            manager.set_read_only(is_read_only=True)
         except Exception as ex:
-            container.add_error('after apply config', ex)
+            log.exception(error_message(manager, 'after apply config'), ex)
 
 
 WRITE_CONFIG_COMMANDS: Iterable[ConfigCommand] = [
@@ -64,7 +74,7 @@ WRITE_CONFIG_COMMANDS: Iterable[ConfigCommand] = [
 ]
 
 
-class DesktopIniHandler:
+class DesktopIniManager:
 
     app_entry = 'IconManager=1'
 
@@ -73,43 +83,46 @@ class DesktopIniHandler:
         self.source = source
         self.commands = commands
 
-    def get_ini_lines(self, handler: IconFolderHandler) -> Iterable[str]:
-        icon_path = handler.config_icon_path()
+    def get_ini_lines(self, manager: IconFolderHandler) -> Iterable[str]:
+        icon_path = manager.config_icon_path()
         return [
             '[.ShellClassInfo]',
             f'IconResource={icon_path},0',
-            DesktopIniHandler.app_entry,
+            DesktopIniManager.app_entry,
             '[ViewState]',
             'Mode=',
             'Vid=',
             'FolderType=Generic'
         ]
 
-    def execute_commands(self, handler: IconFolderHandler, func_name: str) -> None:
+    def execute_commands(self, manager: IconFolderHandler, func_name: str) -> None:
         for command in self.commands:
             function = getattr(command, func_name)
-            function(handler)
+            function(manager)
 
-    def write_config(self, handler: IconFolderHandler) -> IconFolderHandler:
-        self.execute_commands(handler, 'pre_command')
+    def write_config(self, manager: IconFolderHandler) -> None:
+        self.execute_commands(manager, 'pre_command')
         try:
-            self.source.write(handler.ini_file,
-                              self.get_ini_lines(handler))
+            self.source.write(manager.ini_file,
+                              self.get_ini_lines(manager))
         except Exception as ex:
-            handler.add_error('Write file', ex)
-        self.execute_commands(handler, 'post_command')
-        return handler
+            log.exception(error_message(manager, 'Write desktop.ini'), ex)
+        self.execute_commands(manager, 'post_command')
 
-    def get_app_entry(self, file: DesktopIniFile) -> Optional[str]:
+    def can_write_config(self, ini_file: DesktopIniFile) -> bool:
+        if not ini_file.exists():
+            return True
+        return self.is_app_config_file(ini_file)
+
+    def can_delete_config(self, ini_file: DesktopIniFile) -> bool:
+        if not ini_file.exists():
+            return False
+        return self.is_app_config_file(ini_file)
+
+    def is_app_config_file(self, file: DesktopIniFile) -> bool:
         content_lines = self.source.read(file)
         for line in content_lines:
-            if DesktopIniHandler.app_entry not in line:
+            if DesktopIniManager.app_entry not in line:
                 continue
-            return line
-        return None
-
-    def is_app_desktop_file(self, file: DesktopIniFile) -> bool:
-        if not file.exists():
-            return False
-        app_entry = self.get_app_entry(file)
-        return app_entry is not None
+            return True
+        return False

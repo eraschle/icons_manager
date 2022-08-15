@@ -3,12 +3,13 @@ import re
 from typing import Any, Collection, Dict, Iterable, Protocol, Type
 
 from icon_manager.controller.search import SearchController
-from icon_manager.source.json_source import JsonSource
 from icon_manager.models.path import JsonFile
-from icon_manager.models.rules import (ChainedRules, ContainsRule,
-                                       EndswithRule, EqualsRule, FilterRule,
-                                       NotContainsRule, NotEqualsRule,
-                                       StartsOrEndswithRule, StartswithRule)
+from icon_manager.models.rules import (ChainedRules, ContainsExtensionRule,
+                                       ContainsRule, EndswithRule, EqualsRule,
+                                       FilterRule, NotContainsRule,
+                                       NotEqualsRule, StartsOrEndswithRule,
+                                       StartswithRule)
+from icon_manager.source.json_source import JsonSource
 
 
 class Config(Protocol):
@@ -47,7 +48,9 @@ class FolderConfig(Config):
         self.folder_paths: Iterable[str] = []
 
     def read_config(self, reader: JsonSource):
-        self.config = reader.read(self.config_file)
+        config = reader.read(self.config_file)
+        # remove the template part of the config file
+        self.config = config.get('config', {})
 
     def validate(self):
         icons_path = self.config.pop('icons_path', None)
@@ -80,7 +83,8 @@ RULE_MAP: Dict[str, Type[FilterRule]] = {
     "start_or_ends_with": StartsOrEndswithRule,
     'contains': ContainsRule,
     'not_contains': NotContainsRule,
-    'chained': ChainedRules
+    'chained': ChainedRules,
+    'contains_files': ContainsExtensionRule
 }
 
 

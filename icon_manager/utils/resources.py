@@ -14,9 +14,13 @@ def icon_config_template_path() -> str:
     return __resources_path('icon_config_template.json')
 
 
-def icon_config_template_file() -> JsonFile:
+def icon_config_template() -> JsonFile:
     return JsonFile(icon_config_template_path())
 
 
 def folder_config_path() -> str:
-    return __resources_path('folders_config.json')
+    return __resources_path('app_config.json')
+
+
+def folder_config_template() -> JsonFile:
+    return JsonFile(folder_config_path())

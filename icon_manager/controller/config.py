@@ -1,8 +1,13 @@
-from typing import Collection, Iterable, List, Optional
+import logging
+from typing import Iterable, List, Optional, Tuple
 
 from icon_manager.controller.base import FileBaseController
-from icon_manager.models.path import DesktopIniFile, LocalIconFolder, PathModel
+from icon_manager.handler.desktop_ini import DesktopIniManager
+from icon_manager.models.path import (DesktopIniFile, FileModel, FolderModel,
+                                      LocalIconFolder)
 from icon_manager.tasks.find_folders import File, FindOptions, Folder
+
+log = logging.getLogger(__name__)
 
 
 class LocalConfigController(FileBaseController[DesktopIniFile]):
@@ -38,28 +43,30 @@ class LocalConfigController(FileBaseController[DesktopIniFile]):
     def create_files(self, folders: Iterable[Folder], files: Iterable[File]) -> Iterable[DesktopIniFile]:
         return [self.get_file(folders, file) for file in files]
 
-    def delete_existing_configs(self) -> Collection[PathModel]:
-        removed: List[PathModel] = []
-        removed.extend(self.delete_existing_files())
-        removed.extend(self.delete_existing_folders())
-        return removed
+    def delete_existing_configs(self, manager: DesktopIniManager) -> Tuple[List[FolderModel], List[FileModel]]:
+        folders, files = self.delete_existing_files(manager)
+        folders.extend(self.delete_existing_folders())
+        return folders, files
 
-    def delete_existing_files(self) -> Iterable[PathModel]:
-        removed: List[PathModel] = []
+    def delete_existing_files(self, manager: DesktopIniManager) -> Tuple[List[FolderModel], List[FileModel]]:
+        folders: List[FolderModel] = []
+        files: List[FileModel] = []
         for file in self.get_files():
             folder = file.icon_folder
             if folder is not None:
                 folder.remove()
-                removed.append(folder)
+                folders.append(folder)
+            if not manager.can_delete_config(file):
+                log.warning(f'Can not delete "{file.path}"')
             file.remove()
-            removed.append(file)
-        return removed
+            files.append(file)
+        return folders, files
 
-    def delete_existing_folders(self) -> Iterable[PathModel]:
-        removed: List[PathModel] = []
+    def delete_existing_folders(self) -> Iterable[FolderModel]:
+        folders: List[FolderModel] = []
         for folder in self.icon_folders:
             if not folder.exists():
                 continue
             folder.remove()
-            removed.append(folder)
-        return removed
+            folders.append(folder)
+        return folders

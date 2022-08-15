@@ -2,8 +2,9 @@ from typing import (Any, Collection, Dict, Generic, Iterable, List, Protocol,
                     Type, TypeVar)
 
 from icon_manager.models.config import IconConfig
-from icon_manager.models.rules import (ChainedRules, FilterRule,
-                                       FilterRuleManager, FolderRule, Operator)
+from icon_manager.models.rules import (ChainedRules, ContainsExtensionRule,
+                                       FilterRule, FilterRuleManager,
+                                       FolderRule, Operator)
 
 TModel = TypeVar('TModel', covariant=True)
 
@@ -13,8 +14,16 @@ class Factory(Protocol, Generic[TModel]):
         ...
 
 
+ATTRIBUTE_KEY: str = 'attribute'
+CONFIG_KEY: str = 'config'
+ICON_FILE_KEY: str = 'icon_file'
+ATTR_NAME_KEY: str = 'name'
+ATTR_PATH_KEY: str = 'path'
 OPERATOR_KEY: str = 'operator'
 CASE_SENSITIVE_KEY: str = 'case_sensitive'
+RULES_KEY: str = 'rules'
+ORDER_KEY: str = 'order'
+LEVEL_KEY: str = 'level'
 
 
 def get_operator_enum(value: str) -> Operator:
@@ -71,6 +80,12 @@ class FilterRuleFactory(Factory[Collection[FilterRule]]):
         if not issubclass(rule_type, FolderRule):
             raise KeyError(f'Method only creates "{FolderRule}"')
         values = rule_dict.get(rule_name, [])
+        if issubclass(rule_type, ContainsExtensionRule):
+            if attribute != ATTR_PATH_KEY:
+                message = f'Contains extension rules can only applied on {ATTR_PATH_KEY} attribute'
+                raise ValueError(message)
+            level = rule_dict.pop(LEVEL_KEY, 1)
+            return rule_type(attribute, values, operator, case_sensitive, level)
         return rule_type(attribute, values, operator, case_sensitive)
 
     def get_chained_rules(self, attribute: str, rules_dict: Iterable[Dict[str, Any]]) -> Iterable[FolderRule]:
@@ -103,10 +118,11 @@ class FilterRuleFactory(Factory[Collection[FilterRule]]):
         return rules
 
     def create(self, config: Dict[str, Any], **kwargs) -> Collection[FilterRule]:
-        attribute: str = kwargs.get('attribute', None)
+        attribute: str = kwargs.get(ATTRIBUTE_KEY, None)
         if attribute is None:
-            raise ValueError('No attribute argument found')
-        rules: Iterable[Dict[str, Any]] = config.get('rules', [])
+            message = f'Key "{ATTRIBUTE_KEY}" does NOT exist in Dict'
+            raise ValueError(message)
+        rules: Iterable[Dict[str, Any]] = config.get(RULES_KEY, [])
         return self.get_rules(attribute, rules)
 
 
@@ -116,9 +132,10 @@ class RuleManagerFactory(Factory[FilterRuleManager]):
         self.rule_factory = FilterRuleFactory(rule_mapping)
 
     def create(self, config: Dict[str, Any], **kwargs) -> FilterRuleManager:
-        attribute: str = kwargs.get('attribute', None)
+        attribute: str = kwargs.get(ATTRIBUTE_KEY, None)
         if attribute is None:
-            raise ValueError('No attribute argument found')
+            message = f'Key "{ATTRIBUTE_KEY}" does NOT exist in Dict'
+            raise ValueError(message)
         self.attribute = attribute
         operator = get_operator(config)
         rules = self.rule_factory.create(config, **kwargs)
@@ -132,13 +149,15 @@ class ConfigFactory(Factory[IconConfig]):
         self.copy_icon = copy_icon
 
     def create(self, config: Dict[str, Any], **kwargs) -> IconConfig:
-        icon_file = kwargs.get('icon_file', None)
+        icon_file = kwargs.get(ICON_FILE_KEY, None)
         if icon_file is None:
-            raise ValueError('Attribute "icon_file" attribute does NOT exist')
-        config = config.get('config', None)
+            message = f'Argument "{ICON_FILE_KEY}" does NOT exist'
+            raise ValueError(message)
+        config = config.get(CONFIG_KEY, None)
         if config is None:
-            raise ValueError('Icon config does NOT exists')
-        order = config.pop('order', 5)
+            message = f'Key "{CONFIG_KEY}" does NOT exist in Dict'
+            raise ValueError(message)
+        order = config.pop(ORDER_KEY, 5)
         managers: List[FilterRuleManager] = []
         for attribute, rules_dict in config.items():
             manager = self.manager_factory.create(config=rules_dict,

@@ -32,8 +32,13 @@
 				"module": "icon_manager",
 				"justMyCode": true,
 				"args": [
-					// "-e",
-					"--remove-existing"
+					// "--create-icon-config",
+					// "--update",
+					"--overwrite",
+					"--add_icons",
+					// "--delete-folder-config",
+					// "--export-app-config",
+					// "C:\\workspace"
 				]
 			}
 		]

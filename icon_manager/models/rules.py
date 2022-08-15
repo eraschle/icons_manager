@@ -1,6 +1,8 @@
+import os
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Collection, Iterable, Protocol
+from typing import Collection, Iterable, List, Protocol
+
 
 # region RULES INTERFACE
 
@@ -133,6 +135,39 @@ class StartsOrEndswithRule(FolderRule):
 
     def are_all_values_allowed(self, attribute_value: str) -> bool:
         return all(self.__is_allowed(attribute_value, value) for value in self.rule_values)
+
+
+class ContainsExtensionRule(FolderRule):
+
+    def __init__(self, attribute: str, values: Iterable[str],
+                 operator: Operator, case_sensitive: bool,
+                 level: int) -> None:
+        super().__init__(attribute, values, operator, case_sensitive)
+        self.level = level
+
+    def get_files(self, full_path: str, level: int) -> List[str]:
+        files: List[str] = []
+        if level >= self.level:
+            return files
+        level += 1
+        for name in os.listdir(full_path):
+            path = os.path.join(full_path, name)
+            if os.path.isdir(path):
+                files.extend(self.get_files(path, level))
+            elif any(name.endswith(value) for value in self.rule_values):
+                files.append(name)
+        return files
+
+    def __is_allowed(self, files: Iterable[str], value: str) -> bool:
+        return any(file.endswith(value) for file in files)
+
+    def are_any_values_allowed(self, attribute_value: str) -> bool:
+        files = self.get_files(attribute_value, level=0)
+        return len(files) > 0
+
+    def are_all_values_allowed(self, attribute_value: str) -> bool:
+        files = self.get_files(attribute_value, level=0)
+        return all(self.__is_allowed(files, value) for value in self.rule_values)
 
 
 class ChainedRules(FilterRule):

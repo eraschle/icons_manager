@@ -1,9 +1,11 @@
+import logging
 import os
-from typing import Dict, Iterable
 
 from icon_manager.models.config import IconConfig
 from icon_manager.models.path import (DesktopIniFile, FolderModel, IconFile,
                                       LocalIconFolder)
+
+log = logging.getLogger(__name__)
 
 
 class IconFolderHandler(FolderModel):
@@ -11,7 +13,6 @@ class IconFolderHandler(FolderModel):
         super().__init__(folder.path)
         self.ini_file = self.create_desktop_ini()
         self.config = config
-        self.errors: Dict[str, Exception] = {}
 
     @property
     def icon_file(self) -> IconFile:
@@ -49,22 +50,6 @@ class IconFolderHandler(FolderModel):
         icon_name = self.config.icon_file.name
         path = os.path.join(local_folder.path, icon_name)
         return IconFile(path)
-
-    def has_errors(self) -> bool:
-        return len(self.errors) > 0
-
-    def add_error(self, message: str, exception: Exception):
-        self.errors[message] = exception
-
-    def error_messages(self) -> Iterable[str]:
-        messages = []
-        for message, exception in self.errors.items():
-            error_msg = f'ERROR: {self.path}: {message} >> {exception}'
-            messages.append(error_msg)
-        return messages
-
-    def error_message(self) -> str:
-        return '\n'.join(self.error_messages())
 
     def __str__(self) -> str:
         return f'{self.name} [{self.config}]'

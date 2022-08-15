@@ -1,0 +1,35 @@
+{
+    "template": {
+        "code_project_names": "List of folder names identifying a (code) project",
+        "exclude_folder_names": "List of folder names not to be searched.",
+        "folder_paths": "List of paths to add icons to folders. System variables can be used with %VARIABLE_NAME%",
+        "icons_path": "Path in which the icons and the associated configurations are saved.",
+        "copy_icon": "True if the icons should be copied to the folder, otherwise false. Default: False"
+    },
+    "config": {
+        "code_project_names": [
+            ".git",
+            ".svn",
+            ".venv",
+            ".vs",
+            ".vscode"
+        ],
+        "exclude_folder_names": [
+            "__pycache__",
+            ".mypy_cache",
+            "bin",
+            "obj"
+        ],
+        "folder_paths": [
+            "C:\\workspace",
+            "%OneDriveConsumer%\\workspace",
+            "%OneDriveConsumer%\\Develop",
+            "%OneDriveConsumer%\\Software",
+            "%OneDriveConsumer%\\Links",
+            "%OneDriveConsumer%\\TEMP",
+            "%OneDriveConsumer%\\xBackups"
+        ],
+        "icons_path": "%OneDriveConsumer%\\Bilder\\Icons",
+        "copy_icon": true
+    }
+}
