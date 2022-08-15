@@ -38,7 +38,7 @@ class AppConfigController(FileBaseController[JsonFile]):
     def get_or_create_user_config(self) -> JsonFile:
         app_file = app_config_and_template()
         user_file = self.config.get_user_app_config_file()
-        if user_file is None:
+        if user_file is None or not user_file.exists():
             user_file = self.get_or_create_user_config_file()
             config = self.config.get_app_config_with_user(user_file)
             self.source.write(app_file, config)

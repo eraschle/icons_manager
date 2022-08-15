@@ -14,6 +14,8 @@ from icon_manager.models.path import JsonFile
 
 log = logging.getLogger(__name__)
 
+PREFIX_LENGTH = 15
+
 
 class IconFolderService:
 
@@ -33,7 +35,8 @@ class IconFolderService:
             folders, files = controller.delete_existing_configs(self.manager)
             files_count = fixed_length(str(len(files)), HUNDRED)
             folders_count = fixed_length(str(len(folders)), HUNDRED)
-            message = f'Deleted Files: "{files_count}" Folders: "{folders_count}" in {controller.full_path}'
+            prefix = fixed_length("Deleted Files:", PREFIX_LENGTH, align='<')
+            message = f'{prefix}{files_count} Folders: {folders_count} in {controller.full_path}'
             log.info(message)
 
     def add_icons_to_folders(self, overwrite: bool):
@@ -43,7 +46,8 @@ class IconFolderService:
             self.folders_ctrl.add_icon_folders(folder_path, overwrite)
             amount = len(self.folders_ctrl.icon_folders) - start
             amount = fixed_length(str(amount), HUNDRED)
-            log.info(f'Added "{amount}" icons in {folder_path}')
+            prefix = fixed_length("Added Config:", PREFIX_LENGTH, align='<')
+            log.info(f'{prefix}{amount} in {folder_path}')
 
     def create_icon_config_templates(self, overwrite: bool, update: bool) -> None:
         if update:

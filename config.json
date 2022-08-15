@@ -31,8 +31,5 @@
         ],
         "icons_path": "%OneDriveConsumer%\\Bilder\\Icons",
         "copy_icon": true
-    },
-    "app": {
-        "file_path": "C:\\workspace\\python\\folder_manager\\config.json"
     }
 }

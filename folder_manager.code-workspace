@@ -36,7 +36,7 @@
 					// "--update",
 					"--overwrite",
 					"--add_icons",
-					// "--delete-folder-config",
+					"--delete-folder-config",
 					// "--export-app-config",
 					// "C:\\workspace"
 				]

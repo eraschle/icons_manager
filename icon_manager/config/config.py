@@ -151,9 +151,9 @@ class AppConfig(Config):
         if develop:
             return config
         for section, values in config.get(APP_CONFIG_SECTION, {}).items():
-            if isinstance(values, List):
-                config[APP_CONFIG_SECTION][section] = []
-            elif isinstance(values, str):
+            # if isinstance(values, List):
+            #     config[APP_CONFIG_SECTION][section] = []
+            if isinstance(values, str):
                 config[APP_CONFIG_SECTION][section] = ''
             elif isinstance(values, bool):
                 config[APP_CONFIG_SECTION][section] = False
