@@ -1,6 +1,6 @@
 from typing import Iterable
 
-from icon_manager.source.base import Source
+from icon_manager.data.base import Source
 from icon_manager.models.path import DesktopIniFile
 
 

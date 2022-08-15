@@ -1,4 +1,4 @@
-from typing import Iterable, Set, Union
+from typing import Iterable, Union
 
 from icon_manager.utils.path import get_path_names
 

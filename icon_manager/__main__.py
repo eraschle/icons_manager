@@ -4,10 +4,10 @@ import os
 from logging.handlers import RotatingFileHandler
 
 from icon_manager.config.config import AppConfig
+from icon_manager.data.json_source import JsonSource
 from icon_manager.models.path import JsonFile
+from icon_manager.resources.resource import folder_config_path
 from icon_manager.services.icon_manager import IconFolderService
-from icon_manager.source.json_source import JsonSource
-from icon_manager.utils.resources import folder_config_path
 
 log = logging.getLogger(__name__)
 

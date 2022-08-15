@@ -1,18 +1,18 @@
 import logging
 
 from icon_manager.config.config import AppConfig
-from icon_manager.controller.config import LocalConfigController
-from icon_manager.controller.config_app import AppConfigController
+from icon_manager.controller.config import (AppConfigController,
+                                            LocalConfigController)
 from icon_manager.controller.folder import IconFolderController
 from icon_manager.controller.icons import IconsController
-from icon_manager.handler.desktop_ini import DesktopIniManager
+from icon_manager.managers.desktop import DesktopFileManager
 
 log = logging.getLogger(__name__)
 
 
 class IconFolderService:
     def __init__(self, config: AppConfig,
-                 manager: DesktopIniManager = DesktopIniManager()) -> None:
+                 manager: DesktopFileManager = DesktopFileManager()) -> None:
         self.config = config
         self.manager = manager
         self.icons_ctrl = IconsController(config)

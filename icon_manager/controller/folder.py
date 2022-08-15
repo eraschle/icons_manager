@@ -2,22 +2,22 @@ import logging
 from typing import Iterable, List, Optional
 
 from icon_manager.controller.base import BaseController
-from icon_manager.handler.desktop_ini import DesktopIniManager
-from icon_manager.handler.icon_config import IconFolderHandler
+from icon_manager.managers.desktop import DesktopFileManager
+from icon_manager.managers.find import File, FindOptions, Folder
+from icon_manager.managers.icon_folder import IconFolderManager
 from icon_manager.models.config import IconConfig
 from icon_manager.models.path import FolderModel, LocalIconFolder
-from icon_manager.tasks.find_folders import File, FindOptions, Folder
 
 log = logging.getLogger(__name__)
 
 
 class IconFolderController(BaseController):
 
-    def __init__(self, manager: DesktopIniManager) -> None:
+    def __init__(self, manager: DesktopFileManager) -> None:
         super().__init__()
         self.manager = manager
         self.icon_configs: Iterable[IconConfig] = []
-        self.icon_folders: List[IconFolderHandler] = []
+        self.icon_folders: List[IconFolderManager] = []
 
     def get_find_options(self) -> FindOptions:
         options = FindOptions(add_default=True,
@@ -32,7 +32,7 @@ class IconFolderController(BaseController):
     def create_folders(self, folders: Iterable[Folder], _: Iterable[File]) -> Iterable[FolderModel]:
         return [FolderModel(folder.full_path) for folder in folders]
 
-    def can_write(self, folder: IconFolderHandler) -> bool:
+    def can_write(self, folder: IconFolderManager) -> bool:
         if not folder.ini_file.exists():
             return True
         can_write = self.manager.can_write_config(folder.ini_file)
@@ -51,11 +51,11 @@ class IconFolderController(BaseController):
             log.debug(message)
             self.icon_folders.append(icon_folder)
 
-    def get_icon_config_for(self, folder: FolderModel) -> Optional[IconFolderHandler]:
+    def get_icon_config_for(self, folder: FolderModel) -> Optional[IconFolderManager]:
         config = self.icon_config_for(folder)
         if config is None:
             return None
-        return IconFolderHandler(folder, config)
+        return IconFolderManager(folder, config)
 
     def icon_config_for(self, folder: FolderModel) -> Optional[IconConfig]:
         for config in self.icon_configs:

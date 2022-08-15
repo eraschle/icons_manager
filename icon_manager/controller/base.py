@@ -1,9 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Generic, Iterable, List, Type, TypeVar
 
+from icon_manager.managers.find import File, FindManager, FindOptions, Folder
 from icon_manager.models.path import FileModel, FolderModel
-from icon_manager.tasks.find_folders import (File, FindOptions, FindPathTask,
-                                             Folder)
 
 TFile = TypeVar('TFile', bound=FileModel)
 TFolder = TypeVar('TFolder', bound=FolderModel)
@@ -17,9 +16,9 @@ class BaseController(ABC):
     def get_find_options(self) -> FindOptions:
         ...
 
-    def get_find_task(self, search_path: str) -> FindPathTask:
-        return FindPathTask(search_path, self.get_find_options(),
-                            self.on_found_folders_and_files)
+    def get_find_task(self, search_path: str) -> FindManager:
+        return FindManager(search_path, self.get_find_options(),
+                           self.on_found_folders_and_files)
 
     @abstractmethod
     def on_found_folders_and_files(self, folders: Iterable[Folder], files: Iterable[File]) -> None:

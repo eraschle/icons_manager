@@ -1,13 +1,38 @@
 import logging
+import os
 from typing import Iterable, List, Optional, Tuple
 
 from icon_manager.controller.base import FileBaseController
-from icon_manager.handler.desktop_ini import DesktopIniManager
+from icon_manager.data.json_source import JsonSource
+from icon_manager.managers.desktop import DesktopFileManager
+from icon_manager.managers.find import File, FindOptions, Folder
 from icon_manager.models.path import (DesktopIniFile, FileModel, FolderModel,
-                                      LocalIconFolder)
-from icon_manager.tasks.find_folders import File, FindOptions, Folder
+                                      JsonFile, LocalIconFolder)
+from icon_manager.resources.resource import folder_config_template
 
 log = logging.getLogger(__name__)
+
+
+class AppConfigController(FileBaseController[JsonFile]):
+
+    def __init__(self, full_path: str) -> None:
+        super().__init__(full_path, JsonFile)
+
+    def export_app_config(self) -> None:
+        source = JsonSource()
+        config_file = folder_config_template()
+        config = 'config'
+        template_config = source.read(config_file)
+        for section, values in template_config.get(config, {}).items():
+            if isinstance(values, List):
+                template_config[config][section] = []
+            elif isinstance(values, str):
+                template_config[config][section] = ''
+            elif isinstance(values, bool):
+                template_config[config][section] = False
+        file_path = os.path.join(self.full_path, config_file.name)
+        export_file = JsonFile(file_path)
+        source.write(export_file, template_config)
 
 
 class LocalConfigController(FileBaseController[DesktopIniFile]):
@@ -43,12 +68,12 @@ class LocalConfigController(FileBaseController[DesktopIniFile]):
     def create_files(self, folders: Iterable[Folder], files: Iterable[File]) -> Iterable[DesktopIniFile]:
         return [self.get_file(folders, file) for file in files]
 
-    def delete_existing_configs(self, manager: DesktopIniManager) -> Tuple[List[FolderModel], List[FileModel]]:
+    def delete_existing_configs(self, manager: DesktopFileManager) -> Tuple[List[FolderModel], List[FileModel]]:
         folders, files = self.delete_existing_files(manager)
         folders.extend(self.delete_existing_folders())
         return folders, files
 
-    def delete_existing_files(self, manager: DesktopIniManager) -> Tuple[List[FolderModel], List[FileModel]]:
+    def delete_existing_files(self, manager: DesktopFileManager) -> Tuple[List[FolderModel], List[FileModel]]:
         folders: List[FolderModel] = []
         files: List[FileModel] = []
         for file in self.get_files():

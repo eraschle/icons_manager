@@ -3,13 +3,13 @@ import re
 from typing import Any, Collection, Dict, Iterable, Protocol, Type
 
 from icon_manager.controller.search import SearchController
+from icon_manager.data.json_source import JsonSource
 from icon_manager.models.path import JsonFile
 from icon_manager.models.rules import (ChainedRules, ContainsExtensionRule,
                                        ContainsRule, EndswithRule, EqualsRule,
                                        FilterRule, NotContainsRule,
                                        NotEqualsRule, StartsOrEndswithRule,
                                        StartswithRule)
-from icon_manager.source.json_source import JsonSource
 
 
 class Config(Protocol):

@@ -172,7 +172,7 @@ class FindOptions:
         return any(do_stop(names) for do_stop in self.__stop_recursive)
 
 
-class FindPathTask:
+class FindManager:
 
     def __init__(self, root: str, options: FindOptions,
                  on_found: Optional[Callable[[Iterable[Folder], Iterable[File]], None]] = None) -> None:

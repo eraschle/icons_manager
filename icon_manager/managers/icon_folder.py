@@ -8,7 +8,7 @@ from icon_manager.models.path import (DesktopIniFile, FolderModel, IconFile,
 log = logging.getLogger(__name__)
 
 
-class IconFolderHandler(FolderModel):
+class IconFolderManager(FolderModel):
     def __init__(self, folder: FolderModel, config: IconConfig) -> None:
         super().__init__(folder.path)
         self.ini_file = self.create_desktop_ini()

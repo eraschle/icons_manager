@@ -1,7 +1,7 @@
 import json
 from typing import Any, Dict
 
-from icon_manager.source.base import Source
+from icon_manager.data.base import Source
 from icon_manager.models.path import JsonFile
 
 

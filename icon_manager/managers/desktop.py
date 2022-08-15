@@ -1,29 +1,29 @@
 import logging
 from typing import Iterable, Protocol
 
-from icon_manager.handler.icon_config import IconFolderHandler
+from icon_manager.data.ini_source import DesktopFileSource
+from icon_manager.managers.icon_folder import IconFolderManager
 from icon_manager.models.path import DesktopIniFile
-from icon_manager.source.ini_source import DesktopFileSource
 
 log = logging.getLogger(__name__)
 
 
 class ConfigCommand(Protocol):
 
-    def pre_command(self, manager: IconFolderHandler):
+    def pre_command(self, manager: IconFolderManager):
         pass
 
-    def post_command(self, manager: IconFolderHandler):
+    def post_command(self, manager: IconFolderManager):
         pass
 
 
-def error_message(manager: IconFolderHandler, message: str) -> str:
+def error_message(manager: IconFolderManager, message: str) -> str:
     return f'{manager.name} >> "{message}"'
 
 
 class IconCommand(ConfigCommand):
 
-    def pre_command(self, manager: IconFolderHandler):
+    def pre_command(self, manager: IconFolderManager):
         if not manager.config.copy_icon:
             return
         try:
@@ -32,7 +32,7 @@ class IconCommand(ConfigCommand):
         except Exception as ex:
             log.exception(error_message(manager, 'copy icon to local'), ex)
 
-    def post_command(self, manager: IconFolderHandler):
+    def post_command(self, manager: IconFolderManager):
         if not manager.config.copy_icon:
             return
         try:
@@ -50,7 +50,7 @@ class IconCommand(ConfigCommand):
 
 class DesktopAttributeCommand(ConfigCommand):
 
-    def pre_command(self, manager: IconFolderHandler):
+    def pre_command(self, manager: IconFolderManager):
         if not manager.ini_file.exists():
             return
         try:
@@ -58,7 +58,7 @@ class DesktopAttributeCommand(ConfigCommand):
         except Exception as ex:
             log.exception(error_message(manager, 'before apply config'), ex)
 
-    def post_command(self, manager: IconFolderHandler):
+    def post_command(self, manager: IconFolderManager):
         if not manager.ini_file.exists():
             return
         try:
@@ -74,7 +74,7 @@ WRITE_CONFIG_COMMANDS: Iterable[ConfigCommand] = [
 ]
 
 
-class DesktopIniManager:
+class DesktopFileManager:
 
     app_entry = 'IconManager=1'
 
@@ -83,24 +83,24 @@ class DesktopIniManager:
         self.source = source
         self.commands = commands
 
-    def get_ini_lines(self, manager: IconFolderHandler) -> Iterable[str]:
+    def get_ini_lines(self, manager: IconFolderManager) -> Iterable[str]:
         icon_path = manager.config_icon_path()
         return [
             '[.ShellClassInfo]',
             f'IconResource={icon_path},0',
-            DesktopIniManager.app_entry,
+            DesktopFileManager.app_entry,
             '[ViewState]',
             'Mode=',
             'Vid=',
             'FolderType=Generic'
         ]
 
-    def execute_commands(self, manager: IconFolderHandler, func_name: str) -> None:
+    def execute_commands(self, manager: IconFolderManager, func_name: str) -> None:
         for command in self.commands:
             function = getattr(command, func_name)
             function(manager)
 
-    def write_config(self, manager: IconFolderHandler) -> None:
+    def write_config(self, manager: IconFolderManager) -> None:
         self.execute_commands(manager, 'pre_command')
         try:
             self.source.write(manager.ini_file,
@@ -122,7 +122,7 @@ class DesktopIniManager:
     def is_app_config_file(self, file: DesktopIniFile) -> bool:
         content_lines = self.source.read(file)
         for line in content_lines:
-            if DesktopIniManager.app_entry not in line:
+            if DesktopFileManager.app_entry not in line:
                 continue
             return True
         return False
