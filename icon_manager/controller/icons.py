@@ -18,6 +18,7 @@ class IconsController(FileBaseController[IconFile]):
     def __init__(self, config: AppConfig) -> None:
         super().__init__(config.icons_path(), IconFile)
         self.config_factory = ConfigFactory(config.rule_mapping(),
+                                            config.before_or_after_values(),
                                             config.copy_icon_to_folder())
         self.icon_configs: Iterable[IconConfig] = []
         self.config_files: List[JsonFile] = []

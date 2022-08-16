@@ -3,7 +3,6 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Collection, Iterable, List, Protocol
 
-
 # region RULES INTERFACE
 
 
@@ -21,11 +20,12 @@ class FilterRule(Protocol):
 
 class FolderRule(ABC, FilterRule):
     def __init__(self, attribute: str, values: Iterable[str],
-                 operator: Operator, case_sensitive: bool) -> None:
+                 operator: Operator, case_sensitive: bool, before_or_after: Collection[str]) -> None:
         self.attribute = attribute
         self.__values = values
         self.operator = operator
         self.case_sensitive = case_sensitive
+        self.before_or_after = before_or_after
 
     def get_case_sensitive_value(self, value: str) -> str:
         if self.case_sensitive:
@@ -37,9 +37,35 @@ class FolderRule(ABC, FilterRule):
             return values
         return [self.get_case_sensitive_value(value) for value in values]
 
-    @property
+    def get_before_value(self, value: str) -> Iterable[str]:
+        return [f'{before}{value}' for before in self.before_or_after]
+
+    def get_after_value(self, value: str) -> Iterable[str]:
+        return [f'{after}{value}' for after in self.before_or_after]
+
+    def get_before_and_after_value(self, value: str) -> Iterable[str]:
+        return [f'{extra}{value}{extra}' for extra in self.before_or_after]
+
+    def get_before_or_after_value(self, value: str) -> Iterable[str]:
+        before_or_after: List[str] = []
+        before_or_after.extend(self.get_before_value(value))
+        before_or_after.extend(self.get_after_value(value))
+        before_or_after.extend(self.get_before_and_after_value(value))
+        return before_or_after
+
+    def get_before_or_after_values(self, values: Iterable[str]) -> Iterable[str]:
+        if len(self.before_or_after) == 0:
+            return values
+        before_or_after: List[str] = []
+        for value in values:
+            before_or_after.append(value)
+            before_or_after.extend(self.get_before_or_after_value(value))
+        return before_or_after
+
+    @ property
     def rule_values(self) -> Iterable[str]:
-        return self.get_case_sensitive_values(self.__values)
+        values = self.get_case_sensitive_values(self.__values)
+        return self.get_before_or_after_values(values)
 
     def is_allowed(self, folder: object) -> bool:
         attribute_value = getattr(folder, self.attribute, None)
@@ -141,8 +167,8 @@ class ContainsExtensionRule(FolderRule):
 
     def __init__(self, attribute: str, values: Iterable[str],
                  operator: Operator, case_sensitive: bool,
-                 level: int) -> None:
-        super().__init__(attribute, values, operator, case_sensitive)
+                 before_or_after: Collection[str], level: int) -> None:
+        super().__init__(attribute, values, operator, case_sensitive, before_or_after)
         self.level = level
 
     def get_files(self, full_path: str, level: int) -> List[str]:
