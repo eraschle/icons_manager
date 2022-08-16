@@ -172,6 +172,7 @@ class ConfigFactory(Factory[IconConfig]):
             message = f'Key "{CONFIG_KEY}" does NOT exist in Dict'
             raise ValueError(message)
         order = config.pop(ORDER_KEY, 5)
+        operator = pop_operator(config, Operator.ALL)
         managers: List[FilterRuleManager] = []
         for attribute, rules_dict in config.items():
             manager = self.manager_factory.create(config=rules_dict,
@@ -179,4 +180,4 @@ class ConfigFactory(Factory[IconConfig]):
             if manager.is_empty():
                 continue
             managers.append(manager)
-        return IconConfig(icon_file, managers, self. copy_icon, order)
+        return IconConfig(icon_file, managers, operator, self. copy_icon, order)

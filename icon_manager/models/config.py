@@ -2,17 +2,19 @@ import os
 from typing import Collection, Tuple
 
 from icon_manager.models.path import FolderModel, IconFile, JsonFile
-from icon_manager.models.rules import FilterRuleManager
+from icon_manager.models.rules import FilterRuleManager, Operator
 
 
 class IconConfig:
     def __init__(self, icon_file: IconFile,
                  managers: Collection[FilterRuleManager],
+                 operator: Operator,
                  copy_icon: bool,
                  weight: int) -> None:
         self.icon_file = icon_file
         self.copy_icon = copy_icon
         self.managers = managers
+        self.operator = operator
         self.order_weight = weight
 
     def config_file(self) -> JsonFile:
@@ -32,7 +34,9 @@ class IconConfig:
         return all(manager.is_empty() for manager in self.managers)
 
     def is_config_for(self, folder: FolderModel) -> bool:
-        return all(manager.is_allowed(folder) for manager in self.managers)
+        if self.operator == Operator.ALL:
+            return all(manager.is_allowed(folder) for manager in self.managers)
+        return any(manager.is_allowed(folder) for manager in self.managers)
 
     def __str__(self) -> str:
         return f'Config: {self.icon_file.name_wo_extension}'
