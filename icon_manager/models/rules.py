@@ -22,6 +22,7 @@ class FolderRule(ABC, FilterRule):
     def __init__(self, attribute: str, values: Iterable[str],
                  operator: Operator, case_sensitive: bool, before_or_after: Collection[str]) -> None:
         self.attribute = attribute
+        self.__values_generated = False
         self.__values = values
         self.operator = operator
         self.case_sensitive = case_sensitive
@@ -66,8 +67,11 @@ class FolderRule(ABC, FilterRule):
 
     @ property
     def rule_values(self) -> Iterable[str]:
-        values = self.get_case_sensitive_values(self.__values)
-        return self.get_before_or_after_values(values)
+        if self.__values_generated:
+            values = self.get_case_sensitive_values(self.__values)
+            self.__values = self.get_before_or_after_values(values)
+            self.__values_generated = True
+        return self.__values
 
     def is_allowed(self, folder: object) -> bool:
         attribute_value = getattr(folder, self.attribute, None)
@@ -89,7 +93,7 @@ class FolderRule(ABC, FilterRule):
         pass
 
     def __str__(self) -> str:
-        return f'{self.__class__.__name__}: {self.attribute} {self.rule_values}'
+        return f'{self.__class__.__name__}: {self.attribute} {self.__values}'
 
     def __repr__(self) -> str:
         return self.__str__()
