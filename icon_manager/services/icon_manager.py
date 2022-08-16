@@ -70,7 +70,8 @@ DEVELOP = True
 
 
 def ask_user_export_path() -> str:
-    return input("Enter path for loading config: ")
+    path = input("Enter path for loading config: ")
+    return path.strip('"')
 
 
 def ask_user_config_not_exist(config: AppConfig) -> str:
