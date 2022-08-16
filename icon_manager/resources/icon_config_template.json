@@ -12,6 +12,7 @@
     },
     "template": {
         "order": "Integer number to adjust order of config execution. The smaller the earlier it will be executed >> default 5",
+        "operator": "'any' or 'all' rule values must be TRUE >> default: all",
         "path": {
             "operator": "'any' or 'all' rules must be TRUE >> default: any",
             "rules": [

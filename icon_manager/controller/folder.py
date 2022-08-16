@@ -42,6 +42,8 @@ class IconFolderController(BaseController):
     def can_write(self, folder: IconFolderManager) -> bool:
         if not folder.ini_file.exists():
             return True
+        if folder.ini_file.exists() and not self.overwrite:
+            return False
         can_write = self.manager.can_write_config(folder.ini_file)
         if not can_write:
             log.warning(f'Can not write desktop.ini in "{folder.path}"')
