@@ -1,7 +1,12 @@
 import os
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Callable, Collection, Iterable, List, Protocol
+from typing import Collection, Iterable, List, Protocol
+
+from icon_manager.helpers.generate import (AfterValueGenerator,
+                                           BeforeOrAfterValuesGenerator,
+                                           BeforeValueGenerator, CaseGenerator,
+                                           Generator, ValuesGenerator)
 
 # region RULES INTERFACE
 
@@ -26,49 +31,24 @@ class FolderRule(ABC, FilterRule):
         self.__values = values
         self.operator = operator
         self.case_sensitive = case_sensitive
-        self.before_or_after = before_or_after
+        self.generator = Generator()
+        self.generator.set_generation_values(before_or_after)
+        self.generator.value_generators = [CaseGenerator(case_sensitive)]
 
-    def get_case_sensitive_value(self, value: str) -> str:
-        if self.case_sensitive:
-            return value
-        return value.lower()
+    def get_generators(self) -> Iterable[ValuesGenerator]:
+        return [BeforeValueGenerator(), AfterValueGenerator(), BeforeOrAfterValuesGenerator()]
 
-    def get_case_sensitive_values(self, values: Iterable[str]) -> Iterable[str]:
-        if self.case_sensitive:
-            return values
-        return [self.get_case_sensitive_value(value) for value in values]
+    def get_before_and_after_generators(self) -> Iterable[ValuesGenerator]:
+        return [BeforeValueGenerator(), AfterValueGenerator()]
 
-    def get_before_value(self, value: str) -> Iterable[str]:
-        return [f'{before}{value}' for before in self.before_or_after]
-
-    def get_after_value(self, value: str) -> Iterable[str]:
-        return [f'{after}{value}' for after in self.before_or_after]
-
-    def get_before_and_after_value(self, value: str) -> Iterable[str]:
-        return [f'{extra}{value}{extra}' for extra in self.before_or_after]
-
-    def get_before_or_after_callables(self) -> Iterable[Callable[[str], Iterable[str]]]:
-        return [self.get_before_value, self.get_after_value, self.get_before_and_after_value]
-
-    def get_before_or_after_value(self, value: str) -> Iterable[str]:
-        before_or_after: List[str] = []
-        for create_values in self.get_before_or_after_callables():
-            before_or_after.extend(create_values(value))
-        return before_or_after
-
-    def get_before_or_after_values(self, values: Iterable[str]) -> Iterable[str]:
-        if len(self.before_or_after) == 0:
-            return values
-        before_or_after: List[str] = []
-        for value in values:
-            before_or_after.append(value)
-            before_or_after.extend(self.get_before_or_after_value(value))
-        return before_or_after
+    def get_before_or_after_values(self, rule_values: Iterable[str]) -> Iterable[str]:
+        self.generator.values_generators = self.get_generators()
+        return self.generator.generates_many_unique(rule_values, include_value=True)
 
     @ property
     def rule_values(self) -> Iterable[str]:
-        if self.__values_generated:
-            values = self.get_case_sensitive_values(self.__values)
+        if not self.__values_generated:
+            values = self.generator.generates(self.__values)
             self.__values = self.get_before_or_after_values(values)
             self.__values_generated = True
         return self.__values
@@ -77,7 +57,7 @@ class FolderRule(ABC, FilterRule):
         attribute_value = getattr(folder, self.attribute, None)
         if attribute_value is None or self.operator == Operator.UNKNOWN:
             return False
-        attribute_value = self.get_case_sensitive_value(attribute_value)
+        attribute_value = self.generator.generate(attribute_value)
         if self.operator == Operator.ALL:
             return self.are_all_values_allowed(attribute_value)
         return self.are_any_values_allowed(attribute_value)
@@ -88,7 +68,7 @@ class FolderRule(ABC, FilterRule):
     def are_all_values_allowed(self, attribute_value: str) -> bool:
         return all(self.is_values_allowed(attribute_value, value) for value in self.rule_values)
 
-    @abstractmethod
+    @ abstractmethod
     def is_values_allowed(self, attribute_value: str, rule_value: str) -> bool:
         pass
 
@@ -119,8 +99,8 @@ class NotEqualsRule(EqualsRule):
 
 class ContainsRule(FolderRule):
 
-    def get_before_or_after_callables(self) -> Iterable[Callable[[str], Iterable[str]]]:
-        return [self.get_before_value, self.get_after_value]
+    def get_generators(self) -> Iterable[ValuesGenerator]:
+        return self.get_before_and_after_generators()
 
     def is_values_allowed(self, attribute_value: str, rule_value: str) -> bool:
         return rule_value in attribute_value
@@ -134,8 +114,8 @@ class NotContainsRule(ContainsRule):
 
 class StartswithRule(FolderRule):
 
-    def get_before_or_after_callables(self) -> Iterable[Callable[[str], Iterable[str]]]:
-        return [self.get_before_value, self.get_after_value]
+    def get_generators(self) -> Iterable[ValuesGenerator]:
+        return self.get_before_and_after_generators()
 
     def is_values_allowed(self, attribute_value: str, rule_value: str) -> bool:
         return attribute_value.startswith(rule_value)
@@ -143,8 +123,8 @@ class StartswithRule(FolderRule):
 
 class EndswithRule(FolderRule):
 
-    def get_before_or_after_callables(self) -> Iterable[Callable[[str], Iterable[str]]]:
-        return [self.get_before_value, self.get_after_value]
+    def get_generators(self) -> Iterable[ValuesGenerator]:
+        return self.get_before_and_after_generators()
 
     def is_values_allowed(self, attribute_value: str, rule_value: str) -> bool:
         return attribute_value.endswith(rule_value)
@@ -152,8 +132,8 @@ class EndswithRule(FolderRule):
 
 class StartsOrEndswithRule(FolderRule):
 
-    def get_before_or_after_callables(self) -> Iterable[Callable[[str], Iterable[str]]]:
-        return [self.get_before_value, self.get_after_value]
+    def get_generators(self) -> Iterable[ValuesGenerator]:
+        return self.get_before_and_after_generators()
 
     def is_values_allowed(self, attribute_value: str, rule_value: str) -> bool:
         return attribute_value.startswith(rule_value) or attribute_value.endswith(rule_value)
@@ -167,7 +147,7 @@ class ContainsExtensionRule(FolderRule):
         super().__init__(attribute, values, operator, case_sensitive, before_or_after)
         self.max_level = level
 
-    def get_before_or_after_callables(self) -> Iterable[Callable[[str], Iterable[str]]]:
+    def get_generators(self) -> Iterable[ValuesGenerator]:
         return []
 
     def get_files(self, full_path: str, level: int) -> List[str]:
