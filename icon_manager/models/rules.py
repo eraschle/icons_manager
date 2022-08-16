@@ -78,12 +78,14 @@ class FolderRule(ABC, FilterRule):
             return self.are_all_values_allowed(attribute_value)
         return self.are_any_values_allowed(attribute_value)
 
-    @abstractmethod
     def are_any_values_allowed(self, attribute_value: str) -> bool:
-        pass
+        return any(self.is_values_allowed(attribute_value, value) for value in self.rule_values)
+
+    def are_all_values_allowed(self, attribute_value: str) -> bool:
+        return all(self.is_values_allowed(attribute_value, value) for value in self.rule_values)
 
     @abstractmethod
-    def are_all_values_allowed(self, attribute_value: str) -> bool:
+    def is_values_allowed(self, attribute_value: str, rule_value: str) -> bool:
         pass
 
     def __str__(self) -> str:
@@ -101,20 +103,14 @@ class FolderRule(ABC, FilterRule):
 
 class EqualsRule(FolderRule):
 
-    def are_any_values_allowed(self, attribute_value: str) -> bool:
-        return any(value == attribute_value for value in self.rule_values)
-
-    def are_all_values_allowed(self, attribute_value: str) -> bool:
-        return all(value == attribute_value for value in self.rule_values)
+    def is_values_allowed(self, attribute_value: str, rule_value: str) -> bool:
+        return rule_value == attribute_value
 
 
-class NotEqualsRule(FolderRule):
+class NotEqualsRule(EqualsRule):
 
-    def are_any_values_allowed(self, attribute_value: str) -> bool:
-        return any(value != attribute_value for value in self.rule_values)
-
-    def are_all_values_allowed(self, attribute_value: str) -> bool:
-        return all(value != attribute_value for value in self.rule_values)
+    def is_values_allowed(self, attribute_value: str, rule_value: str) -> bool:
+        return not super().is_values_allowed(attribute_value, rule_value)
 
 
 class ContainsRule(FolderRule):
@@ -122,17 +118,14 @@ class ContainsRule(FolderRule):
     def get_before_or_after_callables(self) -> Iterable[Callable[[str], Iterable[str]]]:
         return [self.get_before_value, self.get_after_value]
 
-    def are_all_values_allowed(self, attribute_value: str) -> bool:
-        return all(value in attribute_value for value in self.rule_values)
+    def is_values_allowed(self, attribute_value: str, rule_value: str) -> bool:
+        return rule_value in attribute_value
 
 
 class NotContainsRule(ContainsRule):
 
-    def are_any_values_allowed(self, attribute_value: str) -> bool:
-        return any(value not in attribute_value for value in self.rule_values)
-
-    def are_all_values_allowed(self, attribute_value: str) -> bool:
-        return all(value not in attribute_value for value in self.rule_values)
+    def is_values_allowed(self, attribute_value: str, rule_value: str) -> bool:
+        return not super().is_values_allowed(attribute_value, rule_value)
 
 
 class StartswithRule(FolderRule):
@@ -140,8 +133,8 @@ class StartswithRule(FolderRule):
     def get_before_or_after_callables(self) -> Iterable[Callable[[str], Iterable[str]]]:
         return [self.get_before_value, self.get_after_value]
 
-    def are_all_values_allowed(self, attribute_value: str) -> bool:
-        return all(attribute_value.startswith(value) for value in self.rule_values)
+    def is_values_allowed(self, attribute_value: str, rule_value: str) -> bool:
+        return attribute_value.startswith(rule_value)
 
 
 class EndswithRule(FolderRule):
@@ -149,20 +142,17 @@ class EndswithRule(FolderRule):
     def get_before_or_after_callables(self) -> Iterable[Callable[[str], Iterable[str]]]:
         return [self.get_before_value, self.get_after_value]
 
-    def are_all_values_allowed(self, attribute_value: str) -> bool:
-        return all(attribute_value.endswith(value) for value in self.rule_values)
+    def is_values_allowed(self, attribute_value: str, rule_value: str) -> bool:
+        return attribute_value.endswith(rule_value)
 
 
 class StartsOrEndswithRule(FolderRule):
 
-    def __is_allowed(self, attr_value: str, value: str) -> bool:
-        return attr_value.startswith(value) or attr_value.endswith(value)
-
-    def are_any_values_allowed(self, attribute_value: str) -> bool:
-        return any(self.__is_allowed(attribute_value, value) for value in self.rule_values)
-
     def get_before_or_after_callables(self) -> Iterable[Callable[[str], Iterable[str]]]:
         return [self.get_before_value, self.get_after_value]
+
+    def is_values_allowed(self, attribute_value: str, rule_value: str) -> bool:
+        return attribute_value.startswith(rule_value) or attribute_value.endswith(rule_value)
 
 
 class ContainsExtensionRule(FolderRule):
@@ -189,16 +179,9 @@ class ContainsExtensionRule(FolderRule):
                 files.append(name)
         return files
 
-    def __is_allowed(self, files: Iterable[str], value: str) -> bool:
-        return any(file.endswith(value) for file in files)
-
-    def are_any_values_allowed(self, attribute_value: str) -> bool:
-        files = self.get_files(attribute_value, level=0)
-        return len(files) > 0
-
-    def are_all_values_allowed(self, attribute_value: str) -> bool:
-        files = self.get_files(attribute_value, level=0)
-        return all(self.__is_allowed(files, value) for value in self.rule_values)
+    def is_values_allowed(self, attribute_value: str, rule_value: str) -> bool:
+        files = self.get_files(attribute_value, level=1)
+        return any(file.endswith(rule_value) for file in files)
 
 
 class ChainedRules(FilterRule):
