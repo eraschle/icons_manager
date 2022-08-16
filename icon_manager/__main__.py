@@ -53,6 +53,8 @@ def get_namespace_from_args() -> argparse.Namespace:
                         help='Overwrite existing configs (icon-json & desktop.ini)')
     parser.add_argument('--update', '-u', action='store_true',
                         help='Update rules and template section in exiting icon configs')
+    parser.add_argument('--archive', '-v', action='store_true',
+                        help='Move icon with an empty config file into the subfolder "archive"')
     return parser.parse_args()
 
 
@@ -75,6 +77,10 @@ def main():
 
     if namespace.re_write_ini_file:
         service.re_write_icon_config()
+
+    if namespace.archive:
+        service.archive_empty_icon_configs()
+
 
 if __name__ == "__main__":
     main()

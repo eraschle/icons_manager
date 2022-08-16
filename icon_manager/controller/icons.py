@@ -7,7 +7,7 @@ from icon_manager.data.json_source import JsonSource
 from icon_manager.helpers.resource import icon_config_template
 from icon_manager.managers.find import File, FindOptions, Folder
 from icon_manager.models.config import IconConfig
-from icon_manager.models.path import IconFile, JsonFile
+from icon_manager.models.path import ArchiveFolder, FileModel, IconFile, JsonFile
 from icon_manager.services.factories import ConfigFactory
 
 log = logging.getLogger(__name__)
@@ -88,14 +88,55 @@ class IconsController(FileBaseController[IconFile]):
     def icon_and_config_files(self) -> Iterable[Tuple[IconFile, JsonFile]]:
         return zip(self.get_files(), self.get_config_files())
 
-    def create_icon_config(self) -> None:
+    def create_icon_config(self, remove_empty: bool = True) -> None:
         configs = []
         json_reader = JsonSource()
         for icon_file, config_file in self.icon_and_config_files():
             config_dict = json_reader.read(config_file)
             icon_config = self.config_factory.create(config_dict,
                                                      icon_file=icon_file)
-            if icon_config.is_empty():
+            if icon_config.is_empty() and remove_empty:
                 continue
             configs.append(icon_config)
         self.icon_configs = sorted(configs, key=lambda cnf: cnf.order_key())
+
+
+# region ARCHIVE EMPTY ICON CONFIG
+
+
+    def archive_empty_icon_configs(self):
+        for icon_config in self.icon_configs:
+            if not icon_config.is_empty():
+                continue
+            self.archive_icon_config(icon_config)
+
+    def get_archive_folder(self, icon_config: IconConfig):
+        icon_file = icon_config.icon_file
+        folder_path = ArchiveFolder.get_folder_path(icon_file)
+        folder = ArchiveFolder(folder_path)
+        if not folder.exists():
+            folder.create()
+        return folder
+
+    def archive_icon_config(self, config: IconConfig):
+        folder = self.get_archive_folder(config)
+        self.archive_icon_file(config, folder)
+        self.archive_config_file(config, folder)
+
+    def archive_icon_file(self, config: IconConfig, folder: ArchiveFolder):
+        icon_file = config.icon_file
+        archive = folder.icon_archive(icon_file)
+        self.archive_file(icon_file, archive)
+
+    def archive_config_file(self, config: IconConfig, folder: ArchiveFolder):
+        config_file = config.config_file()
+        archive = folder.icon_archive(config_file)
+        self.archive_file(config_file, archive)
+
+    def archive_file(self, file: FileModel, archive: FileModel):
+        file.copy_to(archive)
+        log.info(f'{file.name} archived to {archive.path}')
+        file.remove()
+
+
+# endregion

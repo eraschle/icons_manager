@@ -59,6 +59,12 @@ class IconFolderService:
         else:
             self.icons_ctrl.create_icon_config_files(overwrite)
 
+    def archive_empty_icon_configs(self):
+        self.icons_ctrl.create_icon_config(remove_empty=False)
+        self.icons_ctrl.archive_empty_icon_configs()
+
+# region START AND LOAD APP
+
 
 DEVELOP = True
 
