@@ -30,7 +30,6 @@ class FolderRule(ABC, FilterRule):
         self.__values_generated = False
         self.__values = values
         self.operator = operator
-        self.case_sensitive = case_sensitive
         self.generator = Generator()
         self.generator.set_generation_values(before_or_after)
         self.generator.value_generators = [CaseGenerator(case_sensitive)]
@@ -63,13 +62,13 @@ class FolderRule(ABC, FilterRule):
         return self.are_any_values_allowed(attribute_value)
 
     def are_any_values_allowed(self, attribute_value: str) -> bool:
-        return any(self.is_values_allowed(attribute_value, value) for value in self.rule_values)
+        return any(self.is_value_allowed(attribute_value, value) for value in self.rule_values)
 
     def are_all_values_allowed(self, attribute_value: str) -> bool:
-        return all(self.is_values_allowed(attribute_value, value) for value in self.rule_values)
+        return all(self.is_value_allowed(attribute_value, value) for value in self.rule_values)
 
     @ abstractmethod
-    def is_values_allowed(self, attribute_value: str, rule_value: str) -> bool:
+    def is_value_allowed(self, attribute_value: str, rule_value: str) -> bool:
         pass
 
     def __str__(self) -> str:
@@ -87,14 +86,14 @@ class FolderRule(ABC, FilterRule):
 
 class EqualsRule(FolderRule):
 
-    def is_values_allowed(self, attribute_value: str, rule_value: str) -> bool:
+    def is_value_allowed(self, attribute_value: str, rule_value: str) -> bool:
         return rule_value == attribute_value
 
 
 class NotEqualsRule(EqualsRule):
 
-    def is_values_allowed(self, attribute_value: str, rule_value: str) -> bool:
-        return not super().is_values_allowed(attribute_value, rule_value)
+    def is_value_allowed(self, attribute_value: str, rule_value: str) -> bool:
+        return not super().is_value_allowed(attribute_value, rule_value)
 
 
 class ContainsRule(FolderRule):
@@ -102,14 +101,14 @@ class ContainsRule(FolderRule):
     def get_generators(self) -> Iterable[ValuesGenerator]:
         return self.get_before_and_after_generators()
 
-    def is_values_allowed(self, attribute_value: str, rule_value: str) -> bool:
+    def is_value_allowed(self, attribute_value: str, rule_value: str) -> bool:
         return rule_value in attribute_value
 
 
 class NotContainsRule(ContainsRule):
 
-    def is_values_allowed(self, attribute_value: str, rule_value: str) -> bool:
-        return not super().is_values_allowed(attribute_value, rule_value)
+    def is_value_allowed(self, attribute_value: str, rule_value: str) -> bool:
+        return not super().is_value_allowed(attribute_value, rule_value)
 
 
 class StartswithRule(FolderRule):
@@ -117,7 +116,7 @@ class StartswithRule(FolderRule):
     def get_generators(self) -> Iterable[ValuesGenerator]:
         return self.get_before_and_after_generators()
 
-    def is_values_allowed(self, attribute_value: str, rule_value: str) -> bool:
+    def is_value_allowed(self, attribute_value: str, rule_value: str) -> bool:
         return attribute_value.startswith(rule_value)
 
 
@@ -126,7 +125,7 @@ class EndswithRule(FolderRule):
     def get_generators(self) -> Iterable[ValuesGenerator]:
         return self.get_before_and_after_generators()
 
-    def is_values_allowed(self, attribute_value: str, rule_value: str) -> bool:
+    def is_value_allowed(self, attribute_value: str, rule_value: str) -> bool:
         return attribute_value.endswith(rule_value)
 
 
@@ -135,7 +134,7 @@ class StartsOrEndswithRule(FolderRule):
     def get_generators(self) -> Iterable[ValuesGenerator]:
         return self.get_before_and_after_generators()
 
-    def is_values_allowed(self, attribute_value: str, rule_value: str) -> bool:
+    def is_value_allowed(self, attribute_value: str, rule_value: str) -> bool:
         return attribute_value.startswith(rule_value) or attribute_value.endswith(rule_value)
 
 
@@ -163,7 +162,7 @@ class ContainsExtensionRule(FolderRule):
                 files.append(name)
         return files
 
-    def is_values_allowed(self, attribute_value: str, rule_value: str) -> bool:
+    def is_value_allowed(self, attribute_value: str, rule_value: str) -> bool:
         files = self.get_files(attribute_value, level=1)
         return any(file.endswith(rule_value) for file in files)
 
