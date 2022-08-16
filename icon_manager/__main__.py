@@ -19,7 +19,7 @@ def console(level) -> logging.Handler:
 
 
 def log_file(level) -> logging.Handler:
-    file_path = os.path.join(os.getcwd(), 'rsrg_bim_sbb.txt')
+    file_path = os.path.join(os.getcwd(), 'icon_manager.log')
     handler = RotatingFileHandler(filename=file_path, mode='a', maxBytes=10240,
                                   backupCount=3, encoding='UTF-8')
     handler.setLevel(level)
@@ -35,7 +35,7 @@ def config_logger():
     logging.basicConfig(handlers=[console(logging.INFO)], level=logging.INFO)
     logger = logging.getLogger('Icon Manager Logger')
     # logger.addHandler(log_file(logging.DEBUG))
-    logger.debug('Logger configured')
+    logger.info('Logger configured')
 
 
 def get_namespace_from_args() -> argparse.Namespace:
