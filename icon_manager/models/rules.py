@@ -1,7 +1,7 @@
 import os
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Collection, Iterable, List, Protocol
+from typing import Callable, Collection, Iterable, List, Protocol
 
 # region RULES INTERFACE
 
@@ -46,11 +46,13 @@ class FolderRule(ABC, FilterRule):
     def get_before_and_after_value(self, value: str) -> Iterable[str]:
         return [f'{extra}{value}{extra}' for extra in self.before_or_after]
 
+    def get_before_or_after_callables(self) -> Iterable[Callable[[str], Iterable[str]]]:
+        return [self.get_before_value, self.get_after_value, self.get_before_and_after_value]
+
     def get_before_or_after_value(self, value: str) -> Iterable[str]:
         before_or_after: List[str] = []
-        before_or_after.extend(self.get_before_value(value))
-        before_or_after.extend(self.get_after_value(value))
-        before_or_after.extend(self.get_before_and_after_value(value))
+        for create_values in self.get_before_or_after_callables():
+            before_or_after.extend(create_values(value))
         return before_or_after
 
     def get_before_or_after_values(self, values: Iterable[str]) -> Iterable[str]:
@@ -117,8 +119,8 @@ class NotEqualsRule(FolderRule):
 
 class ContainsRule(FolderRule):
 
-    def are_any_values_allowed(self, attribute_value: str) -> bool:
-        return any(value in attribute_value for value in self.rule_values)
+    def get_before_or_after_callables(self) -> Iterable[Callable[[str], Iterable[str]]]:
+        return [self.get_before_value, self.get_after_value]
 
     def are_all_values_allowed(self, attribute_value: str) -> bool:
         return all(value in attribute_value for value in self.rule_values)
@@ -135,8 +137,8 @@ class NotContainsRule(ContainsRule):
 
 class StartswithRule(FolderRule):
 
-    def are_any_values_allowed(self, attribute_value: str) -> bool:
-        return any(attribute_value.startswith(value) for value in self.rule_values)
+    def get_before_or_after_callables(self) -> Iterable[Callable[[str], Iterable[str]]]:
+        return [self.get_before_value, self.get_after_value]
 
     def are_all_values_allowed(self, attribute_value: str) -> bool:
         return all(attribute_value.startswith(value) for value in self.rule_values)
@@ -144,8 +146,8 @@ class StartswithRule(FolderRule):
 
 class EndswithRule(FolderRule):
 
-    def are_any_values_allowed(self, attribute_value: str) -> bool:
-        return any(attribute_value.endswith(value) for value in self.rule_values)
+    def get_before_or_after_callables(self) -> Iterable[Callable[[str], Iterable[str]]]:
+        return [self.get_before_value, self.get_after_value]
 
     def are_all_values_allowed(self, attribute_value: str) -> bool:
         return all(attribute_value.endswith(value) for value in self.rule_values)
@@ -159,8 +161,8 @@ class StartsOrEndswithRule(FolderRule):
     def are_any_values_allowed(self, attribute_value: str) -> bool:
         return any(self.__is_allowed(attribute_value, value) for value in self.rule_values)
 
-    def are_all_values_allowed(self, attribute_value: str) -> bool:
-        return all(self.__is_allowed(attribute_value, value) for value in self.rule_values)
+    def get_before_or_after_callables(self) -> Iterable[Callable[[str], Iterable[str]]]:
+        return [self.get_before_value, self.get_after_value]
 
 
 class ContainsExtensionRule(FolderRule):
@@ -169,11 +171,14 @@ class ContainsExtensionRule(FolderRule):
                  operator: Operator, case_sensitive: bool,
                  before_or_after: Collection[str], level: int) -> None:
         super().__init__(attribute, values, operator, case_sensitive, before_or_after)
-        self.level = level
+        self.max_level = level
+
+    def get_before_or_after_callables(self) -> Iterable[Callable[[str], Iterable[str]]]:
+        return []
 
     def get_files(self, full_path: str, level: int) -> List[str]:
         files: List[str] = []
-        if level >= self.level:
+        if level > self.max_level:
             return files
         level += 1
         for name in os.listdir(full_path):
