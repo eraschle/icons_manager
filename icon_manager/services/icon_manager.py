@@ -8,13 +8,11 @@ from icon_manager.controller.folder import IconFolderController
 from icon_manager.controller.icons import IconsController
 from icon_manager.data.json_source import JsonSource
 from icon_manager.helpers.resource import app_config_and_template
-from icon_manager.helpers.string import HUNDRED, fixed_length
+from icon_manager.helpers.string import HUNDRED, PREFIX_LENGTH, fixed_length
 from icon_manager.managers.desktop import DesktopFileManager
 from icon_manager.models.path import JsonFile
 
 log = logging.getLogger(__name__)
-
-PREFIX_LENGTH = 15
 
 
 class IconFolderService:
@@ -25,9 +23,6 @@ class IconFolderService:
         self.manager = manager
         self.icons_ctrl = IconsController(config)
         self.folders_ctrl = IconFolderController(manager)
-
-    def read_config(self):
-        self.icons_ctrl.create_icon_config()
 
     def delete_icon_folder_configs(self):
         for path in self.config.folders.get_search_folder_paths():
@@ -40,6 +35,7 @@ class IconFolderService:
             log.info(message)
 
     def add_icons_to_folders(self, overwrite: bool):
+        self.icons_ctrl.create_icon_config(remove_empty=True)
         self.folders_ctrl.icon_configs = self.icons_ctrl.icon_configs
         for folder_path in self.config.search_folder_paths():
             start = len(self.folders_ctrl.icon_folders)
@@ -48,6 +44,14 @@ class IconFolderService:
             amount = fixed_length(str(amount), HUNDRED)
             prefix = fixed_length("Added Config:", PREFIX_LENGTH, align='<')
             log.info(f'{prefix}{amount} in {folder_path}')
+
+    def re_write_icon_config(self):
+        self.icons_ctrl.create_icon_config(remove_empty=True)
+        self.folders_ctrl.icon_configs = self.icons_ctrl.icon_configs
+        for folder_path in self.config.search_folder_paths():
+            controller = LocalConfigController(folder_path)
+            local_folders = controller.get_existing_local_folders()
+            self.folders_ctrl.re_write_config_file(local_folders, folder_path)
 
     def create_icon_config_templates(self, overwrite: bool, update: bool) -> None:
         if update:
@@ -108,3 +112,6 @@ def get_service() -> IconFolderService:
     user_config = get_user_config(app_config)
     service = IconFolderService(user_config)
     return service
+
+
+# endregion

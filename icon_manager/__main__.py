@@ -43,6 +43,8 @@ def get_namespace_from_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('--add_icons', '-a', action='store_true',
                         help='Execute the process to add icons to folders')
+    parser.add_argument('--re-write-ini-file', '-r', action='store_true',
+                        help='Re write desktop.ini file. The setting are lost after sync with OneDrive')
     parser.add_argument('--delete-folder-config', '-d', action='store_true',
                         help='Absolute Path to export the app configuration as a template')
     parser.add_argument('--create-icon-config', '-i', action='store_true',
@@ -68,10 +70,11 @@ def main():
         service.delete_icon_folder_configs()
 
     if namespace.add_icons:
-        service.read_config()
         overwrite = namespace.overwrite
         service.add_icons_to_folders(overwrite)
 
+    if namespace.re_write_ini_file:
+        service.re_write_icon_config()
 
 if __name__ == "__main__":
     main()

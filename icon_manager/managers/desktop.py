@@ -8,6 +8,8 @@ from icon_manager.models.path import DesktopIniFile
 log = logging.getLogger(__name__)
 
 
+# region COMMANDS
+
 class ConfigCommand(Protocol):
 
     def pre_command(self, manager: IconFolderManager):
@@ -68,6 +70,11 @@ class DesktopAttributeCommand(ConfigCommand):
             log.exception(error_message(manager, 'after apply config'), ex)
 
 
+# endregion
+
+# region DESKTOP INI WRITER
+
+
 WRITE_CONFIG_COMMANDS: Iterable[ConfigCommand] = [
     IconCommand(),
     DesktopAttributeCommand()
@@ -100,14 +107,16 @@ class DesktopFileManager:
             function = getattr(command, func_name)
             function(manager)
 
-    def write_config(self, manager: IconFolderManager) -> None:
+    def write_config(self, manager: IconFolderManager) -> bool:
         self.execute_commands(manager, 'pre_command')
         try:
             self.source.write(manager.ini_file,
                               self.get_ini_lines(manager))
         except Exception as ex:
             log.exception(error_message(manager, 'Write desktop.ini'), ex)
+            return False
         self.execute_commands(manager, 'post_command')
+        return True
 
     def can_write_config(self, ini_file: DesktopIniFile) -> bool:
         if not ini_file.exists():
@@ -126,3 +135,6 @@ class DesktopFileManager:
                 continue
             return True
         return False
+
+
+# endregion

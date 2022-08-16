@@ -94,15 +94,6 @@ class FolderModel(PathModel, ABC):
         return f'Folder: {self.name}'
 
 
-class LocalIconFolder(FolderModel):
-
-    folder_name: str = '__icon__'
-
-    @ classmethod
-    def is_model(cls, path: str) -> bool:
-        return path.endswith(cls.folder_name)
-
-
 class FileModel(PathModel, ABC):
 
     @ classmethod
@@ -137,6 +128,19 @@ class IconFile(FileModel):
     @ classmethod
     def extension(cls) -> str:
         return 'ico'
+
+
+class LocalIconFolder(FolderModel):
+
+    folder_name: str = '__icon__'
+
+    @ classmethod
+    def is_model(cls, path: str) -> bool:
+        return path.endswith(cls.folder_name)
+
+    def parent_folder(self) -> FolderModel:
+        parent_path = os.path.dirname(self.path)
+        return FolderModel(parent_path)
 
 
 class DesktopIniFile(FileModel):

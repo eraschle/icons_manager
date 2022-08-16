@@ -1,6 +1,7 @@
+import os
 from typing import Collection, Tuple
 
-from icon_manager.models.path import FolderModel, IconFile
+from icon_manager.models.path import FolderModel, IconFile, JsonFile
 from icon_manager.models.rules import FilterRuleManager
 
 
@@ -13,6 +14,13 @@ class IconConfig:
         self.copy_icon = copy_icon
         self.managers = managers
         self.order_weight = weight
+
+    def config_file(self) -> JsonFile:
+        folder = os.path.dirname(self.icon_file.path)
+        name = self.icon_file.name_wo_extension
+        file_name = f'{name}.{JsonFile.extension()}'
+        file_path = os.path.join(folder, file_name)
+        return JsonFile(file_path)
 
     def order_key(self) -> Tuple[str, str]:
         weight = f'{self.order_weight:02d}'
