@@ -30,6 +30,11 @@
             "%OneDriveConsumer%\\xBackups"
         ],
         "icons_path": "%OneDriveConsumer%\\Bilder\\Icons",
-        "copy_icon": true
+        "copy_icon": true,
+        "before_or_after": [
+            "_",
+            "__",
+            "-"
+        ]
     }
 }

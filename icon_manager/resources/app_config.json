@@ -30,9 +30,14 @@
             "%OneDriveConsumer%\\xBackups"
         ],
         "icons_path": "%OneDriveConsumer%\\Bilder\\Icons",
-        "copy_icon": true
+        "copy_icon": true,
+        "before_or_after": [
+            "_",
+            "__",
+            "-"
+        ]
     },
     "app": {
-        "file_path": "C:\\workspace\\python\\folder_manager\\config.json"
+        "file_path": "C:\\workspace\\python\\icons_manager\\config.json"
     }
 }

@@ -19,7 +19,7 @@ def console(level) -> logging.Handler:
 
 
 def log_file(level) -> logging.Handler:
-    file_path = os.path.join(os.getcwd(), 'rsrg_bim_sbb.txt')
+    file_path = os.path.join(os.getcwd(), 'icon_manager.log')
     handler = RotatingFileHandler(filename=file_path, mode='a', maxBytes=10240,
                                   backupCount=3, encoding='UTF-8')
     handler.setLevel(level)
@@ -35,7 +35,7 @@ def config_logger():
     logging.basicConfig(handlers=[console(logging.INFO)], level=logging.INFO)
     logger = logging.getLogger('Icon Manager Logger')
     # logger.addHandler(log_file(logging.DEBUG))
-    logger.debug('Logger configured')
+    logger.info('Logger configured')
 
 
 def get_namespace_from_args() -> argparse.Namespace:
@@ -43,6 +43,8 @@ def get_namespace_from_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('--add_icons', '-a', action='store_true',
                         help='Execute the process to add icons to folders')
+    parser.add_argument('--re-write-ini-file', '-r', action='store_true',
+                        help='Re write desktop.ini file. The setting are lost after sync with OneDrive')
     parser.add_argument('--delete-folder-config', '-d', action='store_true',
                         help='Absolute Path to export the app configuration as a template')
     parser.add_argument('--create-icon-config', '-i', action='store_true',
@@ -51,6 +53,8 @@ def get_namespace_from_args() -> argparse.Namespace:
                         help='Overwrite existing configs (icon-json & desktop.ini)')
     parser.add_argument('--update', '-u', action='store_true',
                         help='Update rules and template section in exiting icon configs')
+    parser.add_argument('--archive', '-v', action='store_true',
+                        help='Move icon with an empty config file into the subfolder "archive"')
     return parser.parse_args()
 
 
@@ -68,9 +72,14 @@ def main():
         service.delete_icon_folder_configs()
 
     if namespace.add_icons:
-        service.read_config()
         overwrite = namespace.overwrite
         service.add_icons_to_folders(overwrite)
+
+    if namespace.re_write_ini_file:
+        service.re_write_icon_config()
+
+    if namespace.archive:
+        service.archive_empty_icon_configs()
 
 
 if __name__ == "__main__":

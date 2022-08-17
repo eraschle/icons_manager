@@ -1,4 +1,3 @@
-from ast import List
 import os
 import re
 from typing import Any, Collection, Dict, Iterable, Optional, Protocol, Type
@@ -65,6 +64,7 @@ class FolderConfig(Config):
             raise ValueError('Icon path could not be found')
         self.icons_path = self.__class__.get_folder_path(icons_path)
         self.copy_icon = self.config.get('copy_icon', False)
+        self.before_or_after = self.config.get('before_or_after', [])
         code_project_names = self.config.get('code_project_names', [])
         exclude_folder_names = self.config.get('exclude_folder_names', [])
         folder_paths = self.config.get('folder_paths', None)
@@ -161,3 +161,6 @@ class AppConfig(Config):
 
     def rule_mapping(self) -> Dict[str, Type[FilterRule]]:
         return RULE_MAP
+
+    def before_or_after_values(self) -> Iterable[str]:
+        return self.folders.before_or_after

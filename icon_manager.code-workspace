@@ -34,9 +34,11 @@
 				"args": [
 					// "--create-icon-config",
 					// "--update",
-					"--overwrite",
-					"--add_icons",
+					// "--overwrite",
+					// "--add_icons",
 					// "--delete-folder-config",
+					// "--re-write-ini-file",
+					// "--archive",
 					// "--export-app-config",
 					// "C:\\workspace"
 				]

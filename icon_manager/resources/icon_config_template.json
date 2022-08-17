@@ -8,10 +8,11 @@
         "contains": "Does the attribute value contains in the rule values",
         "not_contains": "Does the attribute value NOT contains in the rule values",
         "chained": "Does the attribute value NOT contains in the rule values",
-        "contains_files": "Does files with the EXTENSIONS (rule values) exists. ONLY ON PATH ATTRIBUTE."
+        "contains_files": "Does files with the EXTENSIONS (rule values) exists"
     },
     "template": {
         "order": "Integer number to adjust order of config execution. The smaller the earlier it will be executed >> default 5",
+        "operator": "'any' or 'all' rule values must be TRUE >> default: all",
         "path": {
             "operator": "'any' or 'all' rules must be TRUE >> default: any",
             "rules": [
@@ -20,7 +21,12 @@
                         "Values for the rule to check"
                     ],
                     "operator": "'any' or 'all' rule values must be TRUE >> default: any",
-                    "case_sensitive": "'true' or 'false' for rule >> default: false"
+                    "case_sensitive": "'true' or 'false' for rule >> default: false",
+                    "level": "'Only for contains_extension >> default: 1",
+                    "before_or_after": "true if the values from app config should to be taken, otherwise false",
+                    "before_or_after_values": [
+                        "If other values than in the app config should be used"
+                    ]
                 }
             ]
         },
@@ -33,7 +39,10 @@
                     ],
                     "operator": "'any' or 'all' rule values must be TRUE >> default: any",
                     "case_sensitive": "'true' or 'false' for rule >> default: false",
-                    "level": "'Only for contains_extension >> default: 1"
+                    "before_or_after": "true if the values from app config should to be taken, otherwise false",
+                    "before_or_after_values": [
+                        "If other values than in the app config should be used"
+                    ]
                 }
             ]
         }

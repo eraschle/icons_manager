@@ -94,15 +94,6 @@ class FolderModel(PathModel, ABC):
         return f'Folder: {self.name}'
 
 
-class LocalIconFolder(FolderModel):
-
-    folder_name: str = '__icon__'
-
-    @ classmethod
-    def is_model(cls, path: str) -> bool:
-        return path.endswith(cls.folder_name)
-
-
 class FileModel(PathModel, ABC):
 
     @ classmethod
@@ -137,6 +128,44 @@ class IconFile(FileModel):
     @ classmethod
     def extension(cls) -> str:
         return 'ico'
+
+
+class ArchiveFolder(FolderModel):
+
+    folder_name: str = '__archive__'
+
+    @ classmethod
+    def get_folder_path(cls, model: PathModel) -> str:
+        folder_path = model.path
+        if isinstance(model, FileModel):
+            folder_path = os.path.dirname(model.path)
+        return os.path.join(folder_path, cls.folder_name)
+
+    @ classmethod
+    def is_model(cls, path: str) -> bool:
+        return path.endswith(cls.folder_name)
+
+    def get_archive_path(self, model: PathModel) -> str:
+        return os.path.join(self.path, model.name)
+
+    def json_archive(self, model: PathModel) -> JsonFile:
+        return JsonFile(self.get_archive_path(model))
+
+    def icon_archive(self, model: PathModel) -> IconFile:
+        return IconFile(self.get_archive_path(model))
+
+
+class LocalIconFolder(FolderModel):
+
+    folder_name: str = '__icon__'
+
+    @ classmethod
+    def is_model(cls, path: str) -> bool:
+        return path.endswith(cls.folder_name)
+
+    def parent_folder(self) -> FolderModel:
+        parent_path = os.path.dirname(self.path)
+        return FolderModel(parent_path)
 
 
 class DesktopIniFile(FileModel):

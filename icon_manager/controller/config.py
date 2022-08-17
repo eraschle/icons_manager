@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Iterable, List, Optional, Tuple
+from typing import Collection, Iterable, List, Optional, Tuple
 
 from icon_manager.config.config import AppConfig
 from icon_manager.controller.base import FileBaseController
@@ -81,6 +81,10 @@ class LocalConfigController(FileBaseController[DesktopIniFile]):
 
     def create_files(self, folders: Iterable[Folder], files: Iterable[File]) -> Iterable[DesktopIniFile]:
         return [self.get_file(folders, file) for file in files]
+
+    def get_existing_local_folders(self) -> Collection[LocalIconFolder]:
+        self.search_for_folders_and_files(self.full_path, search_again=True)
+        return self.icon_folders
 
     def delete_existing_configs(self, manager: DesktopFileManager) -> Tuple[List[FolderModel], List[FileModel]]:
         folders, files = self.delete_existing_files(manager)
