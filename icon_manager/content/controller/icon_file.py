@@ -7,7 +7,7 @@ from icon_manager.content.controller.base import ContentController
 from icon_manager.content.models.matched import MatchedIconFile
 from icon_manager.crawler.filters import files_by_extension
 from icon_manager.crawler.options import FilterOptions
-from icon_manager.helpers.logs import log_time
+from icon_manager.helpers.logs import execution
 from icon_manager.helpers.path import File, Folder
 from icon_manager.interfaces.actions import DeleteAction
 from icon_manager.interfaces.builder import CrawlerBuilder
@@ -47,13 +47,12 @@ class IconFileController(ContentController[MatchedIconFile]):
         super().__init__(user_config, builder, options)
         self.files: List[MatchedIconFile] = []
 
+    @execution(message='Build copied icons')
     def crawl_content(self, folders: List[Folder], settings: Sequence[IconSetting]):
-        start = datetime.now()
         extensions = [MatchedIconFile.extension(with_point=False)]
         files = files_by_extension(folders, extensions)
         self.builder.setup(settings=settings)
         self.files = self.builder.build_models(files)
-        log.info(log_time('Build copied icons', start))
 
     def delete_content(self) -> None:
         action = DeleteAction(self.files)

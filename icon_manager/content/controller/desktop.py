@@ -12,7 +12,7 @@ from icon_manager.content.models.matched import (MatchedIconFile,
 from icon_manager.crawler.filters import files_by_extension
 from icon_manager.crawler.options import FilterOptions
 from icon_manager.data.ini_source import DesktopFileSource
-from icon_manager.helpers.logs import log_time
+from icon_manager.helpers.logs import execution
 from icon_manager.helpers.path import File, Folder
 from icon_manager.interfaces.actions import DeleteAction
 from icon_manager.interfaces.builder import CrawlerBuilder
@@ -64,12 +64,11 @@ class DesktopIniController(ContentController[DesktopIniFile]):
         super().__init__(user_config, builder, options)
         self.desktop_files: List[DesktopIniFile] = []
 
+    @execution(message='Build Desktop.ini', log=log)
     def crawl_content(self, folders: List[Folder], _: Sequence[IconSetting]):
-        start = datetime.now()
         extensions = [DesktopIniFile.extension(with_point=False)]
         files = files_by_extension(folders, extensions)
         self.desktop_files = self.builder.build_models(files)
-        log.info(log_time('Build Desktop.ini', start))
 
     def delete_content(self):
         action = DeleteAction(self.desktop_files)

@@ -43,7 +43,7 @@ class RulesApplyBuilder(CrawlerBuilder[MatchedRuleFolder]):
         action = prefix_value('Icon', width=7, align='<')
         icon_name = config.icon.name_wo_extension
         icon_name = prefix_value(f'"{icon_name}"', width=25, align='<')
-        log.info(f'{action} {icon_name} to "{model.name}"')
+        log.debug(f'{action} {icon_name} to "{model.name}"')
         folder = FolderModel(model.path)
         return MatchedRuleFolder(folder, config)
 
