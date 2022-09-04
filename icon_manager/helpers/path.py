@@ -1,7 +1,7 @@
 import logging
 import os
 from collections import namedtuple
-from typing import Iterable, List, Optional, Sequence, Union
+from typing import Iterable, List, Optional, Sequence, Tuple, Union
 
 log = logging.getLogger(__name__)
 
@@ -56,3 +56,22 @@ def crawle_folder(entry: os.DirEntry) -> Folder:
         else:
             files.append(create_file(elem.path, elem.name))
     return Folder(path=entry.path, name=entry.name, files=files, folders=folders)
+
+
+def count_of(folder: Folder) -> Tuple[int, int]:
+    return len(folder.folders), len(folder.files)
+
+
+def count_of_recursive(entry: Folder) -> Iterable[Tuple[int, int]]:
+    counts = [count_of(entry)]
+    for folder in entry.folders:
+        counts.extend(count_of_recursive(folder))
+    return counts
+
+
+def total_count(entries: Iterable[Folder]) -> Tuple[int, int]:
+    counts: List[Tuple[int, int]] = []
+    for entry in entries:
+        counts.extend(count_of_recursive(entry))
+    return (sum([count[0] for count in counts]),
+            sum([count[1] for count in counts]))

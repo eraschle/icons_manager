@@ -10,7 +10,7 @@ from icon_manager.content.controller.re_apply import ReApplyController
 from icon_manager.content.controller.rules_apply import IApplyController
 from icon_manager.crawler.crawler import (crawling_icons,
                                           crawling_search_folders)
-from icon_manager.helpers.path import Folder
+from icon_manager.helpers.logs import log_count, log_time
 from icon_manager.library.controller import (IconSettingController,
                                              ISettingsController)
 from icon_manager.library.models import IconSetting
@@ -33,16 +33,12 @@ class ConfigService(IConfigService):
         self.rules = rules
         self._before_or_after: Set[str] = set()
 
-    def _duration_message(self, start: datetime, message: str) -> str:
-        diff = (datetime.now() - start).total_seconds()
-        return f'{message} in {diff} seconds'
-
     def create_settings(self):
         start = datetime.now()
         extensions = IconSettingController.icons_extensions
         content = crawling_icons(self.user_config.icons_path, extensions)
         self.settings.create_settings(content)
-        message = self._duration_message(start, 'Created icon settings')
+        message = log_time('Created icon settings', start)
         log.info(message)
 
     def create_icon_configs(self):
@@ -68,48 +64,31 @@ class ConfigService(IConfigService):
         if find_matches:
             self.find_matching_content(settings)
 
-    def __count_of(self, folder: Folder) -> Tuple[int, int]:
-        return len(folder.folders), len(folder.files)
-
-    def __get_count_of(self, entry: Folder) -> Iterable[Tuple[int, int]]:
-        counts = [self.__count_of(entry)]
-        for folder in entry.folders:
-            counts.extend(self.__get_count_of(folder))
-        return counts
-
-    def __get_count(self, entries: Iterable[Folder]) -> Tuple[int, int]:
-        counts: List[Tuple[int, int]] = []
-        for entry in entries:
-            counts.extend(self.__get_count_of(entry))
-        return (sum([count[0] for count in counts]),
-                sum([count[1] for count in counts]))
-
     def crawle_search_folders(self, exclude: ExcludeRuleConfig,
                               settings: Sequence[IconSetting]):
         start = datetime.now()
-        log.info('Start crawle search folders')
-        entries = crawling_search_folders(self.user_config.search_folders)
-        folders, files = self.__get_count(entries)
-        log.info(f'{folders} Folders and {files} Files found')
+        folders = self.user_config.search_folders
+        log.info(f'Start crawling {len(folders)} search folders')
+        entries = crawling_search_folders(folders)
+        log.info(log_count('Found', entries))
         self.desktop.crawl_content(entries, settings)
         self.icon_folders.crawl_content(entries, settings)
         self.icon_files.crawl_content(entries, settings)
         self.rules.crawl_content(entries, exclude)
-        message = self._duration_message(start, 'Crawled through content')
-        log.info(message)
+        log.info(log_time('Crawled through content', start))
 
     def find_matching_content(self, settings: Sequence[IconSetting]):
         start = datetime.now()
         log.info('Start find rule matches')
         self.rules.find_matches(settings)
-        message = self._duration_message(start, 'Find rule matches')
+        message = log_time('Find rule matches', start)
         log.info(message)
 
     def apply_icons(self):
         start = datetime.now()
         log.info('Start apply icons')
         self.rules.apply_matches()
-        message = self._duration_message(start, 'Applied icons')
+        message = log_time('Applied icons', start)
         log.info(message)
 
     def re_apply_icons(self):
@@ -118,7 +97,7 @@ class ConfigService(IConfigService):
         controller = ReApplyController(self.settings, self.desktop,
                                        self.icon_folders)
         self.rules.re_apply_matches(controller)
-        message = self._duration_message(start, 'RE-Applied icons')
+        message = log_time('RE-Applied icons', start)
         log.info(message)
 
     def delete_content(self):
@@ -127,7 +106,7 @@ class ConfigService(IConfigService):
         self.desktop.delete_content()
         self.icon_folders.delete_content()
         self.icon_files.delete_content()
-        message = self._duration_message(start, 'Deleted content')
+        message = log_time('Deleted content', start)
         log.info(message)
 
     # def get_icon_config_by(self, local_folder: MatchedIconFolder) -> Optional[IconSetting]:

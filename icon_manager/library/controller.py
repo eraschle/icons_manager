@@ -73,7 +73,6 @@ class IconSettingBuilder(ModelBuilder[IconSetting]):
         config = self.get_rule_config(file)
         if config is None:
             return None
-        log.debug(f'Icon Setting {file.name_wo_extension} created')
         return IconSetting(file, config)
 
     def update_config(self, setting: IconSetting, template_file: JsonFile) -> None:
@@ -170,19 +169,15 @@ class IconSettingController(ISettingsController):
         for setting in self._settings:
             if not setting.is_empty():
                 continue
-            self.archive_file(setting.icon)
-            for other in setting.icon.other_image_files():
-                if not other.exists():
-                    continue
-                self.archive_file(other)
-            self.archive_file(setting.rule_config.config)
-            log.info(f'Archive icon and config of {setting.name}')
+            archive_files = setting.archive_files()
+            for file in archive_files:
+                self.archive_file(file)
+            log.info(f'Archive {len(archive_files)} of {setting.name}')
 
     def archive_file(self, file: FileModel):
         folder = self.get_archive_folder(file)
         archive = folder.get_archive_file(file)
         file.copy_to(archive)
-        log.info(f'{file.name} archived to {archive.path}')
         file.remove()
 
     def get_archive_folder(self, icon: FileModel):

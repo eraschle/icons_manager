@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 class CreateIconAction(Action[MatchedRuleFolder]):
 
     def __init__(self, entries: Iterable[MatchedRuleFolder], user_config: UserConfig,
-                 action_log: str = 'Create Icons', controller: DesktopIniCreator = DesktopIniCreator()) -> None:
+                 action_log: str = 'Added Icons to Folders', controller: DesktopIniCreator = DesktopIniCreator()) -> None:
         super().__init__(entries, action_log)
         self.user_config = user_config
         self.controller = controller
@@ -33,10 +33,16 @@ class CreateIconAction(Action[MatchedRuleFolder]):
             copy_icon = self.user_config.copy_icon
         self.controller.write(entry, copy_icon)
 
+    def get_log_message(self, model: type) -> str:
+        name = self._log_prefix(model)
+        action = self._log_action()
+        folders = self._log_folders()
+        return f'{name}: {action} "{folders}" Folders'
+
 
 class ReCreateIconAction(CreateIconAction):
 
     def __init__(self, re_apply: ReApplyController, user_config: UserConfig,
                  controller: DesktopIniCreator = DesktopIniCreator()) -> None:
         super().__init__(re_apply.get_rule_folders(), user_config,
-                         action_log='Re created Icons', controller=controller)
+                         action_log='Re added Icons to folder', controller=controller)
