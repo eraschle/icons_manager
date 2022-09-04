@@ -49,7 +49,7 @@ class IconSetting:
         return (weight, self.icon.name)
 
     def is_config_for(self, entry: Folder) -> bool:
-        return self.rule_config.is_config_for(entry)
+        return self.rule_config.has_rule_for(entry)
 
     def set_before_or_after(self, before_or_after: Iterable[str]) -> None:
         self.rule_config.set_before_or_after(before_or_after)

@@ -20,6 +20,17 @@ def icon_setting_template() -> JsonFile:
     return JsonFile(icon_setting_template_path())
 
 
+EXCLUDE_RULES_TEMPLATE_NAME: str = 'exclude_rules_template.config'
+
+
+def exclude_rules_template_path() -> str:
+    return __resources_path(EXCLUDE_RULES_TEMPLATE_NAME)
+
+
+def exclude_rules_template_file() -> ConfigFile:
+    return ConfigFile(exclude_rules_template_path())
+
+
 USER_TEMPLATE_NAME: str = 'template_user.config'
 
 

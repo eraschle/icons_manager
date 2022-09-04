@@ -17,6 +17,12 @@ def _is_project(folder: Folder, options: FilterOptions) -> bool:
     return options.clean_project and folder.name in PROJECT_FOLDERS
 
 
+def _is_exclude_rule(entry: Folder, options: FilterOptions) -> bool:
+    if options.exclude_rules.is_empty():
+        return False
+    return options.exclude_rules.has_rule_for(entry)
+
+
 def _is_clean_recursive(entry: Folder, options: FilterOptions) -> bool:
     if not options.clean_recursive:
         return False
@@ -24,7 +30,7 @@ def _is_clean_recursive(entry: Folder, options: FilterOptions) -> bool:
 
 
 def filter_folder(entry: Folder, options: FilterOptions) -> Optional[Folder]:
-    if _is_clean_recursive(entry, options):
+    if _is_exclude_rule(entry, options) or _is_clean_recursive(entry, options):
         return Folder(path=entry.path, name=entry.name, files=entry.files, folders=[])
     if _is_excluded(entry, options) or _is_project(entry, options):
         return None

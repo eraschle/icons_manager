@@ -13,8 +13,8 @@ def fixed_length(value: str, width: int, fill: str = FILL_SPACE, align: str = '>
     return f"{value:{fill}{align}{width}}"
 
 
-def prefix_value(value: str, align: str = '>') -> str:
-    return fixed_length(value, PREFIX_LENGTH, align=align)
+def prefix_value(value: str, width: int = PREFIX_LENGTH, align: str = '>') -> str:
+    return fixed_length(value, width=width, align=align)
 
 
 def list_value(values: Sequence[Any], align: str = '<') -> str:

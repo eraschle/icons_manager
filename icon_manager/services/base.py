@@ -1,7 +1,8 @@
-from typing import Protocol
+from typing import Iterable, Protocol
 
 from icon_manager.interfaces.controller import (IContentController,
                                                 ILibraryController)
+from icon_manager.rules.config import ExcludeRuleConfig
 
 
 class IConfigService(ILibraryController, IContentController):
@@ -21,7 +22,10 @@ class IConfigService(ILibraryController, IContentController):
     def archive_library(self):
         ...
 
-    def crawl_content(self, find_matches: bool):
+    def update_before_and_after(self, before_and_after: Iterable[str]):
+        ...
+
+    def crawl_content(self, find_matches: bool, exclude: ExcludeRuleConfig):
         ...
 
     def apply_icons(self):

@@ -5,7 +5,7 @@ from icon_manager.content.controller.desktop import DesktopIniController
 from icon_manager.content.controller.icon_folder import IconFolderController
 from icon_manager.content.models.matched import (MatchedIconFolder,
                                                  MatchedRuleFolder)
-from icon_manager.library.controller import SettingsControllerInterface
+from icon_manager.library.controller import ISettingsController
 from icon_manager.library.models import IconSetting
 from icon_manager.interfaces.path import FolderModel
 
@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 
 class ReApplyController:
 
-    def __init__(self, settings: SettingsControllerInterface,
+    def __init__(self, settings: ISettingsController,
                  desktop: DesktopIniController, icon_folders: IconFolderController) -> None:
         super().__init__()
         self.settings = settings

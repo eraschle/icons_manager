@@ -7,6 +7,8 @@ from icon_manager.config.app import AppConfig, AppConfigFactory
 from icon_manager.data.json_source import JsonSource
 from icon_manager.helpers.resource import app_config_template_file
 from icon_manager.interfaces.path import ConfigFile
+from icon_manager.rules.factory import ExcludeRuleConfigFactory
+from icon_manager.rules.mapping import RULE_MAPPINGS
 from icon_manager.services.app_service import IconsAppService
 
 log = logging.getLogger(__name__)
@@ -64,7 +66,8 @@ def get_namespace_from_args() -> argparse.Namespace:
 
 
 def get_app_config(config_file: ConfigFile) -> AppConfig:
-    factory = AppConfigFactory(JsonSource())
+    exclude_factory = ExcludeRuleConfigFactory(RULE_MAPPINGS, JsonSource())
+    factory = AppConfigFactory(JsonSource(), exclude_factory)
     config = factory.create(config_file)
     config.validate()
     return config
@@ -87,8 +90,6 @@ def main():
     service.setup()
 
     service.create_settings()
-    find_matches = namespace.content and not namespace.delete
-    service.crawling_search_content(find_matches)
     if namespace.library:
         if namespace.delete:
             service.delete_library_configs()
@@ -99,6 +100,9 @@ def main():
         if namespace.archive:
             service.archive_icons_and_configs()
     elif namespace.content:
+        service.update_before_and_after()
+        find_matches = namespace.content and not namespace.delete
+        service.crawling_search_content(find_matches)
         if namespace.delete:
             service.delete_icon_settings()
         if namespace.create:

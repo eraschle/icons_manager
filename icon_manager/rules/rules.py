@@ -122,22 +122,11 @@ class EndswithRule(FolderRule):
 
 class StartsOrEndswithRule(FolderRule):
 
-    def __init__(self, attribute: str, operator: Operator, values: Iterable[str],
-                 case_sensitive: bool, before_or_after: bool,
-                 before_or_after_values: Collection[str]) -> None:
-        super().__init__(attribute, operator, values, case_sensitive,
-                         before_or_after, before_or_after_values)
-        self.start_with = StartswithRule(attribute, operator, values, case_sensitive,
-                                         before_or_after, before_or_after_values)
-        self.end_with = EndswithRule(attribute, operator, values, case_sensitive,
-                                     before_or_after, before_or_after_values)
-
     def get_generators(self) -> Iterable[Generator]:
-        return set(*self.start_with.get_generators(), *self.end_with.get_generators())
+        return self.before_and_after_generators()
 
     def is_value_allowed(self, entry: Folder, value: str, rule_value: str) -> bool:
-        return (self.start_with.is_value_allowed(entry, value, rule_value)
-                or self.end_with.is_value_allowed(entry, value, rule_value))
+        return value.startswith(rule_value) or value.endswith(rule_value)
 
 
 class ContainsFileRule(FolderRule):
@@ -201,11 +190,11 @@ class ChainedRule(IconRule):
             return False
         return self.is_allowed_with_operator(entry, value)
 
-    def are_any_allowed(self, value: Any) -> bool:
-        return any(rule.is_allowed(value) for rule in self.rules)
+    def are_any_allowed(self, entry: Folder, _: str) -> bool:
+        return any(rule.is_allowed(entry) for rule in self.rules)
 
-    def are_all_allowed(self, value: Any) -> bool:
-        return all(rule.is_allowed(value) for rule in self.rules)
+    def are_all_allowed(self, entry: Folder, _: str) -> bool:
+        return all(rule.is_allowed(entry) for rule in self.rules)
 
     def set_before_or_after(self, before_or_after: Iterable[str]) -> None:
         for rule in self.rules:

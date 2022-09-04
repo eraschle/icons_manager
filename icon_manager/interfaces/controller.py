@@ -12,7 +12,7 @@ class ILibraryController(Protocol):
     def create_settings(self, content: Dict[str, List[File]]):
         ...
 
-    def create_icon_configs(self, overwrite: bool):
+    def create_icon_configs(self):
         ...
 
     def update_icon_configs(self):
