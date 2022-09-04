@@ -81,7 +81,7 @@ class IconSettingBuilder(ModelBuilder[IconSetting]):
         self.config_builder.factory.update(config, template_file)
 
 
-class SettingsControllerInterface(ILibraryController):
+class ISettingsController(ILibraryController):
 
     def settings(self, clean_empty: bool = True) -> Sequence[IconSetting]:
         ...
@@ -95,7 +95,7 @@ class SettingsControllerInterface(ILibraryController):
     def create_settings(self, content: Dict[str, List[File]]):
         ...
 
-    def create_icon_configs(self, overwrite: bool):
+    def create_icon_configs(self):
         ...
 
     def update_icon_configs(self):
@@ -108,7 +108,7 @@ class SettingsControllerInterface(ILibraryController):
         ...
 
 
-class IconSettingController(SettingsControllerInterface):
+class IconSettingController(ISettingsController):
 
     icons_extensions = [
         IconFile.extension(with_point=False),
@@ -144,11 +144,11 @@ class IconSettingController(SettingsControllerInterface):
         self._settings.sort(key=lambda ele: ele.order_key)
         log.info(f'Created {len(self._settings)} Icon Settings')
 
-    def create_icon_configs(self, overwrite: bool):
+    def create_icon_configs(self):
         template = icon_setting_template()
         for icon_file in self.library_icons:
             icon_config = icon_file.get_config()
-            if not overwrite and icon_config.exists():
+            if icon_config.exists():
                 continue
             template.copy_to(icon_config)
             log.info(f'Created template for {icon_file.name_wo_extension}')

@@ -12,7 +12,7 @@ from icon_manager.crawler.crawler import (crawling_icons,
                                           crawling_search_folders)
 from icon_manager.helpers.path import Folder
 from icon_manager.library.controller import (IconSettingController,
-                                             SettingsControllerInterface)
+                                             ISettingsController)
 from icon_manager.library.models import IconSetting
 from icon_manager.rules.config import ExcludeRuleConfig
 from icon_manager.services.base import IConfigService
@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 
 class ConfigService(IConfigService):
 
-    def __init__(self, user_config: UserConfig, settings: SettingsControllerInterface,
+    def __init__(self, user_config: UserConfig, settings: ISettingsController,
                  desktop: DesktopIniController, icon_folders: IconFolderController,
                  icon_files: IconFileController, rules: IApplyController) -> None:
         self.user_config = user_config
@@ -45,8 +45,8 @@ class ConfigService(IConfigService):
         message = self._duration_message(start, 'Created icon settings')
         log.info(message)
 
-    def create_icon_configs(self, overwrite: bool):
-        self.settings.create_icon_configs(overwrite)
+    def create_icon_configs(self):
+        self.settings.create_icon_configs()
 
     def update_icon_configs(self):
         self.settings.update_icon_configs()

@@ -90,9 +90,6 @@ def main():
     service.setup()
 
     service.create_settings()
-    service.update_before_and_after()
-    find_matches = namespace.content and not namespace.delete
-    service.crawling_search_content(find_matches)
     if namespace.library:
         if namespace.delete:
             service.delete_library_configs()
@@ -103,6 +100,9 @@ def main():
         if namespace.archive:
             service.archive_icons_and_configs()
     elif namespace.content:
+        service.update_before_and_after()
+        find_matches = namespace.content and not namespace.delete
+        service.crawling_search_content(find_matches)
         if namespace.delete:
             service.delete_icon_settings()
         if namespace.create:
