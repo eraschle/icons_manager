@@ -37,8 +37,8 @@ def log_file(level) -> logging.Handler:
     return handler
 
 
-def config_logger():
-    logging.basicConfig(handlers=[console(logging.INFO)], level=logging.INFO)
+def config_logger(level):
+    logging.basicConfig(handlers=[console(level)], level=level)
     logger = logging.getLogger('Icon Manager Logger')
     # logger.addHandler(log_file(logging.DEBUG))
     logger.info('Logger configured')
@@ -84,7 +84,7 @@ def get_service() -> IconsAppService:
 
 
 def main():
-    config_logger()
+    config_logger(logging.INFO)
     namespace = get_namespace_from_args()
     service = get_service()
     service.setup()

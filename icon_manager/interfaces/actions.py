@@ -2,7 +2,9 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Generic, Iterable, List, TypeVar
 
-from icon_manager.helpers.string import fixed_length, list_value, prefix_value
+from icon_manager.helpers.string import (ALIGN_LEFT, ALIGN_RIGHT, THOUSAND,
+                                         fixed_length, list_value,
+                                         prefix_value)
 from icon_manager.interfaces.path import PathModel
 
 log = logging.getLogger(__name__)
@@ -18,7 +20,7 @@ class Action(ABC, Generic[TEntry]):
         self.entries = entries
         self.files: List[PathModel] = []
         self.folders: List[PathModel] = []
-        self._log_value = action_log
+        self._action_log = action_log
 
     def execute(self) -> None:
         for entry in self.entries:
@@ -41,11 +43,23 @@ class Action(ABC, Generic[TEntry]):
     def any_executed(self) -> bool:
         return len(self.files) > 0 or len(self.folders) > 0
 
+    def _log_prefix(self, model: type, width: int = 10, align: str = ALIGN_LEFT) -> str:
+        return prefix_value(model.__name__, width=width, align=align)
+
+    def _log_action(self, width: int = 20, align: str = ALIGN_LEFT) -> str:
+        return fixed_length(self._action_log, width=width, align=align)
+
+    def _log_files(self, width: int = THOUSAND, align: str = ALIGN_RIGHT) -> str:
+        return list_value(self.files, width=width, align=align)
+
+    def _log_folders(self, width: int = THOUSAND, align: str = ALIGN_RIGHT) -> str:
+        return list_value(self.folders, width=width, align=align)
+
     def get_log_message(self, model: type) -> str:
-        name = prefix_value(model.__name__)
-        action = fixed_length(self._log_value, 20)
-        files = list_value(self.files)
-        folders = list_value(self.folders)
+        name = self._log_prefix(model)
+        action = self._log_action()
+        files = self._log_files()
+        folders = self._log_folders()
         return f'{name}: {action} "{files}" Files / "{folders}" Folders'
 
 

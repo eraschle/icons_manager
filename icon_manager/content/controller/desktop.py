@@ -1,5 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
+from datetime import datetime
 from typing import Iterable, List, Optional, Sequence, Union
 
 from icon_manager.config.user import UserConfig
@@ -11,11 +12,12 @@ from icon_manager.content.models.matched import (MatchedIconFile,
 from icon_manager.crawler.filters import files_by_extension
 from icon_manager.crawler.options import FilterOptions
 from icon_manager.data.ini_source import DesktopFileSource
+from icon_manager.helpers.logs import log_time
 from icon_manager.helpers.path import File, Folder
 from icon_manager.interfaces.actions import DeleteAction
 from icon_manager.interfaces.builder import CrawlerBuilder
-from icon_manager.library.models import IconSetting, LibraryIconFile
 from icon_manager.interfaces.path import PathModel
+from icon_manager.library.models import IconSetting, LibraryIconFile
 
 log = logging.getLogger(__name__)
 
@@ -63,9 +65,11 @@ class DesktopIniController(ContentController[DesktopIniFile]):
         self.desktop_files: List[DesktopIniFile] = []
 
     def crawl_content(self, folders: List[Folder], _: Sequence[IconSetting]):
+        start = datetime.now()
         extensions = [DesktopIniFile.extension(with_point=False)]
         files = files_by_extension(folders, extensions)
         self.desktop_files = self.builder.build_models(files)
+        log.info(log_time('Build Desktop.ini', start))
 
     def delete_content(self):
         action = DeleteAction(self.desktop_files)
@@ -179,7 +183,7 @@ class IconFileCommand(ConfigCommand):
             log.exception(error_message(self.icon, 'icon file attribute'), ex)
 
 
-class DesktopAttributeCommand(ConfigCommand):
+class DesktopIniCommand(ConfigCommand):
 
     def __init__(self, order: int, copy_icon: bool, desktop: DesktopIniFile) -> None:
         super().__init__(order, copy_icon)
@@ -218,7 +222,7 @@ def get_commands(rule_folder: MatchedRuleFolder, copy_icon: bool) -> List[Config
         RuleFolderCommand(1, copy_icon, rule_folder),
         IconFolderCommand(2, copy_icon, icon_folder),
         IconFileCommand(3, copy_icon, local_icon, library_icon),
-        DesktopAttributeCommand(4, copy_icon, rule_folder.desktop_ini)
+        DesktopIniCommand(4, copy_icon, rule_folder.desktop_ini)
     ]
 
 

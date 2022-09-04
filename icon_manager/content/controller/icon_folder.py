@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from typing import Iterable, List, Optional, Sequence
 
 from icon_manager.config.user import UserConfig
@@ -6,6 +7,7 @@ from icon_manager.content.controller.base import ContentController
 from icon_manager.content.models.matched import MatchedIconFolder
 from icon_manager.crawler.filters import folders_by_name
 from icon_manager.crawler.options import FilterOptions
+from icon_manager.helpers.logs import log_time
 from icon_manager.helpers.path import Folder
 from icon_manager.interfaces.actions import DeleteAction
 from icon_manager.interfaces.builder import CrawlerBuilder
@@ -37,8 +39,10 @@ class IconFolderController(ContentController[MatchedIconFolder]):
         self.folders: List[MatchedIconFolder] = []
 
     def crawl_content(self, folders: List[Folder], _: Sequence[IconSetting]):
+        start = datetime.now()
         folders = folders_by_name(folders, [MatchedIconFolder.folder_name])
         self.folders = self.builder.build_models(folders)
+        log.info(log_time('Build __icon__-Folders', start))
 
     def delete_content(self) -> None:
         action = DeleteAction(self.folders)

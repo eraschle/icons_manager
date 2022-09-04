@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Iterable, Tuple
+from typing import Iterable, Sequence, Tuple
 
 from icon_manager.helpers.path import Folder
 from icon_manager.interfaces.path import (FileModel, FolderModel, JsonFile,
@@ -8,6 +8,24 @@ from icon_manager.interfaces.path import (FileModel, FolderModel, JsonFile,
 from icon_manager.rules.config import RuleConfig
 
 log = logging.getLogger(__name__)
+
+
+class PngFile(FileModel):
+    @ classmethod
+    def _extension(cls) -> str:
+        return 'png'
+
+
+class JpgFile(FileModel):
+    @ classmethod
+    def _extension(cls) -> str:
+        return 'jpg'
+
+
+class JpegFile(FileModel):
+    @ classmethod
+    def _extension(cls) -> str:
+        return 'jpeg'
 
 
 class IconFile(FileModel):
@@ -47,6 +65,16 @@ class IconSetting:
     def order_key(self) -> Tuple[str, str]:
         weight = f'{self.rule_config.order_weight:02d}'
         return (weight, self.icon.name)
+
+    def archive_files(self) -> Sequence[FileModel]:
+        name = self.icon.name_wo_extension
+        files = [
+            self.icon, self.rule_config.config,
+            PngFile(self.icon.sibling_path(f'{name}{PngFile.extension()}')),
+            JpgFile(self.icon.sibling_path(f'{name}{JpgFile.extension()}')),
+            JpegFile(self.icon.sibling_path(f'{name}{JpegFile.extension()}'))
+        ]
+        return [file for file in files if file.exists()]
 
     def is_config_for(self, entry: Folder) -> bool:
         return self.rule_config.has_rule_for(entry)
