@@ -171,6 +171,10 @@ class IconSettingController(ISettingsController):
             if not setting.is_empty():
                 continue
             self.archive_file(setting.icon)
+            for other in setting.icon.other_image_files():
+                if not other.exists():
+                    continue
+                self.archive_file(other)
             self.archive_file(setting.rule_config.config)
             log.info(f'Archive icon and config of {setting.name}')
 

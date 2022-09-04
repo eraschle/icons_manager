@@ -10,6 +10,24 @@ from icon_manager.rules.config import RuleConfig
 log = logging.getLogger(__name__)
 
 
+class PngFile(FileModel):
+    @ classmethod
+    def _extension(cls) -> str:
+        return 'png'
+
+
+class JpgFile(FileModel):
+    @ classmethod
+    def _extension(cls) -> str:
+        return 'jpg'
+
+
+class JpegFile(FileModel):
+    @ classmethod
+    def _extension(cls) -> str:
+        return 'jpeg'
+
+
 class IconFile(FileModel):
 
     @ classmethod
@@ -25,6 +43,14 @@ class LibraryIconFile(IconFile):
 
     def get_config(self) -> JsonFile:
         return self.__config
+
+    def other_image_files(self) -> Iterable[FileModel]:
+        name = self.name_wo_extension
+        return [
+            PngFile(self.sibling_path(f'{name}{PngFile.extension()}')),
+            JpgFile(self.sibling_path(f'{name}{JpgFile.extension()}')),
+            JpegFile(self.sibling_path(f'{name}{JpegFile.extension()}'))
+        ]
 
     def __create_config(self) -> JsonFile:
         file_name = self.name_wo_extension
