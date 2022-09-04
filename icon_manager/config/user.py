@@ -1,4 +1,5 @@
 from enum import Enum
+import logging
 from typing import Any, Dict, Iterable, Sequence, Set
 from uuid import uuid4
 
@@ -10,6 +11,8 @@ from icon_manager.helpers.resource import user_config_template_file
 from icon_manager.interfaces.factory import FileFactory
 from icon_manager.interfaces.path import (ConfigFile, IconSearchFolder, PathModel,
                                           SearchFolder)
+
+log = logging.getLogger(__name__)
 
 
 class UserConfig(Config):
@@ -33,6 +36,9 @@ class UserConfig(Config):
     def validate(self):
         filters.EXCLUDED_FOLDERS = self.exclude_folders
         filters.PROJECT_FOLDERS = self.code_folders
+
+    def has_search_folders(self) -> bool:
+        return len(self.search_folders) > 0
 
     def search_folder_by(self, entry: PathModel) -> IconSearchFolder:
         for search_folder in self.search_folders:
@@ -80,6 +86,10 @@ def get_search_folders(file: ConfigFile, content: Dict[str, Any]) -> Sequence[Ic
         if not isinstance(folder_config, dict):
             raise ValueError(f'Search folder config is a list of Dicts')
         icon_search = get_icons_search_folder(folder_config)
+        if not icon_search.exists():
+            message = f'{icon_search.name} does not exists [{icon_search.path}]'
+            log.info(message)
+            continue
         search_folders.append(icon_search)
     return search_folders
 

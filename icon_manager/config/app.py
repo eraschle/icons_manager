@@ -1,7 +1,8 @@
 import copy
+import logging
 import os
 from enum import Enum
-from typing import Any, Collection, Dict, Iterable, Optional
+from typing import Any, Collection, Dict, Iterable, Optional, Sequence
 
 from icon_manager.config.base import Config
 from icon_manager.config.user import UserConfig, UserConfigFactory
@@ -15,6 +16,8 @@ from icon_manager.interfaces.factory import FileFactory
 from icon_manager.interfaces.path import ConfigFile, JsonFile
 from icon_manager.rules.config import ExcludeRuleConfig
 from icon_manager.rules.factory import ExcludeRuleConfigFactory
+
+log = logging.getLogger(__name__)
 
 
 class AppConfig(Config):
@@ -137,12 +140,17 @@ class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
             return
         self.excluded_factory.create_template(config)
 
-    def create_user_configs(self, content: Dict[str, Any]) -> Iterable[UserConfig]:
+    def create_user_configs(self, content: Dict[str, Any]) -> Sequence[UserConfig]:
         config_folder_path = content[AppConfigs.USER_CONFIGS]
         user_configs = []
         for config_file_path in self._get_user_config_paths(config_folder_path):
             user_config_file = ConfigFile(config_file_path)
             user_config = self.user_factory.create(user_config_file)
+            if not user_config.has_search_folders():
+                config_name = user_config_file.name_wo_extension
+                message = f'No valid search folder in "{config_name}" []'
+                log.warning(message)
+                continue
             user_configs.append(user_config)
         return user_configs
 
@@ -170,6 +178,8 @@ class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
         content[AppConfigs.USER_CONFIGS] = config_folder_path
         self.source.write(file, content)
         user_configs = self.create_user_configs(content)
+        if len(user_configs) == 0:
+            raise ValueError('No valid user configuration exists')
         exclude_rules = self.create_exclude_config(content)
         before_or_after = content.get(AppConfigs.BEFORE_OR_AFTER, [])
         return AppConfig(user_configs, exclude_rules, before_or_after)
