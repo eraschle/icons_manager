@@ -30,7 +30,7 @@ def _is_clean_recursive(entry: Folder, options: FilterOptions) -> bool:
 
 
 def filter_folder(entry: Folder, options: FilterOptions) -> Optional[Folder]:
-    if _is_clean_recursive(entry, options) or _is_exclude_rule(entry, options):
+    if _is_exclude_rule(entry, options) or _is_clean_recursive(entry, options):
         return Folder(path=entry.path, name=entry.name, files=entry.files, folders=[])
     if _is_excluded(entry, options) or _is_project(entry, options):
         return None
