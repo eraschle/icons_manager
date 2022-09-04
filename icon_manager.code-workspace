@@ -34,8 +34,8 @@
 				"justMyCode": true,
 				"args": [
 					// "--library",
-					// "--content",
-					// "--create",
+					"--content",
+					"--create",
 					// "--update",
 					// "--re-create",
 					// "--delete",

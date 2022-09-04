@@ -1,6 +1,5 @@
 import logging
-from datetime import datetime
-from typing import Iterable, List, Sequence, Set, Tuple
+from typing import Iterable, Sequence, Set
 
 from icon_manager.config.user import UserConfig
 from icon_manager.content.controller.desktop import DesktopIniController
@@ -8,8 +7,9 @@ from icon_manager.content.controller.icon_file import IconFileController
 from icon_manager.content.controller.icon_folder import IconFolderController
 from icon_manager.content.controller.re_apply import ReApplyController
 from icon_manager.content.controller.rules_apply import IApplyController
-from icon_manager.crawler.crawler import (crawling_icons,
-                                          crawling_search_folders)
+from icon_manager.crawler.crawler import (crawling_folders,
+                                          crawling_folders_async,
+                                          crawling_icons)
 from icon_manager.helpers.logs import execution, log_count
 from icon_manager.library.controller import (IconSettingController,
                                              ISettingsController)
@@ -66,7 +66,7 @@ class ConfigService(IConfigService):
     def crawle_search_folders(self, exclude: ExcludeRuleConfig,
                               settings: Sequence[IconSetting]):
         folders = self.user_config.search_folders
-        entries = crawling_search_folders(folders)
+        entries = crawling_folders(folders)
         log.info(log_count('Found', entries))
         self.desktop.crawl_content(entries, settings)
         self.icon_folders.crawl_content(entries, settings)
