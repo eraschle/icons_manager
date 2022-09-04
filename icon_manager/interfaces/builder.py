@@ -63,7 +63,7 @@ class CrawlerBuilder(ABC, Builder[Path, TModel]):
 
     def build_models_async(self, entries: Iterable[Path], **kwargs) -> List[TModel]:
         models: List[TModel] = []
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=200) as executor:
             task = {executor.submit(self.create_models, ele): ele for ele in entries}
             for future in concurrent.futures.as_completed(task):
                 entry = task[future]

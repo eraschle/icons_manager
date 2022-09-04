@@ -23,7 +23,7 @@ def execution(*args, **kwargs):
         def execution_time(*args, **kwargs):
 
             start = datetime.now()
-            log.info(f'Started {func.__name__}')
+            # log.info(f'Started {func.__name__}')
             result = func(*args, **kwargs)
             log.info(log_time(message, start))
             return result
