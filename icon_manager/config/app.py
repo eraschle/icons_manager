@@ -44,7 +44,7 @@ class AppConfigs(str, Enum):
 class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
 
     APP_CONFIG_NAME = 'app_config.config'
-    EXCLUDE_NAME = 'excluded.config'
+    EXCLUDE_NAME = 'excluded_rules.config'
 
     @classmethod
     def app_config_path(cls, folder_path: str = '%APPDATA%/Icon-Manager') -> str:
@@ -79,8 +79,8 @@ class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
 
     def __init__(self, source: JsonSource, factory: ExcludeRuleConfigFactory) -> None:
         self.source = source
-        self.user_config_factory = UserConfigFactory(source)
-        self.factory = factory
+        self.user_factory = UserConfigFactory(source)
+        self.excluded_factory = factory
 
     def _get_user_config_paths(self, config_folder: str) -> Collection[str]:
         return self.__class__.get_user_config_paths(config_folder)
@@ -117,19 +117,32 @@ class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
             folder_path = self.ask_user_for_config_path(information=None)
         if not self.does_user_configs_exists(folder_path):
             self.create_user_template_config(folder_path)
+        if not self.does_excluded_rules_template_exists(folder_path):
+            self.create_excluded_rules_template(folder_path)
 
     def create_user_template_config(self, folder_path: str) -> None:
         file_name = self.ask_user_for_config_file_name()
         file_path = get_path(folder_path, file_name)
         user_config = ConfigFile(file_path)
-        self.user_config_factory.create_template(user_config)
+        self.user_factory.create_template(user_config)
+
+    def does_excluded_rules_template_exists(self, config_folder: str) -> bool:
+        config_file = self._get_exclude_config_path(config_folder)
+        return config_file is not None
+
+    def create_excluded_rules_template(self, path: str) -> None:
+        file_path = get_path(path, self.__class__.EXCLUDE_NAME)
+        config = ConfigFile(file_path)
+        if config.exists():
+            return
+        self.excluded_factory.create_template(config)
 
     def create_user_configs(self, content: Dict[str, Any]) -> Iterable[UserConfig]:
         config_folder_path = content[AppConfigs.USER_CONFIGS]
         user_configs = []
         for config_file_path in self._get_user_config_paths(config_folder_path):
             user_config_file = ConfigFile(config_file_path)
-            user_config = self.user_config_factory.create(user_config_file)
+            user_config = self.user_factory.create(user_config_file)
             user_configs.append(user_config)
         return user_configs
 
@@ -138,7 +151,7 @@ class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
         config_path = self._get_exclude_config_path(config_folder)
         if config_path is None:
             return ExcludeRuleConfig(rule_managers=[])
-        return self.factory.create(JsonFile(config_path))
+        return self.excluded_factory.create(JsonFile(config_path))
 
     def create(self, file: ConfigFile, **kwargs) -> AppConfig:
         if not file.exists():
