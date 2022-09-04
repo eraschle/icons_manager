@@ -44,7 +44,7 @@ class AppConfigs(str, Enum):
 class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
 
     APP_CONFIG_NAME = 'app_config.config'
-    EXCLUDE_NAME = 'exclude_rules.config'
+    EXCLUDE_NAME = 'excluded.config'
 
     @classmethod
     def app_config_path(cls, folder_path: str = '%APPDATA%/Icon-Manager') -> str:
