@@ -27,7 +27,7 @@ def exclude_rules_template_path() -> str:
     return __resources_path(EXCLUDE_RULES_TEMPLATE_NAME)
 
 
-def exclude_rules_template_file() -> ConfigFile:
+def excluded_rules_template_file() -> ConfigFile:
     return ConfigFile(exclude_rules_template_path())
 
 

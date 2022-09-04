@@ -2,8 +2,9 @@ import logging
 from typing import Any, Dict, Iterable, List, Type
 
 from icon_manager.data.json_source import JsonSource
+from icon_manager.helpers.resource import excluded_rules_template_file
 from icon_manager.interfaces.factory import ContentFactory, FileFactory
-from icon_manager.interfaces.path import JsonFile
+from icon_manager.interfaces.path import ConfigFile, JsonFile
 from icon_manager.rules.base import IconRule, Operator
 from icon_manager.rules.builder import (BaseFolderRuleBuilder,
                                         ChainedRuleBuilder, ConfigKeys,
@@ -168,3 +169,16 @@ class ExcludeRuleConfigFactory(FileFactory[JsonFile, ExcludeRuleConfig]):
     #         content[section] = values
     #     self.source.write(config, content)
     #     log.info(f'Updated config {config.name_wo_extension}')
+
+    def copy_template(self, config: ConfigFile) -> None:
+        template = excluded_rules_template_file()
+        template.copy_to(config)
+
+    def prepare_template(self, config: ConfigFile) -> None:
+        content = self.source.read(config)
+        self.source.write(config, content)
+
+    def create_template(self, config: ConfigFile) -> ConfigFile:
+        self.copy_template(config)
+        self.prepare_template(config)
+        return config
