@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Dict, Iterable, Sequence
+from typing import Any, Dict, Iterable, Sequence, Set
 from uuid import uuid4
 
 from icon_manager.config.base import Config
@@ -27,7 +27,7 @@ class UserConfig(Config):
         self.search_folders = search_folders
         self.code_folders = code_folders
         self.exclude_folders = exclude_folders
-        self.before_or_after = before_or_after
+        self.before_or_after: Set[str] = set(before_or_after)
         self.copy_icon = copy_icon
 
     def validate(self):

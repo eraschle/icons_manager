@@ -10,10 +10,12 @@ from icon_manager.content.models.matched import MatchedRuleFolder
 from icon_manager.crawler.filters import filter_folders
 from icon_manager.crawler.options import FilterOptions
 from icon_manager.helpers.path import Folder
-from icon_manager.interfaces.controller import IContentController
+from icon_manager.helpers.string import prefix_value
 from icon_manager.interfaces.builder import CrawlerBuilder
+from icon_manager.interfaces.controller import IContentController
 from icon_manager.interfaces.path import FolderModel
 from icon_manager.library.models import IconSetting
+from icon_manager.rules.config import ExcludeRuleConfig
 
 log = logging.getLogger(__name__)
 
@@ -38,8 +40,10 @@ class RulesApplyBuilder(CrawlerBuilder[MatchedRuleFolder]):
         config = self.icon_setting_for(model)
         if config is None:
             return None
-        message = f'Icon "{config.icon.name_wo_extension}" to "{model.name}" [{model.path}]'
-        log.info(message)
+        action = prefix_value('Icon', width=7, align='<')
+        icon_name = config.icon.name_wo_extension
+        icon_name = prefix_value(f'"{icon_name}"', width=25, align='<')
+        log.info(f'{action} {icon_name} to "{model.name}"')
         folder = FolderModel(model.path)
         return MatchedRuleFolder(folder, config)
 
@@ -58,7 +62,7 @@ class RulesApplyOptions(FilterOptions):
 
 class IApplyController(IContentController):
 
-    def crawl_content(self, folders: List[Folder]):
+    def crawl_content(self, folders: List[Folder], exclude: ExcludeRuleConfig):
         ...
 
     def find_matches(self, settings: Iterable[IconSetting]):
@@ -84,7 +88,8 @@ class RulesApplyController(ContentController[MatchedRuleFolder], IApplyControlle
         self.folders: List[MatchedRuleFolder] = []
         self.crawler_folders: List[Folder] = []
 
-    def crawl_content(self, folders: List[Folder]):
+    def crawl_content(self, folders: List[Folder], exclude: ExcludeRuleConfig):
+        self.options.exclude_rules = exclude
         crawler_folders = filter_folders(folders, self.options)
         self.crawler_folders = crawler_folders
 

@@ -3,14 +3,15 @@ from typing import Any, Dict, Iterable, List, Type
 
 from icon_manager.data.json_source import JsonSource
 from icon_manager.interfaces.factory import ContentFactory, FileFactory
-from icon_manager.interfaces.path import JsonFile, PathModel
+from icon_manager.interfaces.path import JsonFile
 from icon_manager.rules.base import IconRule, Operator
 from icon_manager.rules.builder import (BaseFolderRuleBuilder,
                                         ChainedRuleBuilder, ConfigKeys,
                                         ContainsFileRuleBuilder,
                                         FolderRuleBuilder, get_operator,
                                         pop_operator)
-from icon_manager.rules.config import RuleConfig, RulesManager
+from icon_manager.rules.config import (ExcludeRuleConfig, RuleConfig,
+                                       RulesManager)
 
 log = logging.getLogger(__name__)
 
@@ -77,9 +78,6 @@ class RuleConfigFactory(FileFactory[JsonFile, RuleConfig]):
         self.source = source
         self.__template: Dict[str, Any] = {}
 
-    def is_config_file(self, entry: PathModel) -> bool:
-        return JsonFile.is_model(entry.path)
-
     def get_config_section(self, icon_config: Dict[str, Any]) -> Dict[str, Any]:
         section = icon_config.get(ConfigKeys.CONFIG, None)
         if section is None:
@@ -120,3 +118,53 @@ class RuleConfigFactory(FileFactory[JsonFile, RuleConfig]):
             content[section] = values
         self.source.write(config, content)
         log.info(f'Updated config {config.name_wo_extension}')
+
+
+class ExcludeRuleConfigFactory(FileFactory[JsonFile, ExcludeRuleConfig]):
+
+    def __init__(self, rule_mapping: Dict[str, Type[IconRule]],
+                 source: JsonSource = JsonSource()) -> None:
+        self.manager_factory = RulesManagerFactory(rule_mapping)
+        self.source = source
+        self.__template: Dict[str, Any] = {}
+
+    def get_config_section(self, icon_config: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
+        section = icon_config.get(ConfigKeys.CONFIG, None)
+        if section is None:
+            message = f'Key "{ConfigKeys.CONFIG}" does NOT exist in Setting'
+            raise ValueError(message)
+        if not isinstance(section, Iterable):
+            message = f'Expected List but got "{type(section)}"'
+            raise ValueError(message)
+        return section
+
+    def get_rule_managers(self, icon_config: Dict[str, Any]) -> List[RulesManager]:
+        managers = []
+        for attribute, rules_dict in icon_config.items():
+            manager = self.manager_factory.create(rule_config=rules_dict,
+                                                  attribute=attribute)
+            if manager.is_empty():
+                continue
+            managers.append(manager)
+        return managers
+
+    def create(self, config: JsonFile, **kwargs) -> ExcludeRuleConfig:
+        icon_config = self.source.read(config)
+        configs_section = self.get_config_section(icon_config)
+        managers = []
+        for config_section in configs_section:
+            managers.extend(self.get_rule_managers(config_section))
+        return ExcludeRuleConfig(managers)
+
+    # def update(self, config: JsonFile, template_file: JsonFile) -> None:
+    #     content = self.source.read(config)
+    #     if len(self.__template) == 0:
+    #         self.__template = self.source.read(template_file)
+    #     for section, values in self.__template.items():
+    #         if section == ConfigKeys.CONFIG:
+    #             continue
+    #         if content[section] == values:
+    #             continue
+    #         content[section] = values
+    #     self.source.write(config, content)
+    #     log.info(f'Updated config {config.name_wo_extension}')

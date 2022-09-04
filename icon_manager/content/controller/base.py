@@ -5,8 +5,8 @@ from typing import Generic, List, Sequence, TypeVar
 from icon_manager.config.user import UserConfig
 from icon_manager.crawler.options import FilterOptions
 from icon_manager.helpers.path import Folder
-from icon_manager.interfaces.controller import IContentController
 from icon_manager.interfaces.builder import CrawlerBuilder
+from icon_manager.interfaces.controller import IContentController
 from icon_manager.library.models import IconSetting
 
 log = logging.getLogger(__name__)

@@ -1,3 +1,4 @@
+import copy
 import logging
 from typing import Dict, Iterable, List, Optional, Sequence
 
@@ -5,10 +6,11 @@ from icon_manager.content.models.matched import IconSetting
 from icon_manager.helpers.path import File
 from icon_manager.helpers.resource import icon_setting_template
 from icon_manager.interfaces.actions import DeleteAction
-from icon_manager.interfaces.controller import ILibraryController
 from icon_manager.interfaces.builder import CrawlerBuilder, ModelBuilder
-from icon_manager.library.models import ArchiveFolder, IconFile, LibraryIconFile
+from icon_manager.interfaces.controller import ILibraryController
 from icon_manager.interfaces.path import FileModel, JsonFile, PathModel
+from icon_manager.library.models import (ArchiveFolder, IconFile,
+                                         LibraryIconFile)
 from icon_manager.rules.config import RuleConfig
 from icon_manager.rules.factory import RuleConfigFactory
 from icon_manager.rules.mapping import RULE_MAPPINGS
@@ -84,6 +86,9 @@ class SettingsControllerInterface(ILibraryController):
     def settings(self, clean_empty: bool = True) -> Sequence[IconSetting]:
         ...
 
+    def create_icon_settings(self, before_or_after: Iterable[str]) -> Sequence[IconSetting]:
+        ...
+
     def setting_by_icon(self, icon: IconFile) -> Optional[IconSetting]:
         ...
 
@@ -115,10 +120,20 @@ class IconSettingController(SettingsControllerInterface):
         self.library_icons: Iterable[LibraryIconFile] = []
         self._settings: List[IconSetting] = []
 
+    def set_before_and_after(self, before_or_after: Iterable[str]) -> None:
+        for setting in self._settings:
+            setting.set_before_or_after(before_or_after)
+
     def settings(self, clean_empty: bool = True) -> Sequence[IconSetting]:
         if clean_empty:
             return list(filter(lambda ico: not ico.is_empty(), self._settings))
         return self._settings
+
+    def create_icon_settings(self, before_or_after: Iterable[str]) -> Sequence[IconSetting]:
+        settings = copy.deepcopy(self.settings(clean_empty=True))
+        for setting in self._settings:
+            setting.set_before_or_after(before_or_after)
+        return settings
 
     def create_settings(self, content: Dict[str, List[File]]):
         rules = content.get(JsonFile.extension(with_point=False), [])

@@ -1,6 +1,7 @@
+import copy
 import os
 from enum import Enum
-from typing import Collection, Iterable, Optional
+from typing import Any, Collection, Dict, Iterable, Optional
 
 from icon_manager.config.base import Config
 from icon_manager.config.user import UserConfig, UserConfigFactory
@@ -11,25 +12,28 @@ from icon_manager.helpers.resource import app_config_template_file
 from icon_manager.helpers.user_inputs import (ask_user, ask_user_for_path,
                                               ask_user_yes_no_question)
 from icon_manager.interfaces.factory import FileFactory
-from icon_manager.interfaces.path import ConfigFile
+from icon_manager.interfaces.path import ConfigFile, JsonFile
+from icon_manager.rules.config import ExcludeRuleConfig
+from icon_manager.rules.factory import ExcludeRuleConfigFactory
 
 
 class AppConfig(Config):
 
     def __init__(self, user_configs: Iterable[UserConfig],
+                 exclude_rules: ExcludeRuleConfig,
                  before_or_after: Iterable[str]) -> None:
         super().__init__()
+        self._exclude_rules = exclude_rules
         self.user_configs = user_configs
         self.before_or_after = before_or_after
+
+    def create_exclude_rules(self) -> ExcludeRuleConfig:
+        rule_copy = copy.deepcopy(self._exclude_rules)
+        return rule_copy
 
     def validate(self):
         for user_config in self.user_configs:
             user_config.validate()
-
-    def merged_before_or_after(self, config: UserConfig) -> Iterable[str]:
-        before_or_after = set(self.before_or_after)
-        before_or_after.update(config.before_or_after)
-        return before_or_after
 
 
 class AppConfigs(str, Enum):
@@ -40,6 +44,7 @@ class AppConfigs(str, Enum):
 class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
 
     APP_CONFIG_NAME = 'app_config.config'
+    EXCLUDE_NAME = 'exclude_rules.config'
 
     @classmethod
     def app_config_path(cls, folder_path: str = '%APPDATA%/Icon-Manager') -> str:
@@ -55,17 +60,33 @@ class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
         return config_file
 
     @classmethod
+    def is_user_config_name(cls, name: str) -> bool:
+        return cls.APP_CONFIG_NAME != name and cls.EXCLUDE_NAME != name
+
+    @classmethod
     def get_user_config_paths(cls, folder_path: str) -> Collection[str]:
         names = get_files(folder_path, ConfigFile.extension())
-        names = filter(lambda name: cls.APP_CONFIG_NAME != name, names)
+        names = filter(lambda name: cls.is_user_config_name(name), names)
         return get_paths(folder_path, names)
 
-    def __init__(self, source: JsonSource) -> None:
+    @classmethod
+    def get_exclude_config(cls, folder_path: str) -> Optional[str]:
+        names = get_files(folder_path, ConfigFile.extension())
+        names = list(filter(lambda name: cls.EXCLUDE_NAME == name, names))
+        if len(names) != 1:
+            return None
+        return get_path(folder_path, names[0])
+
+    def __init__(self, source: JsonSource, factory: ExcludeRuleConfigFactory) -> None:
         self.source = source
         self.user_config_factory = UserConfigFactory(source)
+        self.factory = factory
 
-    def __get_user_config_paths(self, config_folder: str) -> Collection[str]:
+    def _get_user_config_paths(self, config_folder: str) -> Collection[str]:
         return self.__class__.get_user_config_paths(config_folder)
+
+    def _get_exclude_config_path(self, config_folder: str) -> Optional[str]:
+        return self.__class__.get_exclude_config(config_folder)
 
     def is_user_config_path_empty(self, config_folder: str) -> bool:
         return len(config_folder) == 0
@@ -74,7 +95,7 @@ class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
         return os.path.isdir(config_folder)
 
     def does_user_configs_exists(self, config_folder: str) -> bool:
-        config_files = self.__get_user_config_paths(config_folder)
+        config_files = self._get_user_config_paths(config_folder)
         return len(config_files) > 0
 
     def ask_user_for_config_path(self, information: Optional[str]) -> str:
@@ -103,6 +124,22 @@ class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
         user_config = ConfigFile(file_path)
         self.user_config_factory.create_template(user_config)
 
+    def create_user_configs(self, content: Dict[str, Any]) -> Iterable[UserConfig]:
+        config_folder_path = content[AppConfigs.USER_CONFIGS]
+        user_configs = []
+        for config_file_path in self._get_user_config_paths(config_folder_path):
+            user_config_file = ConfigFile(config_file_path)
+            user_config = self.user_config_factory.create(user_config_file)
+            user_configs.append(user_config)
+        return user_configs
+
+    def create_exclude_config(self, content: Dict[str, Any]) -> ExcludeRuleConfig:
+        config_folder = content[AppConfigs.USER_CONFIGS]
+        config_path = self._get_exclude_config_path(config_folder)
+        if config_path is None:
+            return ExcludeRuleConfig(rule_managers=[])
+        return self.factory.create(JsonFile(config_path))
+
     def create(self, file: ConfigFile, **kwargs) -> AppConfig:
         if not file.exists():
             template_file = app_config_template_file()
@@ -119,10 +156,7 @@ class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
             self.ask_user_if_not_any_config_file_exist(config_folder_path)
         content[AppConfigs.USER_CONFIGS] = config_folder_path
         self.source.write(file, content)
-        user_configs = []
-        for config_file_path in self.__get_user_config_paths(config_folder_path):
-            user_config_file = ConfigFile(config_file_path)
-            user_config = self.user_config_factory.create(user_config_file)
-            user_configs.append(user_config)
+        user_configs = self.create_user_configs(content)
+        exclude_rules = self.create_exclude_config(content)
         before_or_after = content.get(AppConfigs.BEFORE_OR_AFTER, [])
-        return AppConfig(user_configs, before_or_after)
+        return AppConfig(user_configs, exclude_rules, before_or_after)
