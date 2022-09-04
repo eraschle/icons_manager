@@ -30,7 +30,6 @@ def crawling_folders(roots: Sequence[IconSearchFolder]) -> List[Folder]:
 def crawling_folders_async(roots: Sequence[IconSearchFolder]) -> List[Folder]:
     folders = []
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        # Start the load operations and mark each future with its URL
         task = {executor.submit(_crawling, root): root for root in roots}
         for future in concurrent.futures.as_completed(task):
             root_folder = task[future]
