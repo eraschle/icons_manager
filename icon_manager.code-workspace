@@ -20,7 +20,8 @@
 		},
 		"editor.formatOnSave": true,
 		"editor.formatOnPaste": true,
-		"python.linting.mypyEnabled": true
+		"python.linting.mypyEnabled": true,
+		"editor.formatOnType": true
 	},
 	"launch": {
 		"version": "0.2.0",
@@ -32,15 +33,13 @@
 				"module": "icon_manager",
 				"justMyCode": true,
 				"args": [
-					// "--create-icon-config",
+					// "--library",
+					// "--content",
+					// "--create",
 					// "--update",
-					// "--overwrite",
-					// "--add_icons",
-					// "--delete-folder-config",
-					// "--re-write-ini-file",
-					// "--archive",
-					// "--export-app-config",
-					// "C:\\workspace"
+					// "--re-create",
+					// "--delete",
+					// "--archive"
 				]
 			}
 		]

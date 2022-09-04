@@ -1,8 +1,6 @@
-
 import os
-from pathlib import Path
 
-from icon_manager.models.path import FolderModel, JsonFile
+from icon_manager.interfaces.path import ConfigFile, JsonFile
 
 
 def __resources_path(file_name: str) -> str:
@@ -11,22 +9,34 @@ def __resources_path(file_name: str) -> str:
     return os.path.join(*paths)
 
 
-def __user_path(file_name: str) -> str:
-    paths = [str(Path.home()), file_name]
-    return os.path.join(*paths)
+CONFIG_TEMPLATE_NAME: str = 'icon_config_template.json'
 
 
-def icon_config_template_path() -> str:
-    return __resources_path('icon_config_template.json')
+def icon_setting_template_path() -> str:
+    return __resources_path(CONFIG_TEMPLATE_NAME)
 
 
-def icon_config_template() -> JsonFile:
-    return JsonFile(icon_config_template_path())
+def icon_setting_template() -> JsonFile:
+    return JsonFile(icon_setting_template_path())
 
 
-def app_config_and_template_path() -> str:
-    return __resources_path('app_config.json')
+USER_TEMPLATE_NAME: str = 'template_user.config'
 
 
-def app_config_and_template() -> JsonFile:
-    return JsonFile(app_config_and_template_path())
+def user_config_template_path() -> str:
+    return __resources_path(USER_TEMPLATE_NAME)
+
+
+def user_config_template_file() -> ConfigFile:
+    return ConfigFile(user_config_template_path())
+
+
+APP_TEMPLATE_NAME: str = 'template_app.config'
+
+
+def app_config_template_path() -> str:
+    return __resources_path(APP_TEMPLATE_NAME)
+
+
+def app_config_template_file() -> ConfigFile:
+    return ConfigFile(app_config_template_path())

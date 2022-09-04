@@ -1,0 +1,181 @@
+import logging
+from typing import Dict, Iterable, List, Optional, Sequence
+
+from icon_manager.content.models.matched import IconSetting
+from icon_manager.helpers.path import File
+from icon_manager.helpers.resource import icon_setting_template
+from icon_manager.interfaces.actions import DeleteAction
+from icon_manager.interfaces.controller import ILibraryController
+from icon_manager.interfaces.builder import CrawlerBuilder, ModelBuilder
+from icon_manager.library.models import ArchiveFolder, IconFile, LibraryIconFile
+from icon_manager.interfaces.path import FileModel, JsonFile, PathModel
+from icon_manager.rules.config import RuleConfig
+from icon_manager.rules.factory import RuleConfigFactory
+from icon_manager.rules.mapping import RULE_MAPPINGS
+
+log = logging.getLogger(__name__)
+
+
+class IconConfigBuilder(CrawlerBuilder[RuleConfig]):
+
+    def __init__(self, factory: RuleConfigFactory) -> None:
+        self.factory = factory
+
+    def can_build_file(self, file: File, **kwargs) -> bool:
+        return JsonFile.is_model(file.path)
+
+    def build_file_model(self, file: File, **kwargs) -> Optional[RuleConfig]:
+        return self.factory.create(JsonFile(file.path))
+
+
+class LibraryIconFileBuilder(CrawlerBuilder[LibraryIconFile]):
+
+    def can_build_file(self, file: File, **kwargs) -> bool:
+        return LibraryIconFile.is_model(file.name)
+
+    def build_file_model(self, file: File, **kwargs) -> Optional[LibraryIconFile]:
+        return LibraryIconFile(file.path)
+
+
+def _factory() -> RuleConfigFactory:
+    return RuleConfigFactory(RULE_MAPPINGS)
+
+
+class IconSettingBuilder(ModelBuilder[IconSetting]):
+
+    def __init__(self, icon_builder: LibraryIconFileBuilder = LibraryIconFileBuilder(),
+                 config_builder: IconConfigBuilder = IconConfigBuilder(_factory())) -> None:
+        super().__init__()
+        self.icon_builder = icon_builder
+        self.config_builder = config_builder
+        self.rule_configs: Dict[str, RuleConfig] = {}
+
+    def update_rules(self, rules: Iterable[File]):
+        rule_configs = self.config_builder.build_models(rules)
+        for rule in rule_configs:
+            self.rule_configs[rule.name] = rule
+
+    def build_icons(self, files: Iterable[File]) -> List[LibraryIconFile]:
+        return self.icon_builder.build_models(files)
+
+    def get_rule_config(self, model: LibraryIconFile) -> Optional[RuleConfig]:
+        return self.rule_configs.get(model.name_wo_extension, None)
+
+    def can_build(self, model: PathModel) -> bool:
+        if not isinstance(model, LibraryIconFile):
+            return False
+        config = self.get_rule_config(model)
+        return config is not None
+
+    def build_model(self, file: LibraryIconFile) -> Optional[IconSetting]:
+        config = self.get_rule_config(file)
+        if config is None:
+            return None
+        log.debug(f'Icon Setting {file.name_wo_extension} created')
+        return IconSetting(file, config)
+
+    def update_config(self, setting: IconSetting, template_file: JsonFile) -> None:
+        config = setting.rule_config.config
+        self.config_builder.factory.update(config, template_file)
+
+
+class SettingsControllerInterface(ILibraryController):
+
+    def settings(self, clean_empty: bool = True) -> Sequence[IconSetting]:
+        ...
+
+    def setting_by_icon(self, icon: IconFile) -> Optional[IconSetting]:
+        ...
+
+    def create_settings(self, content: Dict[str, List[File]]):
+        ...
+
+    def create_icon_configs(self, overwrite: bool):
+        ...
+
+    def update_icon_configs(self):
+        ...
+
+    def delete_icon_configs(self):
+        ...
+
+    def archive_library(self):
+        ...
+
+
+class IconSettingController(SettingsControllerInterface):
+
+    icons_extensions = [
+        IconFile.extension(with_point=False),
+        JsonFile.extension(with_point=False)
+    ]
+
+    def __init__(self, builder: IconSettingBuilder = IconSettingBuilder()) -> None:
+        self.builder = builder
+        self.library_icons: Iterable[LibraryIconFile] = []
+        self._settings: List[IconSetting] = []
+
+    def settings(self, clean_empty: bool = True) -> Sequence[IconSetting]:
+        if clean_empty:
+            return list(filter(lambda ico: not ico.is_empty(), self._settings))
+        return self._settings
+
+    def create_settings(self, content: Dict[str, List[File]]):
+        rules = content.get(JsonFile.extension(with_point=False), [])
+        self.builder.update_rules(rules=rules)
+        icons = content.get(LibraryIconFile.extension(with_point=False), [])
+        self.library_icons = self.builder.build_icons(icons)
+        self._settings = self.builder.build_models(self.library_icons)
+        self._settings.sort(key=lambda ele: ele.order_key)
+        log.info(f'Created {len(self._settings)} Icon Settings')
+
+    def create_icon_configs(self, overwrite: bool):
+        template = icon_setting_template()
+        for icon_file in self.library_icons:
+            icon_config = icon_file.get_config()
+            if not overwrite and icon_config.exists():
+                continue
+            template.copy_to(icon_config)
+            log.info(f'Created template for {icon_file.name_wo_extension}')
+
+    def update_icon_configs(self):
+        template = icon_setting_template()
+        for setting in self._settings:
+            self.builder.update_config(setting, template)
+
+    def delete_icon_configs(self):
+        configs = [setting.rule_config.config for setting in self._settings]
+        action = DeleteAction(configs)
+        action.execute()
+        if not action.any_executed():
+            return
+        log.info(action.get_log_message(RuleConfig))
+
+    def archive_library(self):
+        for setting in self._settings:
+            if not setting.is_empty():
+                continue
+            self.archive_file(setting.icon)
+            self.archive_file(setting.rule_config.config)
+            log.info(f'Archive icon and config of {setting.name}')
+
+    def archive_file(self, file: FileModel):
+        folder = self.get_archive_folder(file)
+        archive = folder.get_archive_file(file)
+        file.copy_to(archive)
+        log.info(f'{file.name} archived to {archive.path}')
+        file.remove()
+
+    def get_archive_folder(self, icon: FileModel):
+        folder_path = ArchiveFolder.get_folder_path(icon)
+        folder = ArchiveFolder(folder_path)
+        if not folder.exists():
+            folder.create()
+        return folder
+
+    def setting_by_icon(self, icon: IconFile) -> Optional[IconSetting]:
+        for setting in self._settings:
+            if setting.icon.name != icon.name:
+                continue
+            return setting
+        return None

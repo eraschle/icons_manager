@@ -3,7 +3,11 @@ import logging
 import os
 from logging.handlers import RotatingFileHandler
 
-from icon_manager.services.icon_manager import get_service
+from icon_manager.config.app import AppConfig, AppConfigFactory
+from icon_manager.data.json_source import JsonSource
+from icon_manager.helpers.resource import app_config_template_file
+from icon_manager.interfaces.path import ConfigFile
+from icon_manager.services.app_service import IconsAppService
 
 log = logging.getLogger(__name__)
 
@@ -41,45 +45,66 @@ def config_logger():
 def get_namespace_from_args() -> argparse.Namespace:
     description = 'Helper to add icons to folders defined in a external JSON file.'
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument('--add_icons', '-a', action='store_true',
-                        help='Execute the process to add icons to folders')
-    parser.add_argument('--re-write-ini-file', '-r', action='store_true',
-                        help='Re write desktop.ini file. The setting are lost after sync with OneDrive')
-    parser.add_argument('--delete-folder-config', '-d', action='store_true',
-                        help='Absolute Path to export the app configuration as a template')
-    parser.add_argument('--create-icon-config', '-i', action='store_true',
-                        help='Create icon config files for every existing icon file')
-    parser.add_argument('--overwrite', '-o', action='store_true',
-                        help='Overwrite existing configs (icon-json & desktop.ini)')
+    parser.add_argument('--library', '-l', action='store_true',
+                        help='Execute the options on icon library')
+    parser.add_argument('--content', '-c', action='store_true',
+                        help='Execute the options on search contents')
+    # Options
+    parser.add_argument('--create', '-a', action='store_true',
+                        help='Creates the library configs or applies the icons to folders')
+    parser.add_argument('--re-create', '-r', action='store_true',
+                        help='Re apply the icons to the folder. The icons get lost over OneDrive synchronization')
     parser.add_argument('--update', '-u', action='store_true',
-                        help='Update rules and template section in exiting icon configs')
+                        help='Updates library configs with the content of the template')
+    parser.add_argument('--delete', '-d', action='store_true',
+                        help='Deletes the library configs or applied icons')
     parser.add_argument('--archive', '-v', action='store_true',
-                        help='Move icon with an empty config file into the subfolder "archive"')
+                        help='Moves the library configs without rules into subfolder "archive"')
     return parser.parse_args()
+
+
+def get_app_config(config_file: ConfigFile) -> AppConfig:
+    factory = AppConfigFactory(JsonSource())
+    config = factory.create(config_file)
+    config.validate()
+    return config
+
+
+def get_service() -> IconsAppService:
+    app_config = AppConfigFactory.app_config_file()
+    if not app_config.exists():
+        app_template = app_config_template_file()
+        app_template.copy_to(app_config)
+    app_config = get_app_config(app_config)
+    service = IconsAppService(app_config)
+    return service
 
 
 def main():
     config_logger()
     namespace = get_namespace_from_args()
     service = get_service()
+    service.setup()
 
-    if namespace.create_icon_config:
-        overwrite = namespace.overwrite
-        update = namespace.update
-        service.create_icon_config_templates(overwrite, update)
-
-    if namespace.delete_folder_config:
-        service.delete_icon_folder_configs()
-
-    if namespace.add_icons:
-        overwrite = namespace.overwrite
-        service.add_icons_to_folders(overwrite)
-
-    if namespace.re_write_ini_file:
-        service.re_write_icon_config()
-
-    if namespace.archive:
-        service.archive_empty_icon_configs()
+    service.create_settings()
+    find_matches = namespace.content and not namespace.delete
+    service.crawling_search_content(find_matches)
+    if namespace.library:
+        if namespace.delete:
+            service.delete_library_configs()
+        if namespace.update:
+            service.update_library_configs()
+        elif namespace.create:
+            service.create_library_configs()
+        if namespace.archive:
+            service.archive_icons_and_configs()
+    elif namespace.content:
+        if namespace.delete:
+            service.delete_icon_settings()
+        if namespace.create:
+            service.apply_matched_icons()
+        elif namespace.re_create:
+            service.re_apply_matched_icons()
 
 
 if __name__ == "__main__":

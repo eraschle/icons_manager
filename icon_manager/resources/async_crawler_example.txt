@@ -1,0 +1,174 @@
+# unique string for error passing error messages
+import queue
+import sys
+import threading as th
+import time
+import traceback
+from datetime import datetime
+from ntpath import join
+from os import listdir
+
+from genericpath import isdir
+
+
+class ScanWorker(th.Thread):
+    """Worker class for scanning directory structures.
+    path_queue: queue for folder names
+    result_queue: results of process_file, pairs of (path, data) to be updated
+    """
+    lock = th.Lock()
+    dir_count = 0
+
+    def __init__(self, path_queue, result_queue):
+        self.path_queue = path_queue
+        self.result_queue = result_queue
+        super().__init__()
+
+    def run(self):
+        """Worker thread.
+        Get a directory, process it, and put new directories on the
+        queue."""
+        try:
+            while True:
+                self.process_folder(self.path_queue.get())
+                self.path_queue.task_done()
+        except Exception as e:
+            # pass on exception to main thread
+            description = traceback.format_exception(*sys.exc_info())
+            message = "Error in thread {}:\n".format(th.current_thread().name)
+            description.insert(0, message)
+            self.result_queue.put((ERROR, description))
+            self.path_queue.task_done()
+
+    def process_folder(self, top):
+        """Visit a directory
+        Call self.process_file on every file, and queue the directories.
+        """
+        # Wait and retry a few times in case of network errors.
+        # SharePoint is not reliable, gives errors for no reason
+        for retryCount in range(30):
+            try:
+                names = listdir(top)
+                break
+            except OSError as e:
+                if e.errno in (2, 22):
+                    lastError = e
+                    print(end="L", flush=True)
+                    time.sleep(1)
+                else:
+                    raise
+        else:
+            print("List: too many retries")
+            raise lastError
+        # it is not important to worry about race conditions here
+        self.__class__.dir_count += 1
+        # process contents
+        for name in names:
+            if isdir(join(top, name)):
+                self.path_queue.put(join(top, name))
+            else:
+                self.process_file(join(top, name))
+
+    def process_file(self, path):
+        """Get XML file."""
+        if not path.lower().endswith('.xml'):
+            return
+        file_time = datetime.fromtimestamp(getmtime(path))
+        # SharePoint is not reliable, gives errors for no reason; just retry
+        for retryCount in range(30):
+            try:
+                data = open(path, 'rb').read()
+                break
+            except OSError as e:
+                if e.errno in (2, 22):
+                    lastError = e
+                    print(end="R", flush=True)
+                    time.sleep(1)
+                else:
+                    raise
+        else:
+            print("Read: too many retries")
+            raise lastError
+        self.result_queue.put((path, data))
+
+
+class Scanner:
+    """Interface to the ScanWorkers
+    Sharepoint is pretty fast compared to its delay and handles 50 workers well
+    Make sure you only create one instance of Scanner!
+    """
+
+    def __init__(self, workers):
+        # don't restrict the path queue length; this causes deadlock
+        # we use a LIFO queue to get more depth-first like search
+        # reducing average queue length and hopefully improving server caching
+        self.path_queue = queue.LifoQueue()
+        # this is the output queue to the main thread
+        self.result_queue = queue.Queue(5)
+        self.workers = workers
+        # start workers
+        for i in range(workers):
+            t = ScanWorker(self.path_queue, self.result_queue)
+            t.setDaemon(True)
+            t.start()
+
+    def startWorkers(self, path):
+        # add counter
+        self.added = 0
+        # and go
+        self.path_queue.put(path)
+
+    def processResult(self, wait=True):
+        """Get an element from the result queue, and add to the zip file."""
+        path, data = self.result_queue.get(block=wait)
+        if path == ERROR:
+            # process gave alarm; stop scanning
+            # pass on description
+            raise ScanError(data)
+        # <do whatever you want to do with the file >
+        self.result_queue.task_done()
+        self.added += 1
+
+
+# main
+try:
+    # set up
+    scanner = Scanner(threads)
+    scanner.startWorkers(rootpath)
+    path_queue, result_queue = scanner.path_queue, scanner.result_queue
+    # scanner is rolling; wait for it to finish
+    with path_queue.all_tasks_done:
+        while path_queue.unfinished_tasks:
+            # tasks are still running
+            # process results
+            while True:
+                try:
+                    scanner.processResult(wait=False)
+                except queue.Empty:
+                    break
+            # no new files found; check if scanner is ready
+            done = path_queue.all_tasks_done.wait(timeout=1)
+            if not done:
+                # Not yet; print something while we wait
+                print(
+                    "\rProcessed {} files from {} directories [{} {}]  "
+                    .format(
+                        scanner.added,
+                        ScanWorker.dir_count,
+                        path_queue.unfinished_tasks,
+                        result_queue.unfinished_tasks,
+                    ), end='\r')
+    # just to make sure everybody is ready: join the path queue
+    path_queue.join()
+    # process remaining of result queue
+    while result_queue.unfinished_tasks:
+        scanner.processResult(wait=True)
+    # go to new line to prevent overwriting progress messages
+    print()
+except ScanError as e:
+    print()
+    print(*e.args[0], end='')
+    print("Process interrupted.")
+except KeyboardInterrupt:
+    print("\nProcess interrupted.")
+print()

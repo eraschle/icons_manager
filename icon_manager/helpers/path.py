@@ -1,30 +1,58 @@
-
+import logging
 import os
-from typing import Iterable, List
+from collections import namedtuple
+from typing import Iterable, List, Optional, Sequence, Union
+
+log = logging.getLogger(__name__)
 
 
-def get_path_names(path: str) -> List[str]:
-    splitted = path.split('/')
-    if len(splitted) == 1:
-        splitted = path.split('\\')
-    return splitted
+def is_file(path: str, name: str, extension: Optional[str] = None) -> bool:
+    if not os.path.isfile(os.path.join(path, name)):
+        return False
+    if extension is None:
+        return True
+    if not extension.startswith('.'):
+        extension = f'.{extension}'
+    return name.endswith(extension)
 
 
-def is_file(path: str, name: str) -> bool:
-    return os.path.isfile(os.path.join(path, name))
+def get_files(path: str, extension: Optional[str] = None) -> List[str]:
+    return [name for name in os.listdir(path) if is_file(path, name, extension)]
 
 
-def get_files(path: str) -> List[str]:
-    return [name for name in os.listdir(path) if is_file(path, name)]
-
-
-def is_folder(path: str, name: str) -> bool:
-    return os.path.isdir(os.path.join(path, name))
-
-
-def get_folders(path: str) -> List[str]:
-    return [name for name in os.listdir(path) if is_folder(path, name)]
+def get_path(path: str, name: str) -> str:
+    return os.path.join(path, name)
 
 
 def get_paths(path: str, names: Iterable[str]) -> List[str]:
-    return [os.path.join(path, name) for name in names]
+    return [get_path(path, name) for name in names]
+
+
+File = namedtuple('File', ['path', 'name', 'extension'])
+
+
+def is_file_extensions(file: File, extensions: Sequence[str]) -> bool:
+    return file.extension is not None and file.extension in extensions
+
+
+Folder = namedtuple('Folder', ['path', 'name', 'folders', 'files'])
+Path = Union[Folder, File]
+
+
+def create_file(path: str, name: str) -> File:
+    splitted = name.split('.')
+    extension: Optional[str] = splitted[-1]
+    if len(splitted) <= 1:
+        extension = None
+    return File(path=path, name=name, extension=extension)
+
+
+def crawle_folder(entry: os.DirEntry) -> Folder:
+    files = []
+    folders = []
+    for elem in os.scandir(entry.path):
+        if elem.is_dir():
+            folders.append(crawle_folder(elem))
+        else:
+            files.append(create_file(elem.path, elem.name))
+    return Folder(path=entry.path, name=entry.name, files=files, folders=folders)

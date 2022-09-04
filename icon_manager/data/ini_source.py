@@ -1,7 +1,7 @@
 from typing import Iterable
 
+from icon_manager.content.models.desktop import DesktopIniFile
 from icon_manager.data.base import Source
-from icon_manager.models.path import DesktopIniFile
 
 
 class DesktopFileSource(Source[DesktopIniFile, Iterable[str]]):

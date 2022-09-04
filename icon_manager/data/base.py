@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Generic, TypeVar
 
-from icon_manager.models.path import FileModel
+from icon_manager.interfaces.path import FileModel
 
 TSource = TypeVar('TSource', bound=FileModel)
 TContent = TypeVar('TContent', bound=object)

@@ -2,7 +2,7 @@ import json
 from typing import Any, Dict
 
 from icon_manager.data.base import Source
-from icon_manager.models.path import JsonFile
+from icon_manager.interfaces.path import JsonFile
 
 
 class JsonSource(Source[JsonFile, Dict[str, Any]]):
