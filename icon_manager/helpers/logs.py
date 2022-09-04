@@ -1,14 +1,34 @@
+import logging
 from datetime import datetime
 from typing import Iterable
-from icon_manager.helpers.path import Folder, total_count
 
+from icon_manager.helpers.path import Folder, total_count
 from icon_manager.helpers.string import ALIGN_RIGHT, fixed_length
+
+log = logging.getLogger(__name__)
 
 
 def log_time(message: str, start: datetime) -> str:
     diff = (datetime.now() - start).total_seconds()
     duration = fixed_length(f'{diff:.2f} sec', width=8, align=ALIGN_RIGHT)
     return f'{message} in {duration}'
+
+
+def execution(*args, **kwargs):
+
+    message = kwargs.get('message', '')
+
+    def inner(func):
+
+        def execution_time(*args, **kwargs):
+
+            start = datetime.now()
+            log.info(f'Started {func.__name__}')
+            result = func(*args, **kwargs)
+            log.info(log_time(message, start))
+            return result
+        return execution_time
+    return inner
 
 
 def log_files_and_folders(message: str, files: list, folders: list, width: int = 8, suffix: str = '') -> str:

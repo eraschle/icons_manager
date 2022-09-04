@@ -141,7 +141,6 @@ class IconSettingController(ISettingsController):
         self.library_icons = self.builder.build_icons(icons)
         self._settings = self.builder.build_models(self.library_icons)
         self._settings.sort(key=lambda ele: ele.order_key)
-        log.info(f'Created {len(self._settings)} Icon Settings')
 
     def create_icon_configs(self):
         template = icon_setting_template()
