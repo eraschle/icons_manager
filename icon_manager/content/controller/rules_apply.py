@@ -12,6 +12,7 @@ from icon_manager.crawler.options import FilterOptions
 from icon_manager.helpers.path import Folder
 from icon_manager.interfaces.controller import IContentController
 from icon_manager.interfaces.builder import CrawlerBuilder
+from icon_manager.interfaces.path import FolderModel
 from icon_manager.library.models import IconSetting
 
 log = logging.getLogger(__name__)
@@ -39,7 +40,8 @@ class RulesApplyBuilder(CrawlerBuilder[MatchedRuleFolder]):
             return None
         message = f'Icon "{config.icon.name_wo_extension}" to "{model.name}" [{model.path}]'
         log.info(message)
-        return MatchedRuleFolder(model.path, config)
+        folder = FolderModel(model.path)
+        return MatchedRuleFolder(folder, config)
 
     def can_build_folder(self, folder: Folder, **kwargs) -> bool:
         return True
