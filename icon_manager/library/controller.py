@@ -119,10 +119,6 @@ class IconSettingController(ISettingsController):
         self.library_icons: Iterable[LibraryIconFile] = []
         self._settings: List[IconSetting] = []
 
-    def set_before_and_after(self, before_or_after: Iterable[str]) -> None:
-        for setting in self._settings:
-            setting.set_before_or_after(before_or_after)
-
     def settings(self, clean_empty: bool = True) -> Sequence[IconSetting]:
         if clean_empty:
             return list(filter(lambda ico: not ico.is_empty(), self._settings))

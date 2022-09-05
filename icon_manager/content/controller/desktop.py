@@ -64,7 +64,7 @@ class DesktopIniController(ContentController[DesktopIniFile]):
         super().__init__(user_config, builder, options)
         self.desktop_files: List[DesktopIniFile] = []
 
-    @execution(message='Build Desktop.ini', log=log)
+    @execution(message='Build Desktop.ini')
     def crawl_content(self, folders: List[Folder], _: Sequence[IconSetting]):
         extensions = [DesktopIniFile.extension(with_point=False)]
         files = files_by_extension(folders, extensions)

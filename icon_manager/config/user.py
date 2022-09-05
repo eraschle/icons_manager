@@ -21,11 +21,12 @@ class UserConfig(Config):
     def file_name(cls) -> str:
         return '*.config'
 
-    def __init__(self, icons_path: SearchFolder, search_folders: Sequence[IconSearchFolder],
+    def __init__(self, name: str, icons_path: SearchFolder, search_folders: Sequence[IconSearchFolder],
                  code_folders: Iterable[str], exclude_folders: Iterable[str],
                  before_or_after: Iterable[str], copy_icon: bool) -> None:
         super().__init__()
         self.uuid = uuid4()
+        self.name = name
         self.icons_path = icons_path
         self.search_folders = search_folders
         self.code_folders = code_folders
@@ -108,7 +109,8 @@ class UserConfigFactory(FileFactory[ConfigFile, UserConfig]):
         before_or_after = content.get(UserConfigs.BEFORE_OR_AFTER, [])
         code_folders = content.get(UserConfigs.CODE_FOLDERS, [])
         exclude_folders = content.get(UserConfigs.EXCLUDE_FOLDERS, [])
-        return UserConfig(icons_path, search_folders,
+        config_name = file.name
+        return UserConfig(config_name, icons_path, search_folders,
                           code_folders, exclude_folders,
                           before_or_after, copy_icon)
 

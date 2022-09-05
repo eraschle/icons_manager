@@ -3,32 +3,31 @@ from datetime import datetime
 from typing import Iterable
 
 from icon_manager.helpers.path import Folder, total_count
-from icon_manager.helpers.string import ALIGN_RIGHT, fixed_length
+from icon_manager.helpers.string import ALIGN_LEFT, ALIGN_RIGHT, fixed_length
 
 log = logging.getLogger(__name__)
 
 
 def log_time(message: str, start: datetime) -> str:
     diff = (datetime.now() - start).total_seconds()
-    duration = fixed_length(f'{diff:.2f} sec', width=8, align=ALIGN_RIGHT)
-    return f'{message} in {duration}'
+    diff_value = fixed_length(f'{diff: .2f} sec', width=10, align=ALIGN_RIGHT)
+    return f'{message} in {diff_value}'
 
 
-def execution(*args, **kwargs):
-
-    message = kwargs.get('message', '')
-
-    def inner(func):
-
-        def execution_time(*args, **kwargs):
-
+def execution(message):
+    def actual_decorator(func):
+        def execution_time(self, *args, **kwargs):
             start = datetime.now()
-            # log.info(f'Started {func.__name__}')
-            result = func(*args, **kwargs)
-            log.info(log_time(message, start))
+            result = func(self, *args, **kwargs)
+            log_message = fixed_length(message, width=25, align=ALIGN_LEFT)
+            config = getattr(self, 'user_config')
+            if config is not None:
+                name = fixed_length(config.name, width=20, align=ALIGN_LEFT)
+                log_message = f'{name}: {log_message}'
+            log.info(log_time(log_message, start))
             return result
         return execution_time
-    return inner
+    return actual_decorator
 
 
 def log_files_and_folders(message: str, files: list, folders: list, width: int = 8, suffix: str = '') -> str:
