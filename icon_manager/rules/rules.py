@@ -137,34 +137,37 @@ class ContainsFileRule(FolderRule):
         super().__init__(attribute, operator, values, case_sensitive,
                          before_or_after, before_or_after_values)
         self.max_level = level
+        self.replace_values = ['*', '.']
 
     def get_generators(self) -> Iterable[Generator]:
         return []
 
     def get_rule_value(self, value: str) -> str:
-        if value.startswith('.'):
-            return value[1:]
+        for replace in self.replace_values:
+            if not value.startswith(replace):
+                continue
+            value = value.lstrip(replace)
         return value
 
     def create_rule_values(self, values: Iterable[str]) -> Iterable[str]:
         values = map(lambda value: self.get_rule_value(value), values)
         return super().create_rule_values(values)
 
-    def get_extensions_of(self, folder: Folder) -> List[str]:
+    def get_extensions_of(self, folder: Folder) -> Set[str]:
         extensions = [file.extension for file in folder.files]
-        return [ext for ext in extensions if ext is not None]
+        return set([ext for ext in extensions if ext is not None])
 
-    def get_extensions(self, entry: Folder, level: int) -> List[str]:
+    def get_extensions(self, entry: Folder, level: int) -> Iterable[str]:
         if level > self.max_level:
             return []
         level += 1
         extensions = self.get_extensions_of(entry)
         for folder in entry.folders:
-            extensions.extend(self.get_extensions(folder, level))
+            extensions.update(self.get_extensions(folder, level))
         return extensions
 
     def is_value_allowed(self, entry: Folder, _: str, rule_value: str) -> bool:
-        extensions = self.get_extensions(entry, level=1)
+        extensions = self.get_extensions(entry, level=0)
         return any(ext.endswith(rule_value) for ext in extensions)
 
 

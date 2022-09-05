@@ -24,7 +24,7 @@ class FilterRule(ABC, Generic[TEntry, TValue]):
 
     @abstractmethod
     def is_allowed(self, entry: TEntry) -> bool:
-        ...
+        pass
 
     def is_allowed_with_operator(self, entry: TEntry, value: TValue) -> bool:
         if self.operator == Operator.ALL:
@@ -33,11 +33,11 @@ class FilterRule(ABC, Generic[TEntry, TValue]):
 
     @ abstractmethod
     def are_any_allowed(self, entry: TEntry, value: TValue) -> bool:
-        ...
+        pass
 
     @ abstractmethod
     def are_all_allowed(self, entry: TEntry, value: TValue) -> bool:
-        ...
+        pass
 
 
 class IconRule(FilterRule[Folder, str]):
@@ -48,16 +48,20 @@ class IconRule(FilterRule[Folder, str]):
 
     @abstractmethod
     def is_allowed(self, entry: Folder) -> bool:
-        ...
+        pass
 
     @ abstractmethod
     def are_any_allowed(self, entry: Folder, value: str) -> bool:
-        ...
+        pass
 
     @ abstractmethod
     def are_all_allowed(self, entry: Folder, value: str) -> bool:
-        ...
+        pass
 
     @ abstractmethod
     def set_before_or_after(self, before_or_after: Iterable[str]) -> None:
-        ...
+        pass
+
+    @ abstractmethod
+    def generate_rule_values(self) -> None:
+        pass
