@@ -20,6 +20,7 @@ def _crawling(root: SearchFolder) -> Folder:
     return Folder(path=path, name=root.name, files=files, folders=folders)
 
 
+# @crawler_result(message='Crawler found', log_start='SYNC crawler started')
 def crawling_folders(roots: Sequence[IconSearchFolder]) -> List[Folder]:
     folders = []
     for root in roots:
@@ -27,7 +28,8 @@ def crawling_folders(roots: Sequence[IconSearchFolder]) -> List[Folder]:
     return folders
 
 
-def crawling_folders_async(roots: Sequence[IconSearchFolder]) -> List[Folder]:
+# @crawler_result(message='Crawler found', log_start='ASYNC_crawler started')
+def async_crawling_folders(roots: Sequence[IconSearchFolder]) -> List[Folder]:
     folders = []
     with concurrent.futures.ThreadPoolExecutor() as executor:
         task = {executor.submit(_crawling, root): root for root in roots}
@@ -51,7 +53,6 @@ def _group_by_extension(files: Iterable[File], extensions: Sequence[str]) -> Dic
         if file.extension not in grouped:
             grouped[file.extension] = []
         grouped[file.extension].append(file)
-
     return grouped
 
 

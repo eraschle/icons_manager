@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime
 from typing import Iterable, List, Optional, Sequence
 
 from icon_manager.config.user import UserConfig
@@ -7,16 +6,16 @@ from icon_manager.content.controller.base import ContentController
 from icon_manager.content.models.matched import MatchedIconFolder
 from icon_manager.crawler.filters import folders_by_name
 from icon_manager.crawler.options import FilterOptions
-from icon_manager.helpers.logs import execution
+from icon_manager.helpers.decorator import execution
 from icon_manager.helpers.path import Folder
 from icon_manager.interfaces.actions import DeleteAction
-from icon_manager.interfaces.builder import CrawlerBuilder
+from icon_manager.interfaces.builder import FolderCrawlerBuilder
 from icon_manager.library.models import IconSetting
 
 log = logging.getLogger(__name__)
 
 
-class IconFolderBuilder(CrawlerBuilder[MatchedIconFolder]):
+class IconFolderBuilder(FolderCrawlerBuilder[MatchedIconFolder]):
 
     def can_build_folder(self, folder: Folder, **kwargs) -> bool:
         return folder.name == MatchedIconFolder.folder_name
@@ -33,7 +32,7 @@ class IconFolderOptions(FilterOptions):
 class IconFolderController(ContentController[MatchedIconFolder]):
 
     def __init__(self, user_config: UserConfig,
-                 builder: CrawlerBuilder = IconFolderBuilder(),
+                 builder: FolderCrawlerBuilder = IconFolderBuilder(),
                  options: FilterOptions = IconFolderOptions()) -> None:
         super().__init__(user_config, builder, options)
         self.folders: List[MatchedIconFolder] = []

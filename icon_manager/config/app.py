@@ -14,8 +14,8 @@ from icon_manager.helpers.user_inputs import (ask_user, ask_user_for_path,
                                               ask_user_yes_no_question)
 from icon_manager.interfaces.factory import FileFactory
 from icon_manager.interfaces.path import ConfigFile, JsonFile
-from icon_manager.rules.config import ExcludeRuleConfig
-from icon_manager.rules.factory import ExcludeRuleConfigFactory
+from icon_manager.rules.factory.manager import ExcludeManagerFactory
+from icon_manager.rules.manager import ExcludeManager
 
 log = logging.getLogger(__name__)
 
@@ -23,14 +23,14 @@ log = logging.getLogger(__name__)
 class AppConfig(Config):
 
     def __init__(self, user_configs: Iterable[UserConfig],
-                 exclude_rules: ExcludeRuleConfig,
+                 exclude_rules: ExcludeManager,
                  before_or_after: Iterable[str]) -> None:
         super().__init__()
         self._exclude_rules = exclude_rules
         self.user_configs = user_configs
         self.before_or_after = before_or_after
 
-    def create_exclude_rules(self) -> ExcludeRuleConfig:
+    def create_exclude_rules(self) -> ExcludeManager:
         rule_copy = copy.deepcopy(self._exclude_rules)
         return rule_copy
 
@@ -80,7 +80,7 @@ class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
             return None
         return get_path(folder_path, names[0])
 
-    def __init__(self, source: JsonSource, factory: ExcludeRuleConfigFactory) -> None:
+    def __init__(self, source: JsonSource, factory: ExcludeManagerFactory) -> None:
         self.source = source
         self.user_factory = UserConfigFactory(source)
         self.excluded_factory = factory
@@ -154,11 +154,11 @@ class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
             user_configs.append(user_config)
         return user_configs
 
-    def create_exclude_config(self, content: Dict[str, Any]) -> ExcludeRuleConfig:
+    def create_exclude_config(self, content: Dict[str, Any]) -> ExcludeManager:
         config_folder = content[AppConfigs.USER_CONFIGS]
         config_path = self._get_exclude_config_path(config_folder)
         if config_path is None:
-            return ExcludeRuleConfig(rule_managers=[])
+            return ExcludeManager([])
         return self.excluded_factory.create(JsonFile(config_path))
 
     def create(self, file: ConfigFile, **kwargs) -> AppConfig:

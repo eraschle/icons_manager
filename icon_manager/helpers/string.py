@@ -10,6 +10,7 @@ FILL_HYPHEN = '-'
 
 ALIGN_LEFT = '<'
 ALIGN_RIGHT = '>'
+ALIGN_CENTRE = '^'
 
 
 def fixed_length(value: str, width: int, fill: str = FILL_SPACE, align: str = ALIGN_LEFT) -> str:

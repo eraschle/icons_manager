@@ -1,9 +1,8 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Generic, Iterable, TypeVar
-from icon_manager.helpers.path import Folder
+from typing import Generic, Iterable, Protocol, TypeVar
 
-from icon_manager.interfaces.path import FolderModel
+from icon_manager.helpers.path import Folder
 
 
 class Operator(str, Enum):
@@ -12,42 +11,161 @@ class Operator(str, Enum):
     ALL = 'all'
 
 
-TValue = TypeVar('TValue', bound=object)
-TEntry = TypeVar('TEntry', bound=object)
+class RuleAttribute(str, Enum):
+    UNKNOWN = 'unknown',
+    NAME = 'name'
+    PATH = 'path'
 
 
-class FilterRule(ABC, Generic[TEntry, TValue]):
+def get_rule_attribute(value) -> RuleAttribute:
+    if not isinstance(value, str):
+        return RuleAttribute.UNKNOWN
+    for attr in RuleAttribute:
+        if value.lower() != attr.value:
+            continue
+        return attr
+    return RuleAttribute.UNKNOWN
 
-    def __init__(self, operator: Operator) -> None:
+
+TEntry = TypeVar('TEntry', bound=object, contravariant=True)
+
+
+class IRuleValidator:
+
+    def is_valid(self) -> bool:
+        ...
+
+    def message(self) -> bool:
+        ...
+
+
+class RuleProtocol(Protocol, Generic[TEntry]):
+    operator: Operator
+
+    def is_allowed(self, entry: TEntry) -> bool:
+        ...
+
+
+class IFilterRule(RuleProtocol[Folder]):
+    operator: Operator
+    attribute: RuleAttribute
+
+    @property
+    def name(self) -> str:
+        ...
+
+    def is_allowed(self, entry: Folder) -> bool:
+        ...
+
+    def is_empty(self) -> bool:
+        ...
+
+
+class Rule(str, Enum):
+    UNKNOWN = 'unknown',
+    EQUALS = 'equals'
+    NOT_EQUALS = "not_equals"
+    STARTS_WITH = "starts_with"
+    ENDS_WITH = "ends_with"
+    STARTS_OR_ENDS_WITH = "start_or_ends_with"
+    CONTAINS = 'contains'
+    NOT_CONTAINS = 'not_contains'
+    CHAINED = 'chained'
+    CONTAINS_FILE = 'contains_files'
+
+    def class_name(self) -> str:
+        splitted_name = self.name.split('_')
+        splitted_name.append('Rule')
+        return ''.join([name.capitalize() for name in splitted_name])
+
+
+def get_rule(value) -> Rule:
+    if not isinstance(value, str):
+        return Rule.UNKNOWN
+    for rule in Rule:
+        if value.lower() != rule.value:
+            continue
+        return rule
+    return Rule.UNKNOWN
+
+
+class AFilterRule(ABC, IFilterRule):
+
+    @classmethod
+    def rule(cls) -> Rule:
+        raise NotImplementedError
+
+    def __init__(self, attribute: RuleAttribute, operator: Operator) -> None:
         super().__init__()
+        self.attribute = attribute
         self.operator = operator
 
-    @abstractmethod
-    def is_allowed(self, entry: TEntry) -> bool:
-        pass
+    @property
+    def name(self) -> str:
+        name = self.__class__.__name__.replace('Rule', '')
+        return f'{name} Rule {self.attribute.name} [{self.operator.name}] '
 
-    def is_allowed_with_operator(self, entry: TEntry, value: TValue) -> bool:
+    @abstractmethod
+    def is_empty(self) -> bool:
+        raise NotImplementedError
+
+    @abstractmethod
+    def is_allowed(self, entry: Folder) -> bool:
+        raise NotImplementedError
+
+    def __str__(self) -> str:
+        return self.name
+
+    def __repr__(self) -> str:
+        name = self.__class__.__name__
+        return f'{name} {self.attribute} [{self.operator.name}]'
+
+
+class ISingleRule(IFilterRule):
+    operator: Operator
+    attribute: RuleAttribute
+
+    @property
+    def name(self) -> str:
+        ...
+
+    @property
+    def validator(self) -> IRuleValidator:
+        ...
+
+    def is_allowed(self, entry: Folder) -> bool:
+        ...
+
+    def is_empty(self) -> bool:
+        ...
+
+    def set_before_or_after(self, values: Iterable[str]) -> None:
+        ...
+
+    def setup_filter_rule(self) -> None:
+        ...
+
+
+class ASingleRule(AFilterRule, ISingleRule):
+
+    @property
+    def name(self) -> str:
+        return f'Rule {self.attribute.name} [{self.operator.name}] '
+
+    def is_allowed(self, entry: Folder) -> bool:
+        value = getattr(entry, self.attribute.value, None)
+        if value is None or self.operator == Operator.UNKNOWN:
+            return False
+        value = self.prepare_element_value(value)
+        return self.is_allowed_with_operator(entry, value)
+
+    def is_allowed_with_operator(self, entry: Folder, value: str) -> bool:
         if self.operator == Operator.ALL:
             return self.are_all_allowed(entry, value)
         return self.are_any_allowed(entry, value)
 
     @ abstractmethod
-    def are_any_allowed(self, entry: TEntry, value: TValue) -> bool:
-        pass
-
-    @ abstractmethod
-    def are_all_allowed(self, entry: TEntry, value: TValue) -> bool:
-        pass
-
-
-class IconRule(FilterRule[Folder, str]):
-
-    def __init__(self, attribute: str, operator: Operator) -> None:
-        super().__init__(operator)
-        self.attribute = attribute
-
-    @abstractmethod
-    def is_allowed(self, entry: Folder) -> bool:
+    def prepare_element_value(self, value: str) -> str:
         pass
 
     @ abstractmethod
@@ -56,12 +174,4 @@ class IconRule(FilterRule[Folder, str]):
 
     @ abstractmethod
     def are_all_allowed(self, entry: Folder, value: str) -> bool:
-        pass
-
-    @ abstractmethod
-    def set_before_or_after(self, before_or_after: Iterable[str]) -> None:
-        pass
-
-    @ abstractmethod
-    def generate_rule_values(self) -> None:
         pass

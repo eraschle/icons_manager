@@ -7,12 +7,12 @@ from icon_manager.content.controller.icon_file import IconFileController
 from icon_manager.content.controller.icon_folder import IconFolderController
 from icon_manager.content.controller.re_apply import ReApplyController
 from icon_manager.content.controller.rules_apply import IApplyController
-from icon_manager.crawler.crawler import crawling_folders_async, crawling_icons
-from icon_manager.helpers.logs import execution, log_count
+from icon_manager.crawler.crawler import async_crawling_folders, crawling_icons
+from icon_manager.helpers.decorator import execution
 from icon_manager.library.controller import (IconSettingController,
                                              ISettingsController)
 from icon_manager.library.models import IconSetting
-from icon_manager.rules.config import ExcludeRuleConfig
+from icon_manager.rules.manager import ExcludeManager
 from icon_manager.services.base import IConfigService
 
 log = logging.getLogger(__name__)
@@ -53,42 +53,39 @@ class ConfigService(IConfigService):
         self._before_or_after.update(before_or_after)
         self._before_or_after.update(self.user_config.before_or_after)
 
-    def crawl_content(self, find_matches: bool, exclude: ExcludeRuleConfig):
+    def crawl_content(self, find_matches: bool, exclude: ExcludeManager):
         settings = self.settings.create_icon_settings(self._before_or_after)
-        exclude.set_before_or_after(self._before_or_after)
+        exclude.setup_rules(self._before_or_after)
         self.crawle_search_folders(exclude, settings)
         if find_matches:
             self.find_matching_content(settings)
 
     @execution(message='Crawled through content')
-    def crawle_search_folders(self, exclude: ExcludeRuleConfig,
+    def crawle_search_folders(self, exclude: ExcludeManager,
                               settings: Sequence[IconSetting]):
         folders = self.user_config.search_folders
-        entries = crawling_folders_async(folders)
-        log.info(log_count('Found', entries))
+        entries = async_crawling_folders(folders)
         self.desktop.crawl_content(entries, settings)
         self.icon_folders.crawl_content(entries, settings)
         self.icon_files.crawl_content(entries, settings)
         self.rules.crawl_content(entries, exclude)
 
-    @execution(message='Find rule matches')
+    @ execution(message='Find rule matches', start_message='Start search rule matches')
     def find_matching_content(self, settings: Sequence[IconSetting]):
-        log.info('Start find rule matches')
         self.rules.find_matches(settings)
 
-    @execution(message='Applied icons')
+    @ execution(message='Applied icons')
     def apply_icons(self):
         self.rules.apply_matches()
 
-    @execution(message='RE-Applied icons')
+    @ execution(message='RE-Applied icons')
     def re_apply_icons(self):
         controller = ReApplyController(self.settings, self.desktop,
                                        self.icon_folders)
         self.rules.re_apply_matches(controller)
 
-    @execution(message='Deleted content')
+    @ execution(message='Deleted content', start_message='Start delete content')
     def delete_content(self):
-        log.info('Start delete content')
         self.desktop.delete_content()
         self.icon_folders.delete_content()
         self.icon_files.delete_content()

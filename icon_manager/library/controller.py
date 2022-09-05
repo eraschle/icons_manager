@@ -6,31 +6,30 @@ from icon_manager.content.models.matched import IconSetting
 from icon_manager.helpers.path import File
 from icon_manager.helpers.resource import icon_setting_template
 from icon_manager.interfaces.actions import DeleteAction
-from icon_manager.interfaces.builder import CrawlerBuilder, ModelBuilder
+from icon_manager.interfaces.builder import FileCrawlerBuilder, ModelBuilder
 from icon_manager.interfaces.controller import ILibraryController
 from icon_manager.interfaces.path import FileModel, JsonFile, PathModel
 from icon_manager.library.models import (ArchiveFolder, IconFile,
                                          LibraryIconFile)
-from icon_manager.rules.config import RuleConfig
-from icon_manager.rules.factory import RuleConfigFactory
-from icon_manager.rules.mapping import RULE_MAPPINGS
+from icon_manager.rules.factory.manager import RuleManagerFactory
+from icon_manager.rules.manager import RuleManager
 
 log = logging.getLogger(__name__)
 
 
-class IconConfigBuilder(CrawlerBuilder[RuleConfig]):
+class IconConfigBuilder(FileCrawlerBuilder[RuleManager]):
 
-    def __init__(self, factory: RuleConfigFactory) -> None:
+    def __init__(self, factory: RuleManagerFactory = RuleManagerFactory()) -> None:
         self.factory = factory
 
     def can_build_file(self, file: File, **kwargs) -> bool:
         return JsonFile.is_model(file.path)
 
-    def build_file_model(self, file: File, **kwargs) -> Optional[RuleConfig]:
+    def build_file_model(self, file: File, **kwargs) -> Optional[RuleManager]:
         return self.factory.create(JsonFile(file.path))
 
 
-class LibraryIconFileBuilder(CrawlerBuilder[LibraryIconFile]):
+class LibraryIconFileBuilder(FileCrawlerBuilder[LibraryIconFile]):
 
     def can_build_file(self, file: File, **kwargs) -> bool:
         return LibraryIconFile.is_model(file.name)
@@ -39,18 +38,14 @@ class LibraryIconFileBuilder(CrawlerBuilder[LibraryIconFile]):
         return LibraryIconFile(file.path)
 
 
-def _factory() -> RuleConfigFactory:
-    return RuleConfigFactory(RULE_MAPPINGS)
-
-
 class IconSettingBuilder(ModelBuilder[IconSetting]):
 
     def __init__(self, icon_builder: LibraryIconFileBuilder = LibraryIconFileBuilder(),
-                 config_builder: IconConfigBuilder = IconConfigBuilder(_factory())) -> None:
+                 config_builder: IconConfigBuilder = IconConfigBuilder()) -> None:
         super().__init__()
         self.icon_builder = icon_builder
         self.config_builder = config_builder
-        self.rule_configs: Dict[str, RuleConfig] = {}
+        self.rule_configs: Dict[str, RuleManager] = {}
 
     def update_rules(self, rules: Iterable[File]):
         rule_configs = self.config_builder.build_models(rules)
@@ -60,23 +55,23 @@ class IconSettingBuilder(ModelBuilder[IconSetting]):
     def build_icons(self, files: Iterable[File]) -> List[LibraryIconFile]:
         return self.icon_builder.build_models(files)
 
-    def get_rule_config(self, model: LibraryIconFile) -> Optional[RuleConfig]:
+    def get_rule_manager(self, model: LibraryIconFile) -> Optional[RuleManager]:
         return self.rule_configs.get(model.name_wo_extension, None)
 
     def can_build(self, model: PathModel) -> bool:
         if not isinstance(model, LibraryIconFile):
             return False
-        config = self.get_rule_config(model)
+        config = self.get_rule_manager(model)
         return config is not None
 
     def build_model(self, file: LibraryIconFile) -> Optional[IconSetting]:
-        config = self.get_rule_config(file)
+        config = self.get_rule_manager(file)
         if config is None:
             return None
         return IconSetting(file, config)
 
     def update_config(self, setting: IconSetting, template_file: JsonFile) -> None:
-        config = setting.rule_config.config
+        config = setting.manager.config
         self.config_builder.factory.update(config, template_file)
 
 
@@ -136,7 +131,12 @@ class IconSettingController(ISettingsController):
         icons = content.get(LibraryIconFile.extension(with_point=False), [])
         self.library_icons = self.builder.build_icons(icons)
         self._settings = self.builder.build_models(self.library_icons)
+        self.clean_empty_rules()
         self._settings.sort(key=lambda ele: ele.order_key)
+
+    def clean_empty_rules(self):
+        for setting in self._settings:
+            setting.manager.clean_empty()
 
     def create_icon_configs(self):
         template = icon_setting_template()
@@ -153,12 +153,12 @@ class IconSettingController(ISettingsController):
             self.builder.update_config(setting, template)
 
     def delete_icon_configs(self):
-        configs = [setting.rule_config.config for setting in self._settings]
+        configs = [setting.manager.config for setting in self._settings]
         action = DeleteAction(configs)
         action.execute()
         if not action.any_executed():
             return
-        log.info(action.get_log_message(RuleConfig))
+        log.info(action.get_log_message(RuleManager))
 
     def archive_library(self):
         for setting in self._settings:

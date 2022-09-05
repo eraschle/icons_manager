@@ -1,4 +1,4 @@
-from icon_manager.rules.config import ExcludeRuleConfig
+from icon_manager.rules.manager import ExcludeManager
 
 
 class FilterOptions:
@@ -7,4 +7,4 @@ class FilterOptions:
         self.clean_excluded = clean_excluded
         self.clean_project = clean_project
         self.clean_recursive = clean_recursive
-        self.exclude_rules: ExcludeRuleConfig = ExcludeRuleConfig([])
+        self.exclude_rules: ExcludeManager = ExcludeManager([])

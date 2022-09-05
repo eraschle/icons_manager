@@ -1,75 +1,93 @@
-import os
-from abc import ABC, abstractmethod
-from typing import Any, Collection, Iterable, List
+import logging
+from abc import abstractmethod
+from typing import Any, Collection, Iterable, Sequence, Set
 
 from icon_manager.helpers.path import Folder
-from icon_manager.rules.base import IconRule, Operator
+from icon_manager.rules.base import (AFilterRule, ASingleRule, ISingleRule,
+                                     Operator, RuleAttribute)
+from icon_manager.rules.decorator import matched_value
 from icon_manager.rules.generate import (AfterGenerator, BeforeGenerator,
                                          BeforeOrAfterGenerator, CaseConverter,
                                          Generator, GeneratorManager)
 
+log = logging.getLogger(__name__)
+
+
 # region FOLDER RULES
 
 
-class FolderRule(IconRule):
+class FolderRule(ASingleRule):
 
-    def __init__(self, attribute: str, operator: Operator,
-                 values: Iterable[str], case_sensitive: bool,
+    def __init__(self, attribute: RuleAttribute, operator: Operator,
+                 rule_values: Collection[str], case_sensitive: bool,
                  before_or_after: bool, before_or_after_values: Collection[str]) -> None:
-        self.attribute = attribute
-        self.__values_generated = False
-        self.__values = values
-        self.operator = operator
+        super().__init__(attribute, operator)
+        self.original_values = list(rule_values)
+        self.generated: Collection[str] = []
+        self.rule_values = rule_values
         self.generator = GeneratorManager()
-        self.__before_or_after = before_or_after
+        self.is_case_sensitive = case_sensitive
+        self.add_before_or_after_values = before_or_after
         self.generator.set_values(before_or_after_values)
         self.generator.converters = [CaseConverter(case_sensitive)]
 
-    def get_generators(self) -> Iterable[Generator]:
+    def is_empty(self) -> bool:
+        return len(self.rule_values) == 0
+
+    def get_generators(self) -> Sequence[Generator]:
         return [BeforeGenerator(), AfterGenerator(), BeforeOrAfterGenerator()]
 
-    def before_and_after_generators(self) -> Iterable[Generator]:
+    def before_and_after_generators(self) -> Sequence[Generator]:
         return [BeforeGenerator(), AfterGenerator()]
 
-    def create_before_or_after(self, rule_values: Iterable[str]) -> Iterable[str]:
-        self.generator.generators = self.get_generators()
-        return self.generator.generates_unique(rule_values, include_value=True)
-
     def set_before_or_after(self, before_or_after: Iterable[str]) -> None:
-        if not self.__before_or_after:
+        if not self.add_before_or_after_values:
             return
-        self.generator.set_values(before_or_after)
+        self.generator.generators = self.get_generators()
+        self.generator.set_generator_values(before_or_after)
 
-    def create_rule_values(self, values: Iterable[str]) -> Iterable[str]:
-        values = self.generator.converts(values)
-        return self.create_before_or_after(values)
+    def _before_or_after(self, values: Collection[str]) -> Collection[str]:
+        if not self.add_before_or_after_values:
+            return []
+        include_value = False
+        return self.generator.generates_unique(values, include_value)
 
-    @ property
-    def rule_values(self) -> Iterable[str]:
-        if not self.__values_generated:
-            self.__values = self.create_rule_values(self.__values)
-            self.__values_generated = True
-        return self.__values
+    def setup_filter_rule(self) -> None:
+        self.rule_values = self.prepare_rule_values(self.original_values)
+        self.generated = self._before_or_after(self.rule_values)
 
-    def is_allowed(self, entry: Folder) -> bool:
-        value = getattr(entry, self.attribute, None)
-        if value is None or self.operator == Operator.UNKNOWN:
-            return False
-        value = self.generator.convert(value)
-        return self.is_allowed_with_operator(entry, value)
+    def prepare_rule_values(self, values: Collection[str]) -> Collection[str]:
+        return self.generator.converts(values)
+
+    def prepare_element_value(self, value: str) -> str:
+        return self.generator.convert(value)
 
     def are_any_allowed(self, entry: Folder, value: Any) -> bool:
-        return any(self.is_value_allowed(entry, value, rule_value) for rule_value in self.rule_values)
+        if self._are_any_allowed(entry, value, self.rule_values):
+            return True
+        if len(self.generated) == 0:
+            return False
+        return self._are_any_allowed(entry, value, self.generated)
+
+    def _are_any_allowed(self, entry: Folder, value: Any, rule_values: Iterable[str]) -> bool:
+        return any(self.is_value_allowed(entry, value, rule_value) for rule_value in rule_values)
 
     def are_all_allowed(self, entry: Folder, value: Any) -> bool:
-        return all(self.is_value_allowed(entry, value, rule_value) for rule_value in self.rule_values)
+        if self._are_all_allowed(entry, value, self.rule_values):
+            return True
+        if len(self.generated) == 0:
+            return False
+        return self._are_all_allowed(entry, value, self.generated)
 
-    @ abstractmethod
+    def _are_all_allowed(self, entry: Folder, value: Any, rule_values: Iterable[str]) -> bool:
+        return all(self.is_value_allowed(entry, value, rule_value) for rule_value in rule_values)
+
+    @abstractmethod
     def is_value_allowed(self, entry: Folder, value: str, rule_value: str) -> bool:
         pass
 
     def __str__(self) -> str:
-        return f'{self.__class__.__name__}: {self.attribute} {self.__values}'
+        return f'{self.__class__.__name__}: {self.attribute} {self.rule_values}'
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -83,15 +101,17 @@ class EqualsRule(FolderRule):
 
 class NotEqualsRule(EqualsRule):
 
+    @matched_value()
     def is_value_allowed(self, entry: Folder, value: str, rule_value: str) -> bool:
         return not super().is_value_allowed(entry, value, rule_value)
 
 
 class ContainsRule(FolderRule):
 
-    def get_generators(self) -> Iterable[Generator]:
+    def get_generators(self) -> Sequence[Generator]:
         return self.before_and_after_generators()
 
+    @matched_value()
     def is_value_allowed(self, _: Folder, value: str, rule_value: str) -> bool:
         return rule_value in value
 
@@ -102,36 +122,39 @@ class NotContainsRule(ContainsRule):
         return not super().is_value_allowed(entry, value, rule_value)
 
 
-class StartswithRule(FolderRule):
+class StartsWithRule(FolderRule):
 
-    def get_generators(self) -> Iterable[Generator]:
+    def get_generators(self) -> Sequence[Generator]:
         return self.before_and_after_generators()
 
+    @matched_value()
     def is_value_allowed(self, _: Folder, value: str, rule_value: str) -> bool:
         return value.startswith(rule_value)
 
 
-class EndswithRule(FolderRule):
+class EndsWithRule(FolderRule):
 
-    def get_generators(self) -> Iterable[Generator]:
+    def get_generators(self) -> Sequence[Generator]:
         return self.before_and_after_generators()
 
+    @matched_value()
     def is_value_allowed(self, _: Folder, value: str, rule_value: str) -> bool:
         return value.endswith(rule_value)
 
 
-class StartsOrEndswithRule(FolderRule):
+class StartsOrEndsWithRule(FolderRule):
 
-    def get_generators(self) -> Iterable[Generator]:
+    def get_generators(self) -> Sequence[Generator]:
         return self.before_and_after_generators()
 
+    @matched_value()
     def is_value_allowed(self, entry: Folder, value: str, rule_value: str) -> bool:
         return value.startswith(rule_value) or value.endswith(rule_value)
 
 
 class ContainsFileRule(FolderRule):
 
-    def __init__(self, attribute: str, operator: Operator, values: Iterable[str],
+    def __init__(self, attribute: RuleAttribute, operator: Operator, values: Collection[str],
                  case_sensitive: bool, before_or_after: bool,
                  before_or_after_values: Collection[str], level: int) -> None:
         super().__init__(attribute, operator, values, case_sensitive,
@@ -139,7 +162,7 @@ class ContainsFileRule(FolderRule):
         self.max_level = level
         self.replace_values = ['*', '.']
 
-    def get_generators(self) -> Iterable[Generator]:
+    def get_generators(self) -> Sequence[Generator]:
         return []
 
     def get_rule_value(self, value: str) -> str:
@@ -149,9 +172,9 @@ class ContainsFileRule(FolderRule):
             value = value.lstrip(replace)
         return value
 
-    def create_rule_values(self, values: Iterable[str]) -> Iterable[str]:
-        values = map(lambda value: self.get_rule_value(value), values)
-        return super().create_rule_values(values)
+    def prepare_rule_values(self, values: Collection[str]) -> Collection[str]:
+        values = [self.get_rule_value(value) for value in values]
+        return super().prepare_rule_values(values)
 
     def get_extensions_of(self, folder: Folder) -> Set[str]:
         extensions = [file.extension for file in folder.files]
@@ -166,6 +189,7 @@ class ContainsFileRule(FolderRule):
             extensions.update(self.get_extensions(folder, level))
         return extensions
 
+    @matched_value()
     def is_value_allowed(self, entry: Folder, _: str, rule_value: str) -> bool:
         extensions = self.get_extensions(entry, level=0)
         return any(ext.endswith(rule_value) for ext in extensions)
@@ -174,31 +198,27 @@ class ContainsFileRule(FolderRule):
 # endregion
 
 
-class ChainedRule(IconRule):
+class ChainedRule(AFilterRule, ISingleRule):
 
-    def __init__(self, attribute: str, operator: Operator,
-                 rules: Collection[IconRule]) -> None:
+    def __init__(self, attribute: RuleAttribute, operator: Operator,
+                 rules: Sequence[ISingleRule]) -> None:
         super().__init__(attribute, operator)
         self.rules = rules
 
     def is_empty(self) -> bool:
-        return self.rule_count() == 0
-
-    def rule_count(self) -> int:
-        return len(self.rules)
+        if len(self.rules) == 0:
+            return True
+        return all(rule.is_empty() for rule in self.rules)
 
     def is_allowed(self, entry: Folder) -> bool:
-        value = getattr(entry, self.attribute, None)
-        if value is None:
-            return False
-        return self.is_allowed_with_operator(entry, value)
-
-    def are_any_allowed(self, entry: Folder, _: str) -> bool:
+        if self.operator == Operator.ALL:
+            return all(rule.is_allowed(entry) for rule in self.rules)
         return any(rule.is_allowed(entry) for rule in self.rules)
-
-    def are_all_allowed(self, entry: Folder, _: str) -> bool:
-        return all(rule.is_allowed(entry) for rule in self.rules)
 
     def set_before_or_after(self, before_or_after: Iterable[str]) -> None:
         for rule in self.rules:
             rule.set_before_or_after(before_or_after)
+
+    def setup_filter_rule(self) -> None:
+        for rule in self.rules:
+            rule.setup_filter_rule()

@@ -5,7 +5,7 @@ from typing import Iterable, Sequence, Tuple
 from icon_manager.helpers.path import Folder
 from icon_manager.interfaces.path import (FileModel, FolderModel, JsonFile,
                                           PathModel)
-from icon_manager.rules.config import RuleConfig
+from icon_manager.rules.manager import RuleManager
 
 log = logging.getLogger(__name__)
 
@@ -53,9 +53,9 @@ class LibraryIconFile(IconFile):
 
 class IconSetting:
 
-    def __init__(self, icon: LibraryIconFile, config: RuleConfig) -> None:
+    def __init__(self, icon: LibraryIconFile, manager: RuleManager) -> None:
         self.icon = icon
-        self.rule_config = config
+        self.manager = manager
 
     @property
     def name(self) -> str:
@@ -63,13 +63,13 @@ class IconSetting:
 
     @property
     def order_key(self) -> Tuple[str, str]:
-        weight = f'{self.rule_config.order_weight:02d}'
-        return (weight, self.icon.name)
+        weight = f'{self.manager.weight:02d}'
+        return (weight, self.manager.name)
 
     def archive_files(self) -> Sequence[FileModel]:
         name = self.icon.name_wo_extension
         files = [
-            self.icon, self.rule_config.config,
+            self.icon, self.manager.config,
             PngFile(self.icon.sibling_path(f'{name}{PngFile.extension()}')),
             JpgFile(self.icon.sibling_path(f'{name}{JpgFile.extension()}')),
             JpegFile(self.icon.sibling_path(f'{name}{JpegFile.extension()}'))
@@ -77,13 +77,13 @@ class IconSetting:
         return [file for file in files if file.exists()]
 
     def is_config_for(self, entry: Folder) -> bool:
-        return self.rule_config.has_rule_for(entry)
+        return self.manager.is_allowed(entry)
 
     def set_before_or_after(self, before_or_after: Iterable[str]) -> None:
-        self.rule_config.set_before_or_after(before_or_after)
+        self.manager.setup_rules(before_or_after)
 
     def is_empty(self) -> bool:
-        return self.rule_config.is_empty()
+        return self.manager.is_empty()
 
     def __str__(self) -> str:
         return f'Icon Setting: {self.icon.name_wo_extension}'

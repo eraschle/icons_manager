@@ -11,16 +11,16 @@ from icon_manager.crawler.filters import filter_folders
 from icon_manager.crawler.options import FilterOptions
 from icon_manager.helpers.path import Folder
 from icon_manager.helpers.string import ALIGN_LEFT, prefix_value
-from icon_manager.interfaces.builder import CrawlerBuilder
+from icon_manager.interfaces.builder import FolderCrawlerBuilder
 from icon_manager.interfaces.controller import IContentController
 from icon_manager.interfaces.path import FolderModel
 from icon_manager.library.models import IconSetting
-from icon_manager.rules.config import ExcludeRuleConfig
+from icon_manager.rules.manager import ExcludeManager
 
 log = logging.getLogger(__name__)
 
 
-class RulesApplyBuilder(CrawlerBuilder[MatchedRuleFolder]):
+class RulesApplyBuilder(FolderCrawlerBuilder[MatchedRuleFolder]):
 
     def __init__(self) -> None:
         super().__init__()
@@ -62,7 +62,7 @@ class RulesApplyOptions(FilterOptions):
 
 class IApplyController(IContentController):
 
-    def crawl_content(self, folders: List[Folder], exclude: ExcludeRuleConfig):
+    def crawl_content(self, folders: List[Folder], exclude: ExcludeManager):
         ...
 
     def find_matches(self, settings: Iterable[IconSetting]):
@@ -81,21 +81,21 @@ class IApplyController(IContentController):
 class RulesApplyController(ContentController[MatchedRuleFolder], IApplyController):
 
     def __init__(self, user_config: UserConfig,
-                 builder: CrawlerBuilder = RulesApplyBuilder(),
+                 builder: FolderCrawlerBuilder = RulesApplyBuilder(),
                  options: FilterOptions = RulesApplyOptions()) -> None:
         super().__init__(user_config, builder, options)
         self.existing: List[MatchedRuleFolder] = []
         self.folders: List[MatchedRuleFolder] = []
         self.crawler_folders: List[Folder] = []
 
-    def crawl_content(self, folders: List[Folder], exclude: ExcludeRuleConfig):
+    def crawl_content(self, folders: List[Folder], exclude: ExcludeManager):
         self.options.exclude_rules = exclude
         crawler_folders = filter_folders(folders, self.options)
         self.crawler_folders = crawler_folders
 
     def find_matches(self, settings: Iterable[IconSetting]):
         self.builder.setup(settings=settings)
-        self.folders = self.builder.build_models_async(self.crawler_folders)
+        self.folders = self.builder.build_models(self.crawler_folders)
 
     def apply_matches(self):
         action = CreateIconAction(self.folders, self.user_config)

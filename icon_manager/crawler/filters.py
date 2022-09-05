@@ -1,4 +1,5 @@
 from typing import Iterable, List, Optional, Sequence
+from unittest import result
 
 from icon_manager.helpers.path import File, Folder
 from icon_manager.crawler.options import FilterOptions
@@ -20,7 +21,7 @@ def _is_project(folder: Folder, options: FilterOptions) -> bool:
 def _is_exclude_rule(entry: Folder, options: FilterOptions) -> bool:
     if options.exclude_rules.is_empty():
         return False
-    return options.exclude_rules.has_rule_for(entry)
+    return options.exclude_rules.is_excluded(entry)
 
 
 def _is_clean_recursive(entry: Folder, options: FilterOptions) -> bool:

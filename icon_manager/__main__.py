@@ -7,8 +7,7 @@ from icon_manager.config.app import AppConfig, AppConfigFactory
 from icon_manager.data.json_source import JsonSource
 from icon_manager.helpers.resource import app_config_template_file
 from icon_manager.interfaces.path import ConfigFile
-from icon_manager.rules.factory import ExcludeRuleConfigFactory
-from icon_manager.rules.mapping import RULE_MAPPINGS
+from icon_manager.rules.factory.manager import ExcludeManagerFactory
 from icon_manager.services.app_service import IconsAppService
 
 log = logging.getLogger(__name__)
@@ -67,7 +66,7 @@ def get_namespace_from_args() -> argparse.Namespace:
 
 
 def get_app_config(config_file: ConfigFile) -> AppConfig:
-    exclude_factory = ExcludeRuleConfigFactory(RULE_MAPPINGS, JsonSource())
+    exclude_factory = ExcludeManagerFactory(JsonSource())
     factory = AppConfigFactory(JsonSource(), exclude_factory)
     config = factory.create(config_file)
     config.validate()

@@ -18,8 +18,15 @@ class Builder(Protocol, Generic[TEntry, TModel]):
     def build_models(self, entries: Iterable[TEntry], **kwargs) -> List[TModel]:
         ...
 
+    def build_model(self, entry: TEntry, **kwargs) -> Optional[TModel]:
+        ...
+
 
 class CrawlerBuilder(ABC, Builder[Path, TModel]):
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.models: List[TModel] = []
 
     def setup(self, **kwargs) -> None:
         pass
@@ -58,13 +65,19 @@ class CrawlerBuilder(ABC, Builder[Path, TModel]):
     def build_models(self, entries: Iterable[Path], **kwargs) -> List[TModel]:
         models = []
         for entry in entries:
-            models.extend(self.create_models(entry))
+            model = self.build_model(entry, **kwargs)
+            if model is None:
+                continue
+            models.append(model)
+            if isinstance(entry, Folder):
+                models.extend(self.build_models(entry.files))
+                models.extend(self.build_models(entry.folders))
         return models
 
     def build_models_async(self, entries: Iterable[Path], **kwargs) -> List[TModel]:
         models: List[TModel] = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=200) as executor:
-            task = {executor.submit(self.create_models, ele): ele for ele in entries}
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            task = {executor.submit(self.build_models, ele)                    : ele for ele in entries}
             for future in concurrent.futures.as_completed(task):
                 entry = task[future]
                 try:
@@ -76,16 +89,47 @@ class CrawlerBuilder(ABC, Builder[Path, TModel]):
                     print('%r Exception: %s' % (entry.path, exc))
         return models
 
-    def can_build_folder(self, folder: Folder, **kwargs) -> bool:
-        return False
+    def build_model(self, entry: Path, **kwargs) -> Optional[TModel]:
+        if isinstance(entry, Folder):
+            if not self.can_build_folder(entry, **kwargs):
+                return None
+            return self.build_folder_model(entry, **kwargs)
+        if not self.can_build_file(entry, **kwargs):
+            return None
+        return self.build_file_model(entry, **kwargs)
 
+    @abstractmethod
+    def can_build_folder(self, folder: Folder, **kwargs) -> bool:
+        pass
+
+    @abstractmethod
     def build_folder_model(self, folder: Folder, **kwargs) -> Optional[TModel]:
-        return None
+        pass
+
+    @abstractmethod
+    def can_build_file(self, file: File, **kwargs) -> bool:
+        pass
+
+    @abstractmethod
+    def build_file_model(self, file: File, **kwargs) -> Optional[TModel]:
+        pass
+
+
+class FolderCrawlerBuilder(CrawlerBuilder[TModel]):
 
     def can_build_file(self, file: File, **kwargs) -> bool:
         return False
 
-    def build_file_model(self, folder: File, **kwargs) -> Optional[TModel]:
+    def build_file_model(self, file: File, **kwargs) -> Optional[TModel]:
+        return None
+
+
+class FileCrawlerBuilder(CrawlerBuilder[TModel]):
+
+    def can_build_folder(self, folder: Folder, **kwargs) -> bool:
+        return False
+
+    def build_folder_model(self, folder: Folder, **kwargs) -> Optional[TModel]:
         return None
 
 
@@ -94,7 +138,7 @@ class ModelBuilder(ABC, Builder[PathModel, TModel]):
     def setup(self, **kwargs) -> None:
         pass
 
-    @abstractmethod
+    @ abstractmethod
     def can_build(self, entry: PathModel, **kwargs) -> bool:
         ...
 
@@ -109,6 +153,6 @@ class ModelBuilder(ABC, Builder[PathModel, TModel]):
             models.append(model, **kwargs)
         return models
 
-    @abstractmethod
+    @ abstractmethod
     def build_model(self, entry: PathModel, **kwargs) -> Optional[TModel]:
         ...

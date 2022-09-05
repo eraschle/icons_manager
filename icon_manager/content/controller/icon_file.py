@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime
 from typing import Iterable, List, Optional, Sequence
 
 from icon_manager.config.user import UserConfig
@@ -7,16 +6,16 @@ from icon_manager.content.controller.base import ContentController
 from icon_manager.content.models.matched import MatchedIconFile
 from icon_manager.crawler.filters import files_by_extension
 from icon_manager.crawler.options import FilterOptions
-from icon_manager.helpers.logs import execution
+from icon_manager.helpers.decorator import execution
 from icon_manager.helpers.path import File, Folder
 from icon_manager.interfaces.actions import DeleteAction
-from icon_manager.interfaces.builder import CrawlerBuilder
+from icon_manager.interfaces.builder import FileCrawlerBuilder
 from icon_manager.library.models import IconSetting, LibraryIconFile
 
 log = logging.getLogger(__name__)
 
 
-class IconFileBuilder(CrawlerBuilder[MatchedIconFile]):
+class IconFileBuilder(FileCrawlerBuilder[MatchedIconFile]):
 
     def __init__(self) -> None:
         super().__init__()
@@ -42,7 +41,7 @@ class IconFileOptions(FilterOptions):
 class IconFileController(ContentController[MatchedIconFile]):
 
     def __init__(self, user_config: UserConfig,
-                 builder: CrawlerBuilder = IconFileBuilder(),
+                 builder: FileCrawlerBuilder = IconFileBuilder(),
                  options: FilterOptions = IconFileOptions()) -> None:
         super().__init__(user_config, builder, options)
         self.files: List[MatchedIconFile] = []
