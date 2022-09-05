@@ -18,7 +18,8 @@ def console(level) -> logging.Handler:
     handler = logging.StreamHandler()
     handler.setLevel(level)
     # format_string = '%(levelname)-8s: %(name)-12s: %(funcName)s - %(message)s'
-    format_string = '%(levelname)-8s %(funcName)-30s>> %(message)s'
+    # format_string = '%(levelname)-8s %(funcName)-30s>> %(message)s'
+    format_string = '%(levelname)-8s  %(message)s'
     formatter = logging.Formatter(format_string)
     handler.setFormatter(formatter)
     return handler

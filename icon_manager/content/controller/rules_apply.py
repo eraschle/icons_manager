@@ -10,7 +10,7 @@ from icon_manager.content.models.matched import MatchedRuleFolder
 from icon_manager.crawler.filters import filter_folders
 from icon_manager.crawler.options import FilterOptions
 from icon_manager.helpers.path import Folder
-from icon_manager.helpers.string import prefix_value
+from icon_manager.helpers.string import ALIGN_LEFT, prefix_value
 from icon_manager.interfaces.builder import CrawlerBuilder
 from icon_manager.interfaces.controller import IContentController
 from icon_manager.interfaces.path import FolderModel
@@ -40,9 +40,9 @@ class RulesApplyBuilder(CrawlerBuilder[MatchedRuleFolder]):
         config = self.icon_setting_for(model)
         if config is None:
             return None
-        action = prefix_value('Icon', width=7, align='<')
+        action = prefix_value('Icon', width=7, align=ALIGN_LEFT)
         icon_name = config.icon.name_wo_extension
-        icon_name = prefix_value(f'"{icon_name}"', width=25, align='<')
+        icon_name = prefix_value(f'"{icon_name}"', width=25, align=ALIGN_LEFT)
         log.debug(f'{action} {icon_name} to "{model.name}"')
         folder = FolderModel(model.path)
         return MatchedRuleFolder(folder, config)
