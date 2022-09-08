@@ -31,37 +31,6 @@ class CrawlerBuilder(ABC, Builder[Path, TModel]):
     def setup(self, **kwargs) -> None:
         pass
 
-    def create_folder(self, folder: Folder, **kwargs) -> List[TModel]:
-        if not self.can_build_folder(folder, **kwargs):
-            return []
-        model = self.build_folder_model(folder, **kwargs)
-        if model is None:
-            return []
-        return [model]
-
-    def create_file(self, file: File, **kwargs) -> List[TModel]:
-        if not self.can_build_file(file, **kwargs):
-            return []
-        model = self.build_file_model(file, **kwargs)
-        if model is None:
-            return []
-        return [model]
-
-    def create_files(self, files: Iterable[File], **kwargs) -> List[TModel]:
-        models = []
-        for file in files:
-            model = self.create_file(file, **kwargs)
-            models.extend(model)
-        return models
-
-    def create_models(self, entry: Path, **kwargs) -> List[TModel]:
-        if isinstance(entry, Folder):
-            models = self.create_folder(entry)
-            models.extend(self.create_files(entry.files))
-            models.extend(self.build_models(entry.folders))
-            return models
-        return self.create_file(entry)
-
     def build_models(self, entries: Iterable[Path], **kwargs) -> List[TModel]:
         models = []
         for entry in entries:
@@ -77,7 +46,7 @@ class CrawlerBuilder(ABC, Builder[Path, TModel]):
     def build_models_async(self, entries: Iterable[Path], **kwargs) -> List[TModel]:
         models: List[TModel] = []
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            task = {executor.submit(self.build_models, ele)                    : ele for ele in entries}
+            task = {executor.submit(self.build_models, ele): ele for ele in entries}
             for future in concurrent.futures.as_completed(task):
                 entry = task[future]
                 try:
