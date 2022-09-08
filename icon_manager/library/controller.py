@@ -17,7 +17,7 @@ from icon_manager.rules.manager import RuleManager
 log = logging.getLogger(__name__)
 
 
-class IconConfigBuilder(FileCrawlerBuilder[RuleManager]):
+class RuleManagerBuilder(FileCrawlerBuilder[RuleManager]):
 
     def __init__(self, factory: RuleManagerFactory = RuleManagerFactory()) -> None:
         self.factory = factory
@@ -41,7 +41,7 @@ class LibraryIconFileBuilder(FileCrawlerBuilder[LibraryIconFile]):
 class IconSettingBuilder(ModelBuilder[IconSetting]):
 
     def __init__(self, icon_builder: LibraryIconFileBuilder = LibraryIconFileBuilder(),
-                 config_builder: IconConfigBuilder = IconConfigBuilder()) -> None:
+                 config_builder: RuleManagerBuilder = RuleManagerBuilder()) -> None:
         super().__init__()
         self.icon_builder = icon_builder
         self.config_builder = config_builder

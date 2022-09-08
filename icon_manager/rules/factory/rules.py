@@ -86,7 +86,7 @@ class ARuleBuilder(ABC, ContentFactory[Dict[str, Any], TRule]):
     def is_builder(self, rule_config: Dict[str, Any]) -> bool:
         return any(rule in rule_config.keys() for rule in self.__class__.builder_for_rules())
 
-    def get_rule_name(self, rule_config: Dict[str, Any]) -> str:
+    def get_rule(self, rule_config: Dict[str, Any]) -> Rule:
         rule_name = get_rule_name(rule_config)
         if rule_name == Rule.UNKNOWN:
             raise LookupError('Dict does NOT contain a known rule type')
@@ -152,8 +152,8 @@ class FolderRuleBuilder(ASingleRuleBuilder[FolderRule]):
     def create_rule(self, attribute: RuleAttribute, config: Dict[str, Any]) -> FolderRule:
         operator = pop_operator(config)
         case_sensitive = self.get_case_sensitive(config)
-        rule_name = self.get_rule_name(config)
-        values = config.get(rule_name, [])
+        rule = self.get_rule(config)
+        values = config.get(rule, [])
         before_or_after = self.add_before_or_after(config)
         before_or_after_values = self.get_before_or_after_values(config)
         rule_type = self.get_rule_type(config)
@@ -176,8 +176,8 @@ class ContainsFileRuleBuilder(ASingleRuleBuilder[ContainsFileRule]):
         #     return True
 
     def create_rule(self, attribute: RuleAttribute, rule_config: Dict[str, Any]) -> ContainsFileRule:
-        rule_name = self.get_rule_name(rule_config)
-        values = rule_config.get(rule_name, [])
+        rule = self.get_rule(rule_config)
+        values = rule_config.get(rule, [])
         operator = get_operator(rule_config)
         case_sensitive = self.get_case_sensitive(rule_config)
         before_or_after = self.add_before_or_after(rule_config)
@@ -221,8 +221,8 @@ class ChainedRuleBuilder(ARuleBuilder[ChainedRule]):
         self.single_builders = get_single_builders()
 
     def get_rule_configs(self, rule_config: Dict[str, Any]) -> Collection[Dict[str, Any]]:
-        rule_name = self.get_rule_name(rule_config)
-        return rule_config.get(rule_name, [])
+        rule = self.get_rule(rule_config)
+        return rule_config.get(rule, [])
 
     # def can_build(self, rule_config: Dict[str, Any]) -> bool:
     #     if not super().can_build(rule_config):

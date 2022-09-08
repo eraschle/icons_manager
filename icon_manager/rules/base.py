@@ -73,11 +73,6 @@ class Rule(str, Enum):
     CHAINED = 'chained'
     CONTAINS_FILE = 'contains_files'
 
-    def class_name(self) -> str:
-        splitted_name = self.name.split('_')
-        splitted_name.append('Rule')
-        return ''.join([name.capitalize() for name in splitted_name])
-
 
 def get_rule(value) -> Rule:
     if not isinstance(value, str):
@@ -90,10 +85,6 @@ def get_rule(value) -> Rule:
 
 
 class AFilterRule(ABC, IFilterRule):
-
-    @classmethod
-    def rule(cls) -> Rule:
-        raise NotImplementedError
 
     def __init__(self, attribute: RuleAttribute, operator: Operator) -> None:
         super().__init__()
