@@ -17,6 +17,7 @@ class ConfigKeys(str, Enum):
     ATTRIBUTE = 'attribute'
     CONFIG = 'config'
     ICON_FILE = 'icon_file'
+    COPY_ICON = 'copy_icon'
     BEFORE_OR_AFTER = 'before_or_after'
     OPERATOR = 'operator'
     CASE_SENSITIVE = 'case_sensitive'

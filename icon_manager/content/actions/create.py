@@ -31,6 +31,8 @@ class CreateIconAction(Action[MatchedRuleFolder]):
         copy_icon = search_folder.copy_icon
         if copy_icon is None:
             copy_icon = self.user_config.copy_icon
+        if entry.setting.copy_icon is not None:
+            copy_icon = entry.setting.copy_icon
         self.controller.write(entry, copy_icon)
 
     def get_log_message(self, model: type) -> str:

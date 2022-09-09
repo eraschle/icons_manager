@@ -99,9 +99,10 @@ class RuleManagerFactory(AManagerFactory[RuleManager, Dict[str, Any]]):
         file: Optional[JsonFile] = kwargs.get('file', None)
         if file is None:
             raise ValueError('"file" is not in kwargs or None')
+        copy_icon = config.pop(ConfigKeys.COPY_ICON, None)
         order = config.pop(ConfigKeys.ORDER, 5)
         manager = self.builder.create(config, **kwargs)
-        return RuleManager(file, manager, order)
+        return RuleManager(file, manager, order, copy_icon)
 
     def update(self, config: JsonFile, template_file: JsonFile) -> None:
         content = self.source.read(config)

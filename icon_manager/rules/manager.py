@@ -1,5 +1,5 @@
 import logging
-from typing import Iterable, Sequence
+from typing import Iterable, Optional, Sequence
 
 from icon_manager.interfaces.path import Folder
 from icon_manager.interfaces.managers import (IAttributeChecker, IChecker,
@@ -93,10 +93,11 @@ class RuleChecker(IRuleChecker[Folder]):
 
 class RuleManager(IChecker[Folder]):
 
-    def __init__(self, config: JsonFile, checker: RuleChecker, weight: int) -> None:
+    def __init__(self, config: JsonFile, checker: RuleChecker, weight: int, copy_icon: Optional[bool]) -> None:
         self.config = config
         self.checker = checker
         self.weight = weight
+        self.copy_icon = copy_icon
 
     @property
     def name(self) -> str:

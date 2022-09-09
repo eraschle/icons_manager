@@ -20,6 +20,7 @@
         "contains_files": "Does files with the EXTENSIONS (rule values) exists"
     },
     "template": {
+        "copy_icon": "Setting if the icon should be copied. No value means the settings are taken user config. This value overwrites all previous ones ",
         "order": "Integer number to adjust order of config execution. The smaller the earlier it will be executed >> default 5",
         "operator": "'any' or 'all' rule values must be TRUE >> default: all",
         "path": {

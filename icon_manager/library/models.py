@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Iterable, Sequence, Tuple
+from typing import Iterable, Optional, Sequence, Tuple
 
 from icon_manager.interfaces.path import Folder
 from icon_manager.interfaces.path import (FileModel, FolderModel, JsonFile,
@@ -65,6 +65,10 @@ class IconSetting:
     def order_key(self) -> Tuple[str, str]:
         weight = f'{self.manager.weight:02d}'
         return (weight, self.manager.name)
+
+    @property
+    def copy_icon(self) -> Optional[bool]:
+        return self.manager.copy_icon
 
     def archive_files(self) -> Sequence[FileModel]:
         name = self.icon.name_wo_extension
