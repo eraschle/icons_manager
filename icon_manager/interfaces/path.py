@@ -2,10 +2,54 @@ import logging
 import os
 import shutil
 from abc import ABC, abstractmethod
-from typing import Dict, Iterable, Optional
+from dataclasses import dataclass, field
+from typing import Dict, Iterable, List, Optional
 from uuid import UUID, uuid4
 
 log = logging.getLogger(__name__)
+
+log = logging.getLogger(__name__)
+
+
+@dataclass
+class Node:
+    name: str = field(repr=True)
+    parent_name: str = field(repr=True)
+    path: str = field(compare=True, hash=True, repr=False)
+    excluded: bool
+
+    def is_file(self) -> bool:
+        return os.path.isfile(self.path)
+
+    def is_dir(self) -> bool:
+        return os.path.isdir(self.path)
+
+
+@dataclass()
+class File(Node):
+    name_wo_ext: str
+    ext: Optional[str]
+
+
+@dataclass()
+class Folder(Node):
+    folders: List['Folder'] = field(default_factory=list)
+    files: List[File] = field(default_factory=list)
+
+    def mark_children_excluded(self) -> None:
+        for folder in self.folders:
+            folder.excluded = True
+        for file in self.files:
+            file.excluded = True
+
+    def mark_and_clean(self) -> None:
+        self.excluded = True
+        for folder in self.folders:
+            folder.excluded = True
+        self.folders.clear()
+        for file in self.files:
+            file.excluded = True
+        self.files.clear()
 
 
 def get_attr_bit_dict(attributes: Iterable[str], is_enable: bool) -> Dict[str, str]:

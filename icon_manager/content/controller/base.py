@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from typing import Generic, List, Sequence, TypeVar
 
 from icon_manager.config.user import UserConfig
-from icon_manager.helpers.path import Folder
+from icon_manager.interfaces.path import Folder
 from icon_manager.interfaces.builder import CrawlerBuilder
 from icon_manager.library.models import IconSetting
 from icon_manager.rules.manager import ExcludeManager

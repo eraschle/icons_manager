@@ -4,8 +4,9 @@ from typing import Dict, Iterable, List, Sequence
 
 from icon_manager.crawler.filters import (files_by_extension,
                                           is_file_with_extensions)
-from icon_manager.helpers.path import File, Folder, crawle_folder, create_file
-from icon_manager.interfaces.path import IconSearchFolder, SearchFolder
+from icon_manager.helpers.path import crawle_folder, create_file, create_folder
+from icon_manager.interfaces.path import (File, Folder, IconSearchFolder,
+                                          SearchFolder)
 
 
 def _crawling(root: SearchFolder) -> Folder:
@@ -16,8 +17,8 @@ def _crawling(root: SearchFolder) -> Folder:
         if entry.is_dir():
             folders.append(crawle_folder(entry))
         else:
-            files.append(create_file(entry.path, entry.name))
-    return Folder(path=path, name=root.name, files=files, folders=folders)
+            files.append(create_file(entry))
+    return create_folder(path, folders, files)
 
 
 # @crawler_result(message='Crawler found', log_start='SYNC crawler started')
@@ -46,13 +47,13 @@ def async_crawling_folders(roots: Sequence[IconSearchFolder]) -> List[Folder]:
 def _group_by_extension(files: Iterable[File], extensions: Sequence[str]) -> Dict[str, List[File]]:
     grouped: Dict[str, List[File]] = {}
     for file in files:
-        if file.extension is None:
+        if file.ext is None:
             continue
         if not is_file_with_extensions(file, extensions):
             continue
-        if file.extension not in grouped:
-            grouped[file.extension] = []
-        grouped[file.extension].append(file)
+        if file.ext not in grouped:
+            grouped[file.ext] = []
+        grouped[file.ext].append(file)
     return grouped
 
 

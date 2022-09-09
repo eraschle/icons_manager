@@ -1,7 +1,8 @@
 from typing import Iterable, List, Optional, Sequence
 
 from icon_manager.crawler.options import FilterOptions
-from icon_manager.helpers.path import File, Folder
+from icon_manager.helpers.path import create_folder
+from icon_manager.interfaces.path import File, Folder
 
 EXCLUDED_FOLDERS: Iterable[str] = []
 
@@ -31,16 +32,19 @@ def _is_clean_recursive(entry: Folder, options: FilterOptions) -> bool:
 
 def filter_folder(entry: Folder, options: FilterOptions) -> Optional[Folder]:
     if _is_exclude_rule(entry, options) or _is_clean_recursive(entry, options):
-        return Folder(path=entry.path, name=entry.name, files=[], folders=[])
+        entry.mark_children_excluded()
+        return entry
     if _is_excluded(entry, options) or _is_project(entry, options):
+        entry.mark_and_clean()
         return None
     filtered = []
     for folder in entry.folders:
         cleaned = filter_folder(folder, options)
         if cleaned is None:
+            folder.mark_and_clean()
             continue
         filtered.append(cleaned)
-    return Folder(path=entry.path, name=entry.name, files=entry.files, folders=filtered)
+    return create_folder(entry.path, files=entry.files, folders=filtered)
 
 
 def filter_folders(folders: List[Folder], options: FilterOptions) -> List[Folder]:
@@ -50,6 +54,7 @@ def filter_folders(folders: List[Folder], options: FilterOptions) -> List[Folder
     for folder in folders:
         cleaned = filter_folder(folder, options)
         if cleaned is None:
+            folder.mark_and_clean()
             continue
         filtered.append(cleaned)
     return filtered
@@ -69,7 +74,7 @@ def folders_by_name(folders: Sequence[Folder], names: Sequence[str]) -> List[Fol
 
 
 def is_file_with_extensions(file: File, extensions: Sequence[str]) -> bool:
-    return file.extension is not None and file.extension in extensions
+    return file.ext is not None and file.ext in extensions
 
 
 def _files_by_extension(files: List[File], extensions: Optional[Sequence[str]] = None) -> List[File]:

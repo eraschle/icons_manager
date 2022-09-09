@@ -2,7 +2,7 @@ import logging
 from abc import abstractmethod
 from typing import Any, Collection, Iterable, Sequence, Set
 
-from icon_manager.helpers.path import Folder
+from icon_manager.interfaces.path import Folder
 from icon_manager.rules.base import (AFilterRule, ASingleRule, ISingleRule,
                                      Operator, RuleAttribute)
 from icon_manager.rules.decorator import matched_value
@@ -178,7 +178,7 @@ class ContainsFileRule(FolderRule):
         return super().prepare_rule_values(values)
 
     def get_extensions_of(self, folder: Folder) -> Set[str]:
-        extensions = [file.extension for file in folder.files]
+        extensions = [file.ext for file in folder.files]
         return set([ext for ext in extensions if ext is not None])
 
     def get_extensions(self, entry: Folder, level: int) -> Iterable[str]:
@@ -192,7 +192,7 @@ class ContainsFileRule(FolderRule):
 
     @matched_value()
     def is_value_allowed(self, entry: Folder, _: str, rule_value: str) -> bool:
-        extensions = self.get_extensions(entry, level=0)
+        extensions = self.get_extensions(entry, level=1)
         return any(ext.endswith(rule_value) for ext in extensions)
 
 

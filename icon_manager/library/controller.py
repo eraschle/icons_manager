@@ -3,7 +3,7 @@ import logging
 from typing import Dict, Iterable, List, Optional, Sequence
 
 from icon_manager.content.models.matched import IconSetting
-from icon_manager.helpers.path import File
+from icon_manager.interfaces.path import File
 from icon_manager.helpers.resource import icon_setting_template
 from icon_manager.interfaces.actions import DeleteAction
 from icon_manager.interfaces.builder import FileCrawlerBuilder, ModelBuilder

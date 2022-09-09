@@ -1,10 +1,11 @@
 import logging
 from datetime import datetime
 from typing import Iterable, Optional
-from icon_manager.config.user import UserConfig
 
-from icon_manager.helpers.path import Folder, total_count
+from icon_manager.config.user import UserConfig
+from icon_manager.helpers.path import total_count
 from icon_manager.helpers.string import ALIGN_LEFT, ALIGN_RIGHT, fixed_length
+from icon_manager.interfaces.path import Folder
 
 log = logging.getLogger(__name__)
 

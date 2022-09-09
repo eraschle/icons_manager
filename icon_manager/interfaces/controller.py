@@ -1,7 +1,7 @@
 import logging
 from typing import Dict, Iterable, List, Optional, Protocol, Sequence
 
-from icon_manager.helpers.path import File
+from icon_manager.interfaces.path import File
 from icon_manager.library.models import IconFile, IconSetting
 
 log = logging.getLogger(__name__)

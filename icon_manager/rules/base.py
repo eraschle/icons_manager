@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Generic, Iterable, Protocol, TypeVar
 
-from icon_manager.helpers.path import Folder
+from icon_manager.interfaces.path import Folder
 
 
 class Operator(str, Enum):

@@ -11,7 +11,7 @@ from icon_manager.content.models.matched import (MatchedIconFile,
 from icon_manager.crawler.filters import files_by_extension
 from icon_manager.data.ini_source import DesktopFileSource
 from icon_manager.helpers.decorator import execution
-from icon_manager.helpers.path import File, Folder
+from icon_manager.interfaces.path import File, Folder
 from icon_manager.interfaces.actions import DeleteAction
 from icon_manager.interfaces.builder import FileCrawlerBuilder
 from icon_manager.interfaces.path import PathModel

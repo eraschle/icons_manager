@@ -9,7 +9,7 @@ from icon_manager.content.controller.re_apply import ReApplyController
 from icon_manager.content.controller.rules_apply import RulesApplyController
 from icon_manager.crawler.crawler import async_crawling_folders, crawling_icons
 from icon_manager.helpers.decorator import execution
-from icon_manager.helpers.path import Folder
+from icon_manager.interfaces.path import Folder
 from icon_manager.library.controller import IconLibraryController
 from icon_manager.rules.manager import ExcludeManager
 from icon_manager.services.base import IConfigService

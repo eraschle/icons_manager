@@ -2,7 +2,7 @@ import logging
 import os
 from typing import Iterable, Sequence, Tuple
 
-from icon_manager.helpers.path import Folder
+from icon_manager.interfaces.path import Folder
 from icon_manager.interfaces.path import (FileModel, FolderModel, JsonFile,
                                           PathModel)
 from icon_manager.rules.manager import RuleManager

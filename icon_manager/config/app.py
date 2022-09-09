@@ -69,7 +69,7 @@ class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
     @classmethod
     def get_user_config_paths(cls, folder_path: str) -> Collection[str]:
         names = get_files(folder_path, ConfigFile.extension())
-        names = filter(lambda name: cls.is_user_config_name(name), names)
+        names = list(filter(lambda name: cls.is_user_config_name(name), names))
         return get_paths(folder_path, names)
 
     @classmethod

@@ -1,7 +1,7 @@
 import logging
 from typing import Iterable, Sequence
 
-from icon_manager.helpers.path import Folder
+from icon_manager.interfaces.path import Folder
 from icon_manager.interfaces.managers import (IAttributeChecker, IChecker,
                                               IRuleChecker)
 from icon_manager.interfaces.path import JsonFile

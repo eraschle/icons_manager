@@ -9,7 +9,7 @@ from icon_manager.content.models.matched import MatchedRuleFolder
 from icon_manager.crawler.filters import filter_folders
 from icon_manager.crawler.options import FilterOptions
 from icon_manager.helpers.decorator import execution
-from icon_manager.helpers.path import Folder
+from icon_manager.interfaces.path import Folder
 from icon_manager.helpers.string import ALIGN_LEFT, prefix_value
 from icon_manager.interfaces.builder import FolderCrawlerBuilder
 from icon_manager.interfaces.path import FolderModel
@@ -73,7 +73,9 @@ class RulesApplyController:
 
     @ execution(message='Crawle and filter result')
     def crawle_and_build_result(self, folders: List[Folder], exclude: ExcludeManager) -> List[Folder]:
-        return filter_folders(folders, RulesApplyOptions(exclude))
+        folders = filter_folders(folders, RulesApplyOptions(exclude))
+        # folders = clean_excluded_folders(folders)
+        return folders
 
     @ execution(message='Searched for matches', start_message='Searching for matches')
     def search_and_find_matches(self, folders: List[Folder], settings: Iterable[IconSetting]):
