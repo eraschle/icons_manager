@@ -47,7 +47,7 @@ class Folder(Node):
     folders: List['Folder'] = field(default_factory=list)
     files: List[File] = field(default_factory=list)
 
-    def mark_children_excluded(self) -> None:
+    def mark_children(self) -> None:
         for folder in self.folders:
             folder.excluded = True
         for file in self.files:

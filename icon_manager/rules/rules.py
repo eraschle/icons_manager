@@ -182,17 +182,17 @@ class ContainsFileRule(FolderRule):
         return set([ext for ext in extensions if ext is not None])
 
     def get_extensions(self, entry: Folder, level: int) -> Iterable[str]:
-        if level > self.max_level:
-            return []
-        level += 1
         extensions = self.get_extensions_of(entry)
+        level += 1
+        if level >= self.max_level:
+            return extensions
         for folder in entry.folders:
             extensions.update(self.get_extensions(folder, level))
         return extensions
 
     @matched_value()
     def is_value_allowed(self, entry: Folder, _: str, rule_value: str) -> bool:
-        extensions = self.get_extensions(entry, level=1)
+        extensions = self.get_extensions(entry, level=0)
         return any(ext.endswith(rule_value) for ext in extensions)
 
 

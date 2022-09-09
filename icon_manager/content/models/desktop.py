@@ -1,6 +1,15 @@
 from icon_manager.interfaces.path import FileModel
 
 
+class Git(FileModel):
+
+    file_name = '.git'
+
+    @ classmethod
+    def is_model(cls, path: str) -> bool:
+        return path.endswith(cls.file_name)
+
+
 class DesktopIniFile(FileModel):
 
     file_name = 'desktop.ini'

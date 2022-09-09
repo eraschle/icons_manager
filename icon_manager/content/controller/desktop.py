@@ -4,7 +4,7 @@ from typing import Iterable, List, Optional, Sequence, Union
 
 from icon_manager.config.user import UserConfig
 from icon_manager.content.controller.base import ContentController
-from icon_manager.content.models.desktop import DesktopIniFile
+from icon_manager.content.models.desktop import DesktopIniFile, Git
 from icon_manager.content.models.matched import (MatchedIconFile,
                                                  MatchedIconFolder,
                                                  MatchedRuleFolder)
@@ -127,8 +127,12 @@ class RuleFolderCommand(ConfigCommand):
         super().__init__(order, copy_icon)
         self.rule_folder = rule_folder
 
+    def can_change_attribute(self) -> bool:
+        folder = self.rule_folder.icon_folder
+        return folder.exists() and not Git.is_model(self.rule_folder.path)
+
     def pre_command(self):
-        if not self.copy_icon or self.rule_folder.icon_folder.exists():
+        if not self.copy_icon or not self.can_change_attribute():
             return
         try:
             self.rule_folder.icon_folder.create()
@@ -137,7 +141,7 @@ class RuleFolderCommand(ConfigCommand):
             log.exception(error_message(self.rule_folder, message), ex)
 
     def post_command(self):
-        if not self.rule_folder.exists():
+        if not self.can_change_attribute():
             return
         try:
             self.rule_folder.set_read_only(is_read_only=True)
