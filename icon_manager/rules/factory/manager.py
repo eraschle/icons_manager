@@ -1,5 +1,6 @@
 import logging
 from abc import abstractmethod
+from turtle import update
 from typing import Any, Dict, Generic, Iterable, Optional, Sequence, TypeVar
 
 from icon_manager.data.base import Source
@@ -73,7 +74,7 @@ class AManagerFactory(FileFactory[JsonFile, TModel], Generic[TModel, TContent]):
     def __init__(self, source: Source = JsonSource()) -> None:
         self.source = source
         self.builder = SourceCheckerBuilder()
-        self.__template: Dict[str, Any] = {}
+        self._template: Dict[str, Any] = {}
 
     def get_config_section(self, config: Dict[str, Any]) -> TContent:
         section: Optional[TContent] = config.get(ConfigKeys.CONFIG, None)
@@ -104,15 +105,14 @@ class RuleManagerFactory(AManagerFactory[RuleManager, Dict[str, Any]]):
 
     def update(self, config: JsonFile, template_file: JsonFile) -> None:
         content = self.source.read(config)
-        if len(self.__template) == 0:
-            self.__template = self.source.read(template_file)
-        for section, values in self.__template.items():
+        if len(self._template) == 0:
+            self._template = self.source.read(template_file)
+        updated = {}
+        for section, values in self._template.items():
+            updated[section] = values
             if section == ConfigKeys.CONFIG:
-                continue
-            if content[section] == values:
-                continue
-            content[section] = values
-        self.source.write(config, content)
+                updated[section] = content[section]
+        self.source.write(config, updated)
         log.info(f'Updated config {config.name_wo_extension}')
 
 

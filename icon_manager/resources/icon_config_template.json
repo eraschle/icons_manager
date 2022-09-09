@@ -1,4 +1,13 @@
 {
+    "config": {
+        "order": 5,
+        "path": {
+            "rules": []
+        },
+        "name": {
+            "rules": []
+        }
+    },
     "rules": {
         "equals": "Is the attribute value equals with a rule value",
         "not_equals": "Is the attribute value NOT equals with a rule value",
@@ -45,15 +54,6 @@
                     ]
                 }
             ]
-        }
-    },
-    "config": {
-        "order": 5,
-        "path": {
-            "rules": []
-        },
-        "name": {
-            "rules": []
         }
     }
 }
