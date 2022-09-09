@@ -14,7 +14,6 @@ log = logging.getLogger(__name__)
 @dataclass
 class Node:
     name: str = field(repr=True)
-    parent_name: str = field(repr=True)
     path: str = field(compare=True, hash=True, repr=False)
     excluded: bool
 
@@ -23,6 +22,18 @@ class Node:
 
     def is_dir(self) -> bool:
         return os.path.isdir(self.path)
+
+    @property
+    def parent_path(self) -> str:
+        parent, name = os.path.split(self.path)
+        if parent is None or len(parent) == 0:
+            return name
+        return parent
+
+    @property
+    def parent_name(self) -> str:
+        _, name = os.path.split(self.parent_path)
+        return name
 
 
 @dataclass()

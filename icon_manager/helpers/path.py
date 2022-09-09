@@ -19,15 +19,14 @@ def get_name_and_extension(name: str) -> Tuple[str, Optional[str]]:
 def get_folder(entry: os.DirEntry) -> Folder:
     parent, name = get_parent_and_name(entry.path)
     parent = os.path.basename(parent)
-    return Folder(parent_name=parent, path=entry.path, name=name,
-                  excluded=False)
+    return Folder(path=entry.path, name=name, excluded=False)
 
 
 def create_file(entry: os.DirEntry) -> File:
-    parent, name = get_parent_and_name(entry.path)
+    _, name = get_parent_and_name(entry.path)
     name_wo_ext, ext = get_name_and_extension(entry.name)
-    return File(parent_name=parent, path=entry.path, name=name,
-                name_wo_ext=name_wo_ext, ext=ext, excluded=False)
+    return File(path=entry.path, name=name, name_wo_ext=name_wo_ext,
+                ext=ext, excluded=False)
 
 
 def create_children_folder(parent: Folder) -> Folder:
@@ -44,8 +43,7 @@ def create_children_folder(parent: Folder) -> Folder:
 def create_folder(path: str, folders: List[Folder], files: List[File]) -> Folder:
     parent, name = get_parent_and_name(path)
     parent = os.path.basename(parent)
-    return Folder(parent_name=parent, path=path, name=name,
-                  folders=folders, files=files, excluded=False)
+    return Folder(path=path, name=name, folders=folders, files=files, excluded=False)
 
 
 def crawle_folder(entry: os.DirEntry) -> Folder:
