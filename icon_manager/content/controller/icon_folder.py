@@ -24,24 +24,19 @@ class IconFolderBuilder(FolderCrawlerBuilder[MatchedIconFolder]):
         return MatchedIconFolder(folder.path)
 
 
-class IconFolderOptions(FilterOptions):
-    def __init__(self) -> None:
-        super().__init__(clean_excluded=False, clean_project=False, clean_recursive=False)
-
-
 class IconFolderController(ContentController[MatchedIconFolder]):
 
     def __init__(self, user_config: UserConfig,
-                 builder: FolderCrawlerBuilder = IconFolderBuilder(),
-                 options: FilterOptions = IconFolderOptions()) -> None:
-        super().__init__(user_config, builder, options)
+                 builder: FolderCrawlerBuilder = IconFolderBuilder()) -> None:
+        super().__init__(user_config, builder)
         self.folders: List[MatchedIconFolder] = []
 
-    @execution(message='Build __icon__ folders')
-    def crawl_content(self, folders: List[Folder], _: Sequence[IconSetting]):
+    @execution(message='Crawle & build __icon__ folder')
+    def crawle_and_build_result(self, folders: List[Folder], _: Sequence[IconSetting]):
         folders = folders_by_name(folders, [MatchedIconFolder.folder_name])
         self.folders = self.builder.build_models(folders)
 
+    @execution(message='Deleted existing __icon__ folder')
     def delete_content(self) -> None:
         action = DeleteAction(self.folders)
         action.execute()

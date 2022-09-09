@@ -120,7 +120,8 @@ class IconSettingController(ISettingsController):
         return self._settings
 
     def create_icon_settings(self, before_or_after: Iterable[str]) -> Sequence[IconSetting]:
-        settings = copy.deepcopy(self.settings(clean_empty=True))
+        # settings = copy.deepcopy(self.settings(clean_empty=True))
+        settings = self.settings(clean_empty=True)
         for setting in settings:
             setting.set_before_or_after(before_or_after)
         return settings

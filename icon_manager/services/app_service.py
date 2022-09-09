@@ -54,18 +54,19 @@ class IconsAppService (ServiceProtocol):
         for service in self.services:
             service.archive_library()
 
-    def update_before_and_after(self):
+    def setup_and_merge_user_service(self):
         for service in self.services:
             service.update_before_and_after(self.config.before_or_after)
-
-    def crawling_search_content(self, find_matches: bool):
-        for service in self.services:
             exclude = self.config.create_exclude_rules()
-            service.crawl_content(find_matches, exclude)
+            service.set_exclude_manager(exclude)
 
-    def apply_matched_icons(self):
+    def find_and_apply_matches(self):
         for service in self.services:
-            service.apply_icons()
+            service.find_and_apply_matches()
+
+    def find_existing_content(self):
+        for service in self.services:
+            service.find_existing_content()
 
     def re_apply_matched_icons(self):
         for service in self.services:

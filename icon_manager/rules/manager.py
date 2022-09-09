@@ -6,7 +6,6 @@ from icon_manager.interfaces.managers import (IAttributeChecker, IChecker,
                                               IRuleChecker)
 from icon_manager.interfaces.path import JsonFile
 from icon_manager.rules.base import ISingleRule, Operator, RuleAttribute
-from icon_manager.rules.decorator import matched_rule
 
 log = logging.getLogger(__name__)
 
@@ -34,7 +33,6 @@ class AttributeChecker(IAttributeChecker[Folder]):
             rules.append(rule)
         self.rules = rules
 
-    @ matched_rule()
     def is_allowed(self, entry: Folder) -> bool:
         if self.operator == Operator.ALL:
             return all(rule.is_allowed(entry) for rule in self.rules)

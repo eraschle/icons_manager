@@ -4,15 +4,14 @@ from typing import Iterable, List, Optional
 from icon_manager.config.user import UserConfig
 from icon_manager.content.actions.create import (CreateIconAction,
                                                  ReCreateIconAction)
-from icon_manager.content.controller.base import ContentController
 from icon_manager.content.controller.re_apply import ReApplyController
 from icon_manager.content.models.matched import MatchedRuleFolder
 from icon_manager.crawler.filters import filter_folders
 from icon_manager.crawler.options import FilterOptions
+from icon_manager.helpers.decorator import execution
 from icon_manager.helpers.path import Folder
 from icon_manager.helpers.string import ALIGN_LEFT, prefix_value
 from icon_manager.interfaces.builder import FolderCrawlerBuilder
-from icon_manager.interfaces.controller import IContentController
 from icon_manager.interfaces.path import FolderModel
 from icon_manager.library.models import IconSetting
 from icon_manager.rules.manager import ExcludeManager
@@ -55,50 +54,45 @@ class RulesApplyBuilder(FolderCrawlerBuilder[MatchedRuleFolder]):
 
 
 class RulesApplyOptions(FilterOptions):
-    def __init__(self) -> None:
-        super().__init__(clean_excluded=True, clean_project=True,
-                         clean_recursive=True)
+    def __init__(self, exclude: ExcludeManager) -> None:
+        super().__init__(exclude, clean_excluded=True,
+                         clean_project=True, clean_recursive=True)
+
+    def no_filter_options(self) -> bool:
+        return (not self.clean_excluded and not self.clean_project
+                and not self.clean_recursive and self.exclude.is_empty())
 
 
-class IApplyController(IContentController):
-
-    def crawl_content(self, folders: List[Folder], exclude: ExcludeManager):
-        ...
-
-    def find_matches(self, settings: Iterable[IconSetting]):
-        ...
-
-    def apply_matches(self):
-        ...
-
-    def re_apply_matches(self, controller: ReApplyController):
-        ...
-
-    def delete_content(self):
-        ...
-
-
-class RulesApplyController(ContentController[MatchedRuleFolder], IApplyController):
+class RulesApplyController:
 
     def __init__(self, user_config: UserConfig,
-                 builder: FolderCrawlerBuilder = RulesApplyBuilder(),
-                 options: FilterOptions = RulesApplyOptions()) -> None:
-        super().__init__(user_config, builder, options)
-        self.existing: List[MatchedRuleFolder] = []
+                 builder: FolderCrawlerBuilder = RulesApplyBuilder()) -> None:
+        self.user_config = user_config
+        self.builder = builder
         self.folders: List[MatchedRuleFolder] = []
-        self.crawler_folders: List[Folder] = []
 
-    def crawl_content(self, folders: List[Folder], exclude: ExcludeManager):
-        self.options.exclude_rules = exclude
-        crawler_folders = filter_folders(folders, self.options)
-        self.crawler_folders = crawler_folders
+    @ execution(message='Crawle and filter result')
+    def crawle_and_build_result(self, folders: List[Folder], exclude: ExcludeManager) -> List[Folder]:
+        return filter_folders(folders, RulesApplyOptions(exclude))
 
-    def find_matches(self, settings: Iterable[IconSetting]):
+    @ execution(message='Searched for matches', start_message='Searching for matches')
+    def search_and_find_matches(self, folders: List[Folder], settings: Iterable[IconSetting]):
         self.builder.setup(settings=settings)
-        self.folders = self.builder.build_models(self.crawler_folders)
+        self.folders = self.builder.build_models(folders)
 
-    def apply_matches(self):
-        action = CreateIconAction(self.folders, self.user_config)
+    @ execution(message='Created matched icons', start_message='Creating matched icons')
+    def creating_found_matches(self, exclude: ExcludeManager):
+        count = 0
+        cleaned = []
+        for folder in self.folders:
+            dummy = Folder(path=folder.path, name=folder.name,
+                           files=[], folders=[])
+            if exclude.is_excluded(dummy):
+                count += 1
+                continue
+            cleaned.append(folder)
+        print(count)
+        action = CreateIconAction(cleaned, self.user_config)
         action.execute()
         if not action.any_executed():
             return

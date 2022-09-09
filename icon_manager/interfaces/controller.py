@@ -23,12 +23,3 @@ class ILibraryController(Protocol):
 
     def archive_library(self):
         ...
-
-
-class IContentController(Protocol):
-
-    def crawl_content(self, folders: List[Folder], settings: Sequence[IconSetting]):
-        ...
-
-    def delete_content(self):
-        ...

@@ -95,6 +95,7 @@ class FolderRule(ASingleRule):
 
 class EqualsRule(FolderRule):
 
+    @matched_value()
     def is_value_allowed(self, _: Folder, value: str, rule_value: str) -> bool:
         return rule_value == value
 

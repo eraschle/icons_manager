@@ -1,11 +1,10 @@
 from typing import Iterable, Protocol
 
-from icon_manager.interfaces.controller import (IContentController,
-                                                ILibraryController)
+from icon_manager.interfaces.controller import ILibraryController
 from icon_manager.rules.manager import ExcludeManager
 
 
-class IConfigService(ILibraryController, IContentController):
+class IConfigService(ILibraryController):
 
     def create_settings(self):
         ...
@@ -25,10 +24,13 @@ class IConfigService(ILibraryController, IContentController):
     def update_before_and_after(self, before_and_after: Iterable[str]):
         ...
 
-    def crawl_content(self, find_matches: bool, exclude: ExcludeManager):
+    def set_exclude_manager(self, exclude: ExcludeManager):
         ...
 
-    def apply_icons(self):
+    def find_and_apply_matches(self):
+        ...
+
+    def find_existing_content(self):
         ...
 
     def re_apply_icons(self):
@@ -55,7 +57,10 @@ class ServiceProtocol(Protocol):
     def archive_icons_and_configs(self):
         ...
 
-    def apply_matched_icons(self, overwrite: bool):
+    def find_and_apply_matches(self, overwrite: bool):
+        ...
+
+    def find_existing_content(self):
         ...
 
     def re_apply_matched_icons(self):

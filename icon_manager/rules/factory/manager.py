@@ -39,7 +39,7 @@ class AttributeCheckerFactory(ContentFactory[Dict[str, Any], AttributeChecker]):
 
     def create(self, config: Dict[str, Any], **kwargs) -> AttributeChecker:
         attribute = kwargs.get(ConfigKeys.ATTRIBUTE, RuleAttribute.UNKNOWN)
-        operator = get_operator(config, Operator.ALL)
+        operator = pop_operator(config, Operator.ANY)
         rules = self.create_rules(config, **kwargs)
         return AttributeChecker(attribute, operator, rules)
 

@@ -5,7 +5,6 @@ from icon_manager.config.user import UserConfig
 from icon_manager.content.controller.base import ContentController
 from icon_manager.content.models.matched import MatchedIconFile
 from icon_manager.crawler.filters import files_by_extension
-from icon_manager.crawler.options import FilterOptions
 from icon_manager.helpers.decorator import execution
 from icon_manager.helpers.path import File, Folder
 from icon_manager.interfaces.actions import DeleteAction
@@ -33,26 +32,21 @@ class IconFileBuilder(FileCrawlerBuilder[MatchedIconFile]):
         return MatchedIconFile(file.path)
 
 
-class IconFileOptions(FilterOptions):
-    def __init__(self) -> None:
-        super().__init__(clean_excluded=False, clean_project=False, clean_recursive=False)
-
-
 class IconFileController(ContentController[MatchedIconFile]):
 
     def __init__(self, user_config: UserConfig,
-                 builder: FileCrawlerBuilder = IconFileBuilder(),
-                 options: FilterOptions = IconFileOptions()) -> None:
-        super().__init__(user_config, builder, options)
+                 builder: FileCrawlerBuilder = IconFileBuilder()) -> None:
+        super().__init__(user_config, builder)
         self.files: List[MatchedIconFile] = []
 
-    @execution(message='Build copied icons')
-    def crawl_content(self, folders: List[Folder], settings: Sequence[IconSetting]):
+    @execution(message='Crawle & build icons (__icon__ folder)')
+    def crawle_and_build_result(self, folders: List[Folder], settings: Sequence[IconSetting]):
         extensions = [MatchedIconFile.extension(with_point=False)]
         files = files_by_extension(folders, extensions)
         self.builder.setup(settings=settings)
         self.files = self.builder.build_models(files)
 
+    @execution(message='Crawle & build icons (__icon__ folder)')
     def delete_content(self) -> None:
         action = DeleteAction(self.files)
         action.execute()

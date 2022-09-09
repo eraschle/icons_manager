@@ -50,25 +50,19 @@ class DesktopIniBuilder(FileCrawlerBuilder[DesktopIniFile]):
         return DesktopIniFile(file.path)
 
 
-class DesktopIniOptions(FilterOptions):
-    def __init__(self) -> None:
-        super().__init__(clean_excluded=True, clean_project=True, clean_recursive=True)
-
-
 class DesktopIniController(ContentController[DesktopIniFile]):
 
-    def __init__(self, user_config: UserConfig,
-                 builder: FileCrawlerBuilder = DesktopIniBuilder(),
-                 options: FilterOptions = DesktopIniOptions()) -> None:
-        super().__init__(user_config, builder, options)
+    def __init__(self, user_config: UserConfig, builder: FileCrawlerBuilder = DesktopIniBuilder()) -> None:
+        super().__init__(user_config, builder)
         self.desktop_files: List[DesktopIniFile] = []
 
-    @execution(message='Build Desktop.ini')
-    def crawl_content(self, folders: List[Folder], _: Sequence[IconSetting]):
+    @execution(message='Crawle & build DESKTOP.INI-files')
+    def crawle_and_build_result(self, folders: List[Folder], _: Sequence[IconSetting]):
         extensions = [DesktopIniFile.extension(with_point=False)]
         files = files_by_extension(folders, extensions)
         self.desktop_files = self.builder.build_models(files)
 
+    @execution(message='Deleted DESKTOP.INI-files')
     def delete_content(self):
         action = DeleteAction(self.desktop_files)
         action.execute()

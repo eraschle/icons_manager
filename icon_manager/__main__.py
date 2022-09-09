@@ -100,15 +100,16 @@ def main():
         if namespace.archive:
             service.archive_icons_and_configs()
     elif namespace.content:
-        service.update_before_and_after()
+        service.setup_and_merge_user_service()
         find_matches = namespace.content and not namespace.delete
-        service.crawling_search_content(find_matches)
+        if namespace.delete or namespace.re_create:
+            service.find_existing_content()
         if namespace.delete:
             service.delete_icon_settings()
-        if namespace.create:
-            service.apply_matched_icons()
-        elif namespace.re_create:
+        if namespace.re_create:
             service.re_apply_matched_icons()
+        if namespace.create:
+            service.find_and_apply_matches()
 
 
 if __name__ == "__main__":

@@ -1,8 +1,7 @@
 from typing import Iterable, List, Optional, Sequence
-from unittest import result
 
-from icon_manager.helpers.path import File, Folder
 from icon_manager.crawler.options import FilterOptions
+from icon_manager.helpers.path import File, Folder
 
 EXCLUDED_FOLDERS: Iterable[str] = []
 
@@ -19,9 +18,9 @@ def _is_project(folder: Folder, options: FilterOptions) -> bool:
 
 
 def _is_exclude_rule(entry: Folder, options: FilterOptions) -> bool:
-    if options.exclude_rules.is_empty():
+    if options.exclude.is_empty():
         return False
-    return options.exclude_rules.is_excluded(entry)
+    return options.exclude.is_excluded(entry)
 
 
 def _is_clean_recursive(entry: Folder, options: FilterOptions) -> bool:
@@ -32,7 +31,7 @@ def _is_clean_recursive(entry: Folder, options: FilterOptions) -> bool:
 
 def filter_folder(entry: Folder, options: FilterOptions) -> Optional[Folder]:
     if _is_exclude_rule(entry, options) or _is_clean_recursive(entry, options):
-        return Folder(path=entry.path, name=entry.name, files=entry.files, folders=[])
+        return Folder(path=entry.path, name=entry.name, files=[], folders=[])
     if _is_excluded(entry, options) or _is_project(entry, options):
         return None
     filtered = []
