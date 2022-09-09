@@ -1,10 +1,10 @@
 from typing import Iterable, Protocol
 
-from icon_manager.interfaces.controller import ILibraryController
+from icon_manager.interfaces.controller import IConfigHandler
 from icon_manager.rules.manager import ExcludeManager
 
 
-class IConfigService(ILibraryController):
+class IConfigService(IConfigHandler):
 
     def create_settings(self):
         ...

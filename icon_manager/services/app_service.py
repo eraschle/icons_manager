@@ -7,7 +7,7 @@ from icon_manager.content.controller.desktop import DesktopIniController
 from icon_manager.content.controller.icon_file import IconFileController
 from icon_manager.content.controller.icon_folder import IconFolderController
 from icon_manager.content.controller.rules_apply import RulesApplyController
-from icon_manager.library.controller import IconSettingController
+from icon_manager.library.controller import IconLibraryController
 from icon_manager.services.base import IConfigService, ServiceProtocol
 from icon_manager.services.config_service import ConfigService
 
@@ -21,7 +21,7 @@ class IconsAppService (ServiceProtocol):
         self.services: List[IConfigService] = []
 
     def _create_service(self, user_config: UserConfig) -> IConfigService:
-        library = IconSettingController()
+        library = IconLibraryController()
         desktop = DesktopIniController(user_config)
         folders = IconFolderController(user_config)
         files = IconFileController(user_config)

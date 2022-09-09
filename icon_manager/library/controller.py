@@ -7,7 +7,7 @@ from icon_manager.helpers.path import File
 from icon_manager.helpers.resource import icon_setting_template
 from icon_manager.interfaces.actions import DeleteAction
 from icon_manager.interfaces.builder import FileCrawlerBuilder, ModelBuilder
-from icon_manager.interfaces.controller import ILibraryController
+from icon_manager.interfaces.controller import IConfigHandler, ISettingsHandler
 from icon_manager.interfaces.path import FileModel, JsonFile, PathModel
 from icon_manager.library.models import (ArchiveFolder, IconFile,
                                          LibraryIconFile)
@@ -75,34 +75,7 @@ class IconSettingBuilder(ModelBuilder[IconSetting]):
         self.config_builder.factory.update(config, template_file)
 
 
-class ISettingsController(ILibraryController):
-
-    def settings(self, clean_empty: bool = True) -> Sequence[IconSetting]:
-        ...
-
-    def create_icon_settings(self, before_or_after: Iterable[str]) -> Sequence[IconSetting]:
-        ...
-
-    def setting_by_icon(self, icon: IconFile) -> Optional[IconSetting]:
-        ...
-
-    def create_settings(self, content: Dict[str, List[File]]):
-        ...
-
-    def create_icon_configs(self):
-        ...
-
-    def update_icon_configs(self):
-        ...
-
-    def delete_icon_configs(self):
-        ...
-
-    def archive_library(self):
-        ...
-
-
-class IconSettingController(ISettingsController):
+class IconLibraryController(IConfigHandler, ISettingsHandler):
 
     icons_extensions = [
         IconFile.extension(with_point=False),
