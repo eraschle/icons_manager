@@ -15,6 +15,8 @@ class RuleAttribute(str, Enum):
     UNKNOWN = 'unknown',
     NAME = 'name'
     PATH = 'path'
+    PARENT_NAME = 'parent_name'
+    PARENT_PATH = 'parent_path'
 
 
 def get_rule_attribute(value) -> RuleAttribute:
