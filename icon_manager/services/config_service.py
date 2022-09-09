@@ -89,8 +89,7 @@ class ConfigService(IConfigService):
 
     @ execution(message='RE-Applied icons')
     def re_apply_icons(self):
-        controller = ReApplyController(self.settings, self.desktop,
-                                       self.icon_folders)
+        controller = ReApplyController(self.settings, self.icon_folders)
         self.rules.re_apply_matches(controller)
 
     @ execution(message='Deleted content', start_message='Start delete content')
@@ -98,26 +97,3 @@ class ConfigService(IConfigService):
         self.desktop.delete_content()
         self.icon_folders.delete_content()
         self.icon_files.delete_content()
-
-    # def get_icon_config_by(self, local_folder: MatchedIconFolder) -> Optional[IconSetting]:
-    #     icon_file = self.icon_file_by(local_folder)
-    #     if icon_file is None:
-    #         return None
-    #     return self.icon_config_by(icon_file)
-
-    # def get_icon_folder(self, local_folder: MatchedIconFolder) -> Optional[MatchedRuleFolder]:
-    #     icon_config = self.get_icon_config_by(local_folder)
-    #     if icon_config is None:
-    #         return None
-    #     folder = local_folder.parent_folder()
-    #     return MatchedRuleFolder(folder, icon_config, self.user_config.copy_icon)
-
-    # def can_write(self, folder: MatchedRuleFolder) -> bool:
-    #     if not folder.desktop_ini.exists():
-    #         return True
-    #     if folder.desktop_ini.exists() and not self.overwrite:
-    #         return False
-    #     can_write = DesktopFileManager.can_write(folder.desktop_ini)
-    #     if not can_write:
-    #         log.warning(f'Can not write desktop.ini in "{folder.path}"')
-    #     return can_write and self.overwrite

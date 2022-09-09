@@ -1,24 +1,21 @@
 import logging
 from typing import Iterable, Optional
 
-from icon_manager.content.controller.desktop import DesktopIniController
 from icon_manager.content.controller.icon_folder import IconFolderController
 from icon_manager.content.models.matched import (MatchedIconFolder,
                                                  MatchedRuleFolder)
+from icon_manager.interfaces.path import FolderModel
 from icon_manager.library.controller import ISettingsController
 from icon_manager.library.models import IconSetting
-from icon_manager.interfaces.path import FolderModel
 
 log = logging.getLogger(__name__)
 
 
 class ReApplyController:
 
-    def __init__(self, settings: ISettingsController,
-                 desktop: DesktopIniController, icon_folders: IconFolderController) -> None:
+    def __init__(self, settings: ISettingsController, icon_folders: IconFolderController) -> None:
         super().__init__()
         self.settings = settings
-        self.desktop = desktop
         self.icon_folders = icon_folders
 
     def get_setting_of(self, folder: MatchedIconFolder) -> Optional[IconSetting]:

@@ -82,17 +82,7 @@ class RulesApplyController:
 
     @ execution(message='Created matched icons', start_message='Creating matched icons')
     def creating_found_matches(self, exclude: ExcludeManager):
-        count = 0
-        cleaned = []
-        for folder in self.folders:
-            dummy = Folder(path=folder.path, name=folder.name,
-                           files=[], folders=[])
-            if exclude.is_excluded(dummy):
-                count += 1
-                continue
-            cleaned.append(folder)
-        print(count)
-        action = CreateIconAction(cleaned, self.user_config)
+        action = CreateIconAction(self.folders, self.user_config)
         action.execute()
         if not action.any_executed():
             return

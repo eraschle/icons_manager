@@ -19,7 +19,7 @@ def log_time(message: str, start: datetime) -> str:
 
 
 def _config_message(config: Optional[UserConfig], message: str,
-                    width_config: int = 20, width_message: int = 40):
+                    width_config: int = 20, width_message: int = 60):
     name = fixed_length('', width=width_config, align=ALIGN_LEFT)
     if config is not None:
         name = fixed_length(config.name, width=width_config, align=ALIGN_LEFT)

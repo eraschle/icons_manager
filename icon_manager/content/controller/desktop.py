@@ -9,7 +9,6 @@ from icon_manager.content.models.matched import (MatchedIconFile,
                                                  MatchedIconFolder,
                                                  MatchedRuleFolder)
 from icon_manager.crawler.filters import files_by_extension
-from icon_manager.crawler.options import FilterOptions
 from icon_manager.data.ini_source import DesktopFileSource
 from icon_manager.helpers.decorator import execution
 from icon_manager.helpers.path import File, Folder
@@ -24,35 +23,56 @@ log = logging.getLogger(__name__)
 # region MATCHED DESKTOP INI
 
 
-class DesktopIniBuilder(FileCrawlerBuilder[DesktopIniFile]):
+class DesktopFileChecker:
 
-    app_entry = 'IconManager=1'
-    source: DesktopFileSource = DesktopFileSource()
+    def __init__(self, source: DesktopFileSource) -> None:
+        self.source = source
 
-    @classmethod
-    def is_file_from_app(cls, file: Union[File, PathModel]) -> bool:
+    def is_app_file(self, file: Union[File, PathModel]) -> bool:
         if isinstance(file, DesktopIniFile):
             source_file = file
         else:
             source_file = DesktopIniFile(file.path)
-        content_lines = cls.source.read(source_file)
+        content_lines = self.source.read(source_file)
         for line in content_lines:
-            if cls.app_entry not in line:
+            if DesktopIniBuilder.app_entry not in line:
                 continue
             return True
         return False
 
+
+class DesktopIniBuilder(FileCrawlerBuilder[DesktopIniFile]):
+
+    app_entry = 'IconManager=1'
+
+    def __init__(self, source: DesktopFileSource) -> None:
+        super().__init__()
+        self.checker = DesktopFileChecker(source)
+
     def can_build_file(self, file: File, **kwargs) -> bool:
         return (DesktopIniFile.is_model(file.path)
-                and self.is_file_from_app(file))
+                and self.checker.is_app_file(file))
 
     def build_file_model(self, file: File, **kwargs) -> Optional[DesktopIniFile]:
         return DesktopIniFile(file.path)
 
 
+class DesktopDeleteAction(DeleteAction):
+
+    def __init__(self, entries: Iterable[PathModel], checker: DesktopFileChecker) -> None:
+        super().__init__(entries)
+        self.checker = checker
+
+    def can_execute(self, entry: PathModel) -> bool:
+        can_execute = super().can_execute(entry)
+        if not can_execute or not isinstance(entry, File):
+            return False
+        return self.checker.is_app_file(entry)
+
+
 class DesktopIniController(ContentController[DesktopIniFile]):
 
-    def __init__(self, user_config: UserConfig, builder: FileCrawlerBuilder = DesktopIniBuilder()) -> None:
+    def __init__(self, user_config: UserConfig, builder: DesktopIniBuilder = DesktopIniBuilder(DesktopFileSource())) -> None:
         super().__init__(user_config, builder)
         self.desktop_files: List[DesktopIniFile] = []
 
@@ -64,7 +84,8 @@ class DesktopIniController(ContentController[DesktopIniFile]):
 
     @execution(message='Deleted DESKTOP.INI-files')
     def delete_content(self):
-        action = DeleteAction(self.desktop_files)
+        checker = DesktopFileChecker(DesktopFileSource())
+        action = DesktopDeleteAction(self.desktop_files, checker)
         action.execute()
         if not action.any_executed():
             return
@@ -222,12 +243,13 @@ class DesktopIniCreator:
 
     def __init__(self, source: DesktopFileSource = DesktopFileSource()) -> None:
         self.source = source
+        self.checker = DesktopFileChecker(source)
         self.commands: List[ConfigCommand] = []
 
     def can_write(self, file: DesktopIniFile) -> bool:
         if not file.exists():
             return True
-        return DesktopIniBuilder.is_file_from_app(file)
+        return self.checker.is_app_file(file)
 
     def create_content(self, manager: MatchedRuleFolder) -> Iterable[str]:
         return [
