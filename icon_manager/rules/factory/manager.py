@@ -1,6 +1,5 @@
 import logging
 from abc import abstractmethod
-from turtle import update
 from typing import Any, Dict, Generic, Iterable, Optional, Sequence, TypeVar
 
 from icon_manager.data.base import Source
@@ -9,9 +8,9 @@ from icon_manager.helpers.resource import excluded_rules_template_file
 from icon_manager.interfaces.factory import ContentFactory, FileFactory
 from icon_manager.interfaces.path import ConfigFile, JsonFile
 from icon_manager.rules.base import (IFilterRule, ISingleRule, Operator,
-                                     RuleAttribute, get_rule_attribute)
+                                     RuleAttribute)
 from icon_manager.rules.factory.rules import (ConfigKeys, get_builders,
-                                              get_operator, pop_operator)
+                                              pop_operator)
 from icon_manager.rules.manager import (AttributeChecker, ExcludeManager,
                                         RuleChecker, RuleManager)
 
@@ -43,6 +42,16 @@ class AttributeCheckerFactory(ContentFactory[Dict[str, Any], AttributeChecker]):
         operator = pop_operator(config, Operator.ANY)
         rules = self.create_rules(config, **kwargs)
         return AttributeChecker(attribute, operator, rules)
+
+
+def get_rule_attribute(value) -> RuleAttribute:
+    if not isinstance(value, str):
+        return RuleAttribute.UNKNOWN
+    for attr in RuleAttribute:
+        if value.lower() != attr.value:
+            continue
+        return attr
+    return RuleAttribute.UNKNOWN
 
 
 class SourceCheckerBuilder(ContentFactory[Dict[str, Any], RuleChecker]):

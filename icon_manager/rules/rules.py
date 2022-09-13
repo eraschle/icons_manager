@@ -5,7 +5,6 @@ from typing import Any, Collection, Iterable, Sequence, Set
 from icon_manager.interfaces.path import Folder
 from icon_manager.rules.base import (AFilterRule, ASingleRule, ISingleRule,
                                      Operator, RuleAttribute)
-from icon_manager.rules.decorator import matched_value
 from icon_manager.rules.generate import (AfterGenerator, BeforeGenerator,
                                          BeforeOrAfterGenerator, CaseConverter,
                                          Generator, GeneratorManager)
@@ -95,14 +94,12 @@ class FolderRule(ASingleRule):
 
 class EqualsRule(FolderRule):
 
-    @matched_value()
     def is_value_allowed(self, _: Folder, value: str, rule_value: str) -> bool:
         return rule_value == value
 
 
 class NotEqualsRule(EqualsRule):
 
-    @matched_value()
     def is_value_allowed(self, entry: Folder, value: str, rule_value: str) -> bool:
         return not super().is_value_allowed(entry, value, rule_value)
 
@@ -112,7 +109,6 @@ class ContainsRule(FolderRule):
     def get_generators(self) -> Sequence[Generator]:
         return self.before_and_after_generators()
 
-    @matched_value()
     def is_value_allowed(self, _: Folder, value: str, rule_value: str) -> bool:
         return rule_value in value
 
@@ -128,7 +124,6 @@ class StartsWithRule(FolderRule):
     def get_generators(self) -> Sequence[Generator]:
         return self.before_and_after_generators()
 
-    @matched_value()
     def is_value_allowed(self, _: Folder, value: str, rule_value: str) -> bool:
         return value.startswith(rule_value)
 
@@ -138,7 +133,6 @@ class EndsWithRule(FolderRule):
     def get_generators(self) -> Sequence[Generator]:
         return self.before_and_after_generators()
 
-    @matched_value()
     def is_value_allowed(self, _: Folder, value: str, rule_value: str) -> bool:
         return value.endswith(rule_value)
 
@@ -148,7 +142,6 @@ class StartsOrEndsWithRule(FolderRule):
     def get_generators(self) -> Sequence[Generator]:
         return self.before_and_after_generators()
 
-    @matched_value()
     def is_value_allowed(self, entry: Folder, value: str, rule_value: str) -> bool:
         return value.startswith(rule_value) or value.endswith(rule_value)
 
@@ -190,7 +183,6 @@ class ContainsFileRule(FolderRule):
             extensions.update(self.get_extensions(folder, level))
         return extensions
 
-    @matched_value()
     def is_value_allowed(self, entry: Folder, _: str, rule_value: str) -> bool:
         folder = entry
         if self.attribute == RuleAttribute.PARENT_PATH and entry.parent is not None:
@@ -201,7 +193,6 @@ class ContainsFileRule(FolderRule):
 
 class NotContainsFileRule(ContainsFileRule):
 
-    @matched_value()
     def is_value_allowed(self, entry: Folder, value: str, rule_value: str) -> bool:
         return not super().is_value_allowed(entry, value, rule_value)
 
@@ -230,7 +221,6 @@ class ContainsFolderRule(ContainsFileRule):
             folders.update(self.get_folders(folder, level))
         return folders
 
-    @matched_value()
     def is_value_allowed(self, entry: Folder, _: str, rule_value: str) -> bool:
         folder = entry
         if self.attribute == RuleAttribute.PARENT_PATH and entry.parent is not None:
@@ -241,7 +231,6 @@ class ContainsFolderRule(ContainsFileRule):
 
 class NotContainsFolderRule(ContainsFolderRule):
 
-    @matched_value()
     def is_value_allowed(self, entry: Folder, value: str, rule_value: str) -> bool:
         return not super().is_value_allowed(entry, value, rule_value)
 

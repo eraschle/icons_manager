@@ -19,26 +19,7 @@ class RuleAttribute(str, Enum):
     PARENT_PATH = 'parent_path'
 
 
-def get_rule_attribute(value) -> RuleAttribute:
-    if not isinstance(value, str):
-        return RuleAttribute.UNKNOWN
-    for attr in RuleAttribute:
-        if value.lower() != attr.value:
-            continue
-        return attr
-    return RuleAttribute.UNKNOWN
-
-
 TEntry = TypeVar('TEntry', bound=object, contravariant=True)
-
-
-class IRuleValidator:
-
-    def is_valid(self) -> bool:
-        ...
-
-    def message(self) -> bool:
-        ...
 
 
 class RuleProtocol(Protocol, Generic[TEntry]):
@@ -79,16 +60,6 @@ class Rule(str, Enum):
     NOT_CONTAINS_FOLDER = 'not_contains_folder'
 
 
-def get_rule(value) -> Rule:
-    if not isinstance(value, str):
-        return Rule.UNKNOWN
-    for rule in Rule:
-        if value.lower() != rule.value:
-            continue
-        return rule
-    return Rule.UNKNOWN
-
-
 class AFilterRule(ABC, IFilterRule):
 
     def __init__(self, attribute: RuleAttribute, operator: Operator) -> None:
@@ -123,10 +94,6 @@ class ISingleRule(IFilterRule):
 
     @property
     def name(self) -> str:
-        ...
-
-    @property
-    def validator(self) -> IRuleValidator:
         ...
 
     def is_allowed(self, entry: Folder) -> bool:
