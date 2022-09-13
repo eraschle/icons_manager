@@ -24,9 +24,9 @@ def _is_exclude_rule(entry: Folder, options: FilterOptions) -> bool:
 
 
 def _is_clean_recursive(entry: Folder, options: FilterOptions) -> bool:
-    if not options.clean_recursive:
+    if not options.clean_recursive or entry.parent is None:
         return False
-    return any(folder.name in PROJECT_FOLDERS for folder in entry.folders)
+    return any(folder.name in PROJECT_FOLDERS for folder in entry.parent.folders)
 
 
 def filter_folder(entry: Folder, options: FilterOptions) -> Optional[Folder]:
