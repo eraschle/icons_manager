@@ -2,9 +2,9 @@ import logging
 from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Lock
-from typing import Generic, Iterable, List, Optional, TypeVar
-from icon_manager.config.user import UserConfig
+from typing import Generic, List, Optional, Sequence, TypeVar
 
+from icon_manager.config.user import UserConfig
 from icon_manager.helpers.string import (ALIGN_LEFT, ALIGN_RIGHT, THOUSAND,
                                          fixed_length, list_value,
                                          prefix_value)
@@ -18,7 +18,7 @@ TEntry = TypeVar('TEntry', bound=PathModel)
 
 class Action(ABC, Generic[TEntry]):
 
-    def __init__(self, config: Optional[UserConfig], entries: Iterable[TEntry], action_log: str) -> None:
+    def __init__(self, config: Optional[UserConfig], entries: Sequence[TEntry], action_log: str) -> None:
         super().__init__()
         self.config = config
         self.entries = entries
@@ -35,7 +35,8 @@ class Action(ABC, Generic[TEntry]):
         prefix = 'execute action'
         if self.config is not None:
             prefix = f'execute action {self.config.name}'
-        with ThreadPoolExecutor(thread_name_prefix=prefix) as executor:
+        with ThreadPoolExecutor(thread_name_prefix=prefix,
+                                max_workers=len(self.entries)) as executor:
             task = {executor.submit(
                 self.action_execute, entry): entry for entry in self.entries}
             for future in as_completed(task):
@@ -48,12 +49,11 @@ class Action(ABC, Generic[TEntry]):
     def action_execute(self, entry: TEntry) -> None:
         if not self.can_execute(entry):
             return
-        with self._lock:
-            if entry.is_file():
-                self.files.append(entry)
-            if entry.is_dir():
-                self.folders.append(entry)
-            self.execute_action(entry)
+        if entry.is_file():
+            self.files.append(entry)
+        if entry.is_dir():
+            self.folders.append(entry)
+        self.execute_action(entry)
 
     @abstractmethod
     def can_execute(self, entry: TEntry) -> bool:
@@ -88,7 +88,7 @@ class Action(ABC, Generic[TEntry]):
 
 class DeleteAction(Action[PathModel]):
 
-    def __init__(self, config: Optional[UserConfig], entries: Iterable[PathModel]) -> None:
+    def __init__(self, config: Optional[UserConfig], entries: Sequence[PathModel]) -> None:
         super().__init__(config, entries, 'Deleted')
 
     def can_execute(self, entry: PathModel) -> bool:

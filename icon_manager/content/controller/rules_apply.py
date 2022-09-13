@@ -1,6 +1,6 @@
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, Sequence
 
 from icon_manager.config.user import UserConfig
 from icon_manager.content.actions.create import (CreateIconAction,
@@ -23,7 +23,7 @@ class RulesApplyBuilder(FolderCrawlerBuilder[MatchedRuleFolder]):
 
     def __init__(self) -> None:
         super().__init__()
-        self.settings: Iterable[IconSetting] = []
+        self.settings: Sequence[IconSetting] = []
 
     def setup(self, **kwargs) -> None:
         self.settings = kwargs.get('settings', [])
@@ -35,22 +35,8 @@ class RulesApplyBuilder(FolderCrawlerBuilder[MatchedRuleFolder]):
             return setting
         return None
 
-    def async_icon_setting_for(self, model: Folder) -> Optional[IconSetting]:
-        with ThreadPoolExecutor(thread_name_prefix='icon_setting_for') as executor:
-            task = {executor.submit(
-                config.is_config_for, model): config for config in self.settings}
-            for future in as_completed(task):
-                setting = task[future]
-                try:
-                    if not future.result():
-                        continue
-                    return setting
-                except Exception as exc:
-                    print('%r Exception: %s' % (setting, exc))
-        return None
-
     def get_matched_folder(self, model: Folder) -> Optional[MatchedRuleFolder]:
-        config = self.async_icon_setting_for(model)
+        config = self.icon_setting_for(model)
         if config is None:
             return None
         action = prefix_value('Icon', width=7, align=ALIGN_LEFT)
