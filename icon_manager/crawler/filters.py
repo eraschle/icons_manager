@@ -1,7 +1,6 @@
 from typing import Iterable, List, Optional, Sequence
 
 from icon_manager.crawler.options import FilterOptions
-from icon_manager.helpers.path import create_folder
 from icon_manager.interfaces.path import File, Folder
 
 EXCLUDED_FOLDERS: Iterable[str] = []
@@ -44,7 +43,8 @@ def filter_folder(entry: Folder, options: FilterOptions) -> Optional[Folder]:
             folder.mark_and_clean()
             continue
         filtered.append(cleaned)
-    return create_folder(entry.path, files=entry.files, folders=filtered)
+    entry.folders = filtered
+    return entry
 
 
 def filter_folders(folders: List[Folder], options: FilterOptions) -> List[Folder]:

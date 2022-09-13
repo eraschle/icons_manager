@@ -4,21 +4,19 @@ from typing import Dict, Iterable, List, Sequence
 
 from icon_manager.crawler.filters import (files_by_extension,
                                           is_file_with_extensions)
-from icon_manager.helpers.path import crawle_folder, create_file, create_folder
+from icon_manager.helpers.path import crawle_folder
 from icon_manager.interfaces.path import (File, Folder, IconSearchFolder,
                                           SearchFolder)
 
 
 def _crawling(root: SearchFolder) -> Folder:
-    files = []
-    folders = []
-    path = root.path
-    for entry in os.scandir(path):
+    current = Folder.from_path(root.path, None)
+    for entry in os.scandir(root.path):
         if entry.is_dir():
-            folders.append(crawle_folder(entry))
+            current.folders.append(crawle_folder(entry, current))
         else:
-            files.append(create_file(entry))
-    return create_folder(path, folders, files)
+            current.files.append(File.from_path(entry.path, current))
+    return current
 
 
 # @crawler_result(message='Crawler found', log_start='SYNC crawler started')

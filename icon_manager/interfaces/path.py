@@ -3,28 +3,43 @@ import os
 import shutil
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional, Tuple
 from uuid import UUID, uuid4
 
 log = logging.getLogger(__name__)
 
-log = logging.getLogger(__name__)
+
+def get_parent_and_name(path: str) -> Tuple[str, str]:
+    return os.path.split(path)
+
+
+_POINT = '.'
+
+
+def get_name_and_extension(path: str) -> Tuple[str, Optional[str]]:
+    _, name = get_parent_and_name(path)
+    if _POINT not in name or name.startswith(_POINT):
+        return name, None
+    splitted = name.split(_POINT)
+    return '.'.join(splitted[:-1]), splitted[-1]
 
 
 @dataclass
 class Node:
-    name: str = field(repr=True)
-    path: str = field(compare=True, hash=True, repr=False)
-    excluded: bool
+    parent: Optional['Node'] = field(repr=False, compare=False)
+    name: str = field(repr=True, init=False)
+    path: str = field(compare=True, repr=False)
+    excluded: bool = field(repr=False, init=False)
 
-    def is_file(self) -> bool:
-        return os.path.isfile(self.path)
-
-    def is_dir(self) -> bool:
-        return os.path.isdir(self.path)
+    def __post_init__(self):
+        self.excluded = False
+        _, name = get_parent_and_name(self.path)
+        self.name = name
 
     @property
     def parent_path(self) -> str:
+        if self.parent is not None:
+            return self.parent.path
         parent, name = os.path.split(self.path)
         if parent is None or len(parent) == 0:
             return name
@@ -32,20 +47,47 @@ class Node:
 
     @property
     def parent_name(self) -> str:
+        if self.parent is not None:
+            return self.parent.name
         _, name = os.path.split(self.parent_path)
         return name
+
+    def is_file(self) -> bool:
+        return os.path.isfile(self.path)
+
+    def is_dir(self) -> bool:
+        return os.path.isdir(self.path)
+
+    def exists(self) -> bool:
+        return os.path.exists(self.path)
 
 
 @dataclass()
 class File(Node):
-    name_wo_ext: str
-    ext: Optional[str]
+    parent: Optional['Folder'] = field(repr=False)
+    name_wo_ext: str = field(repr=False, init=False)
+    ext: Optional[str] = field(repr=True, init=False)
+
+    def __post_init__(self):
+        super().__post_init__()
+        name_wo_ext, ext = get_name_and_extension(self.name)
+        self.name_wo_ext = name_wo_ext
+        self.ext = ext
+
+    @classmethod
+    def from_path(cls, path: str, parent: Optional['Folder']) -> 'File':
+        return File(parent=parent, path=path)
 
 
 @dataclass()
 class Folder(Node):
+    parent: Optional['Folder'] = field(repr=False)
     folders: List['Folder'] = field(default_factory=list)
     files: List[File] = field(default_factory=list)
+
+    @classmethod
+    def from_path(cls, path: str, parent: Optional['Folder']) -> 'Folder':
+        return Folder(parent=parent, path=path, files=[], folders=[])
 
     def mark_children(self) -> None:
         for folder in self.folders:

@@ -4,57 +4,14 @@ from typing import Iterable, List, Optional, Sequence, Tuple
 from icon_manager.interfaces.path import File, Folder
 
 
-def get_parent_and_name(path: str) -> Tuple[str, str]:
-    return os.path.split(path)
-
-
-def get_name_and_extension(name: str) -> Tuple[str, Optional[str]]:
-    splitted = name.split('.')
-    if len(splitted) == 1:
-        return splitted[0], None
-    name = '.'.join(splitted[:-1])
-    return name, splitted[-1]
-
-
-def get_folder(entry: os.DirEntry) -> Folder:
-    parent, name = get_parent_and_name(entry.path)
-    parent = os.path.basename(parent)
-    return Folder(path=entry.path, name=name, excluded=False)
-
-
-def create_file(entry: os.DirEntry) -> File:
-    _, name = get_parent_and_name(entry.path)
-    name_wo_ext, ext = get_name_and_extension(entry.name)
-    return File(path=entry.path, name=name, name_wo_ext=name_wo_ext,
-                ext=ext, excluded=False)
-
-
-def create_children_folder(parent: Folder) -> Folder:
-    for entry in os.scandir(parent.path):
-        if entry.is_dir():
-            folder = get_folder(entry)
-            parent.folders.append(folder)
-        else:
-            file = create_file(entry)
-            parent.files.append(file)
-    return parent
-
-
-def create_folder(path: str, folders: List[Folder], files: List[File]) -> Folder:
-    parent, name = get_parent_and_name(path)
-    parent = os.path.basename(parent)
-    return Folder(path=path, name=name, folders=folders, files=files, excluded=False)
-
-
-def crawle_folder(entry: os.DirEntry) -> Folder:
-    files = []
-    folders = []
+def crawle_folder(entry: os.DirEntry, parent: Optional[Folder]) -> Folder:
+    current = Folder.from_path(entry.path, parent)
     for elem in os.scandir(entry.path):
         if elem.is_dir():
-            folders.append(crawle_folder(elem))
+            current.folders.append(crawle_folder(elem, current))
         else:
-            files.append(create_file(elem))
-    return create_folder(entry.path, folders, files)
+            current.files.append(File.from_path(elem.path, current))
+    return current
 
 
 def is_file(path: str, name: str, extension: Optional[str] = None) -> bool:
