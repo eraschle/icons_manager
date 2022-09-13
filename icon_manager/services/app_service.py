@@ -1,6 +1,6 @@
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import List
+from typing import List, Sequence
 
 from icon_manager.config.app import AppConfig
 from icon_manager.config.user import UserConfig
@@ -13,6 +13,10 @@ from icon_manager.services.base import IConfigService, ServiceProtocol
 from icon_manager.services.config_service import ConfigService
 
 log = logging.getLogger(__name__)
+
+
+def thread_count(services: Sequence[IConfigService]) -> int:
+    return len(services) * 10
 
 
 class IconsAppService(ServiceProtocol):
@@ -67,7 +71,7 @@ class IconsAppService(ServiceProtocol):
 
     def async_find_and_apply_matches(self):
         with ThreadPoolExecutor(thread_name_prefix='find_and_apply_matches',
-                                max_workers=len(self.services)) as executor:
+                                max_workers=thread_count(self.services)) as executor:
             task = {executor.submit(srv.find_and_apply)
                                     : srv for srv in self.services}
             for future in as_completed(task):
@@ -83,7 +87,7 @@ class IconsAppService(ServiceProtocol):
 
     def async_find_existing_content(self):
         with ThreadPoolExecutor(thread_name_prefix='find_existing_content',
-                                max_workers=len(self.services)) as executor:
+                                max_workers=thread_count(self.services)) as executor:
             task = {executor.submit(srv.find_existing)
                                     : srv for srv in self.services}
             for future in as_completed(task):
@@ -102,9 +106,8 @@ class IconsAppService(ServiceProtocol):
             config_service.delete_setting()
 
     def async_delete_icon_settings(self):
-        with ThreadPoolExecutor(
-                thread_name_prefix='delete_icon_settings',
-                max_workers=len(self.services)) as executor:
+        with ThreadPoolExecutor(thread_name_prefix='delete_icon_settings',
+                                max_workers=thread_count(self.services)) as executor:
             task = {executor.submit(srv.delete_setting)
                                     : srv for srv in self.services}
             for future in as_completed(task):
