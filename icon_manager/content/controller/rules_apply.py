@@ -1,5 +1,4 @@
 import logging
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Iterable, List, Optional, Sequence
 
 from icon_manager.config.user import UserConfig

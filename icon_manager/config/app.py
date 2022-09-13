@@ -2,13 +2,13 @@ import copy
 import logging
 import os
 from enum import Enum
-from typing import Any, Collection, Dict, Iterable, Optional, Sequence
+from typing import Any, Collection, Dict, Iterable, List, Optional, Sequence
 
 from icon_manager.config.base import Config
 from icon_manager.config.user import UserConfig, UserConfigFactory
 from icon_manager.data.json_source import JsonSource
 from icon_manager.helpers.environment import get_converted_env_path
-from icon_manager.helpers.path import get_files, get_path, get_paths
+from icon_manager.helpers.path import get_files
 from icon_manager.helpers.resource import app_config_template_file
 from icon_manager.helpers.user_inputs import (ask_user, ask_user_for_path,
                                               ask_user_yes_no_question)
@@ -18,6 +18,10 @@ from icon_manager.rules.factory.manager import ExcludeManagerFactory
 from icon_manager.rules.manager import ExcludeManager
 
 log = logging.getLogger(__name__)
+
+
+def get_paths(path: str, names: Iterable[str]) -> List[str]:
+    return [os.path.join(path, name) for name in names]
 
 
 class AppConfig(Config):
@@ -78,7 +82,7 @@ class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
         names = list(filter(lambda name: cls.EXCLUDE_NAME == name, names))
         if len(names) != 1:
             return None
-        return get_path(folder_path, names[0])
+        return os.path.join(folder_path, names[0])
 
     def __init__(self, source: JsonSource, factory: ExcludeManagerFactory) -> None:
         self.source = source
@@ -125,7 +129,7 @@ class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
 
     def create_user_template_config(self, folder_path: str) -> None:
         file_name = self.ask_user_for_config_file_name()
-        file_path = get_path(folder_path, file_name)
+        file_path = os.path.join(folder_path, file_name)
         user_config = ConfigFile(file_path)
         self.user_factory.create_template(user_config)
 
@@ -134,7 +138,7 @@ class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
         return config_file is not None
 
     def create_excluded_rules_template(self, path: str) -> None:
-        file_path = get_path(path, self.__class__.EXCLUDE_NAME)
+        file_path = os.path.join(path, self.__class__.EXCLUDE_NAME)
         config = ConfigFile(file_path)
         if config.exists():
             return

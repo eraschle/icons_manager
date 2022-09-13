@@ -172,11 +172,6 @@ class ContainsFileRuleBuilder(ASingleRuleBuilder[ContainsFileRule]):
     def __init__(self, **kwargs) -> None:
         super().__init__(rule_type=ContainsFileRule, **kwargs)
 
-        # def can_build(self, rule_config: Dict[str, Any]) -> bool:
-        #     if ConfigKeys.SEARCH_LEVEL not in rule_config:
-        #         return False
-        #     return True
-
     def create_rule(self, attribute: RuleAttribute, rule_config: Dict[str, Any]) -> ContainsFileRule:
         rule = self.get_rule(rule_config)
         values = rule_config.get(rule, [])
@@ -225,11 +220,6 @@ class ChainedRuleBuilder(ARuleBuilder[ChainedRule]):
     def get_rule_configs(self, rule_config: Dict[str, Any]) -> Collection[Dict[str, Any]]:
         rule = self.get_rule(rule_config)
         return rule_config.get(rule, [])
-
-    # def can_build(self, rule_config: Dict[str, Any]) -> bool:
-    #     if not super().can_build(rule_config):
-    #         return False
-    #     return len(self.get_rule_configs(rule_config)) > 0
 
     def get_single_rules(self, rule_config: Dict[str, Any], **kwargs) -> Sequence[FolderRule]:
         rules = []
