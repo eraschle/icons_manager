@@ -1,5 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from threading import Lock
 from typing import Generic, Iterable, List, TypeVar
 
 from icon_manager.helpers.string import (ALIGN_LEFT, ALIGN_RIGHT, THOUSAND,
@@ -21,11 +23,27 @@ class Action(ABC, Generic[TEntry]):
         self.files: List[PathModel] = []
         self.folders: List[PathModel] = []
         self._action_log = action_log
+        self._lock = Lock()
 
     def execute(self) -> None:
         for entry in self.entries:
-            if not self.can_execute(entry):
-                continue
+            self.action_execute(entry)
+
+    def async_execute(self) -> None:
+        with ThreadPoolExecutor(thread_name_prefix='execute action') as executor:
+            task = {executor.submit(
+                self.action_execute, entry): entry for entry in self.entries}
+            for future in as_completed(task):
+                setting = task[future]
+                try:
+                    future.result()
+                except Exception as exc:
+                    print('%r Exception: %s' % (setting, exc))
+
+    def action_execute(self, entry: TEntry) -> None:
+        if not self.can_execute(entry):
+            return
+        with self._lock:
             if entry.is_file():
                 self.files.append(entry)
             if entry.is_dir():

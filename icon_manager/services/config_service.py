@@ -66,7 +66,7 @@ class ConfigService(IConfigService):
         self.__exclude = exclude
 
     @execution(message='Found & applied icons', start_message='Start find & apply icons')
-    def find_and_apply_matches(self):
+    def find_and_apply(self):
         settings = self.settings.create_icon_settings(self._before_or_after)
         entries = self.crawling_search_folders()
         entries = self.rules.crawle_and_build_result(entries, self.exclude)
@@ -76,10 +76,10 @@ class ConfigService(IConfigService):
     @execution(message='Crawled through folders (No filtering)', start_message='Crawling search folders')
     def crawling_search_folders(self) -> List[Folder]:
         folders = self.user_config.search_folders
-        return async_crawling_folders(folders)
+        return async_crawling_folders(self.user_config, folders)
 
     @execution(message='Crawled through content')
-    def find_existing_content(self):
+    def find_existing(self):
         entries = self.crawling_search_folders()
         settings = self.settings.settings(clean_empty=True)
         self.desktop.crawle_and_build_result(entries, settings)
@@ -92,7 +92,7 @@ class ConfigService(IConfigService):
         self.rules.re_apply_matches(controller)
 
     @ execution(message='Deleted content', start_message='Start delete content')
-    def delete_content(self):
+    def delete_setting(self):
         self.desktop.delete_content()
         self.icon_folders.delete_content()
         self.icon_files.delete_content()

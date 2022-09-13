@@ -126,8 +126,11 @@ class RuleFolderCommand(ConfigCommand):
         self.rule_folder = rule_folder
 
     def can_change_attribute(self) -> bool:
-        folder = self.rule_folder.icon_folder
-        return folder.exists() and not Git.is_model(self.rule_folder.path)
+        if Git.is_model(self.rule_folder.path):
+            return False
+        if not self.copy_icon:
+            return True
+        return self.rule_folder.icon_folder.exists()
 
     def pre_command(self):
         if not self.copy_icon or not self.can_change_attribute():

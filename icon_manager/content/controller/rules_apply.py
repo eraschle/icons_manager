@@ -1,4 +1,5 @@
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Iterable, List, Optional
 
 from icon_manager.config.user import UserConfig
@@ -9,10 +10,9 @@ from icon_manager.content.models.matched import MatchedRuleFolder
 from icon_manager.crawler.filters import filter_folders
 from icon_manager.crawler.options import FilterOptions
 from icon_manager.helpers.decorator import execution
-from icon_manager.interfaces.path import Folder
 from icon_manager.helpers.string import ALIGN_LEFT, prefix_value
 from icon_manager.interfaces.builder import FolderCrawlerBuilder
-from icon_manager.interfaces.path import FolderModel
+from icon_manager.interfaces.path import Folder, FolderModel
 from icon_manager.library.models import IconSetting
 from icon_manager.rules.manager import ExcludeManager
 
@@ -35,8 +35,22 @@ class RulesApplyBuilder(FolderCrawlerBuilder[MatchedRuleFolder]):
             return setting
         return None
 
+    def async_icon_setting_for(self, model: Folder) -> Optional[IconSetting]:
+        with ThreadPoolExecutor(thread_name_prefix='icon_setting_for') as executor:
+            task = {executor.submit(
+                config.is_config_for, model): config for config in self.settings}
+            for future in as_completed(task):
+                setting = task[future]
+                try:
+                    if not future.result():
+                        continue
+                    return setting
+                except Exception as exc:
+                    print('%r Exception: %s' % (setting, exc))
+        return None
+
     def get_matched_folder(self, model: Folder) -> Optional[MatchedRuleFolder]:
-        config = self.icon_setting_for(model)
+        config = self.async_icon_setting_for(model)
         if config is None:
             return None
         action = prefix_value('Icon', width=7, align=ALIGN_LEFT)
@@ -85,7 +99,7 @@ class RulesApplyController:
     @ execution(message='Created matched icons', start_message='Creating matched icons')
     def creating_found_matches(self, exclude: ExcludeManager):
         action = CreateIconAction(self.folders, self.user_config)
-        action.execute()
+        action.async_execute()
         if not action.any_executed():
             return
         log.info(action.get_log_message(MatchedRuleFolder))

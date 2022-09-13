@@ -1,10 +1,12 @@
 from typing import Iterable, Protocol
 
+from icon_manager.config.user import UserConfig
 from icon_manager.interfaces.controller import IConfigHandler
 from icon_manager.rules.manager import ExcludeManager
 
 
 class IConfigService(IConfigHandler):
+    user_config: UserConfig
 
     def create_settings(self):
         ...
@@ -27,16 +29,16 @@ class IConfigService(IConfigHandler):
     def set_exclude_manager(self, exclude: ExcludeManager):
         ...
 
-    def find_and_apply_matches(self):
+    def find_and_apply(self):
         ...
 
-    def find_existing_content(self):
+    def find_existing(self):
         ...
 
     def re_apply_icons(self):
         ...
 
-    def delete_content(self):
+    def delete_setting(self):
         ...
 
 

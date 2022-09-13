@@ -2,6 +2,7 @@ import concurrent.futures
 import os
 from typing import Dict, Iterable, List, Sequence
 
+from icon_manager.config.user import UserConfig
 from icon_manager.crawler.filters import (files_by_extension,
                                           is_file_with_extensions)
 from icon_manager.helpers.path import crawle_folder
@@ -28,9 +29,10 @@ def crawling_folders(roots: Sequence[IconSearchFolder]) -> List[Folder]:
 
 
 # @crawler_result(message='Crawler found', log_start='ASYNC_crawler started')
-def async_crawling_folders(roots: Sequence[IconSearchFolder]) -> List[Folder]:
+def async_crawling_folders(config: UserConfig, roots: Sequence[IconSearchFolder]) -> List[Folder]:
     folders = []
-    with concurrent.futures.ThreadPoolExecutor() as executor:
+    prefix = f'Crawler {config.name}'
+    with concurrent.futures.ThreadPoolExecutor(thread_name_prefix=prefix) as executor:
         task = {executor.submit(_crawling, root): root for root in roots}
         for future in concurrent.futures.as_completed(task):
             root_folder = task[future]
