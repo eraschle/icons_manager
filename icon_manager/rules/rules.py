@@ -207,6 +207,12 @@ class NotContainsFileRule(ContainsFileRule):
 
 
 class ContainsFolderRule(ContainsFileRule):
+    def __init__(self, attribute: RuleAttribute, operator: Operator, values: Collection[str],
+                 case_sensitive: bool, before_or_after: bool,
+                 before_or_after_values: Collection[str], level: int) -> None:
+        super().__init__(attribute, operator, values, case_sensitive,
+                         before_or_after, before_or_after_values, level)
+        self.replace_values = []
 
     def get_generators(self) -> Sequence[Generator]:
         return []
