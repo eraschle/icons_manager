@@ -48,7 +48,7 @@ class IconFileController(ContentController[MatchedIconFile]):
 
     @execution(message='Crawle & build icons (__icon__ folder)')
     def delete_content(self) -> None:
-        action = DeleteAction(self.files)
+        action = DeleteAction(self. user_config, self.files)
         action.execute()
         if not action.any_executed():
             return

@@ -2,7 +2,8 @@ import logging
 from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Lock
-from typing import Generic, Iterable, List, TypeVar
+from typing import Generic, Iterable, List, Optional, TypeVar
+from icon_manager.config.user import UserConfig
 
 from icon_manager.helpers.string import (ALIGN_LEFT, ALIGN_RIGHT, THOUSAND,
                                          fixed_length, list_value,
@@ -17,8 +18,9 @@ TEntry = TypeVar('TEntry', bound=PathModel)
 
 class Action(ABC, Generic[TEntry]):
 
-    def __init__(self, entries: Iterable[TEntry], action_log: str) -> None:
+    def __init__(self, config: Optional[UserConfig], entries: Iterable[TEntry], action_log: str) -> None:
         super().__init__()
+        self.config = config
         self.entries = entries
         self.files: List[PathModel] = []
         self.folders: List[PathModel] = []
@@ -30,7 +32,10 @@ class Action(ABC, Generic[TEntry]):
             self.action_execute(entry)
 
     def async_execute(self) -> None:
-        with ThreadPoolExecutor(thread_name_prefix='execute action') as executor:
+        prefix = 'execute action'
+        if self.config is not None:
+            prefix = f'execute action {self.config.name}'
+        with ThreadPoolExecutor(thread_name_prefix=prefix) as executor:
             task = {executor.submit(
                 self.action_execute, entry): entry for entry in self.entries}
             for future in as_completed(task):
@@ -83,8 +88,8 @@ class Action(ABC, Generic[TEntry]):
 
 class DeleteAction(Action[PathModel]):
 
-    def __init__(self, entries: Iterable[PathModel]) -> None:
-        super().__init__(entries, 'Deleted')
+    def __init__(self, config: Optional[UserConfig], entries: Iterable[PathModel]) -> None:
+        super().__init__(config, entries, 'Deleted')
 
     def can_execute(self, entry: PathModel) -> bool:
         return entry.exists()

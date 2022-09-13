@@ -7,7 +7,7 @@ EXCLUDED_FOLDERS: Iterable[str] = []
 
 
 def _is_excluded(folder: Folder, options: FilterOptions) -> bool:
-    return options.clean_excluded and folder.name in EXCLUDED_FOLDERS
+    return options.clean_excluded and folder.parent_name in EXCLUDED_FOLDERS
 
 
 PROJECT_FOLDERS: Iterable[str] = []

@@ -59,8 +59,8 @@ class DesktopIniBuilder(FileCrawlerBuilder[DesktopIniFile]):
 
 class DesktopDeleteAction(DeleteAction):
 
-    def __init__(self, entries: Iterable[PathModel], checker: DesktopFileChecker) -> None:
-        super().__init__(entries)
+    def __init__(self, config: Optional[UserConfig], entries: Iterable[PathModel], checker: DesktopFileChecker) -> None:
+        super().__init__(config, entries)
         self.checker = checker
 
     def can_execute(self, entry: PathModel) -> bool:
@@ -83,7 +83,8 @@ class DesktopIniController(ContentController[DesktopIniFile]):
     @execution(message='Deleted DESKTOP.INI-files')
     def delete_content(self):
         checker = DesktopFileChecker(DesktopFileSource())
-        action = DesktopDeleteAction(self.desktop_files, checker)
+        action = DesktopDeleteAction(self.user_config, self.desktop_files,
+                                     checker)
         action.execute()
         if not action.any_executed():
             return

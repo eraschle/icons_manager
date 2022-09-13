@@ -128,7 +128,7 @@ class IconLibraryController(IConfigHandler, ISettingsHandler):
 
     def delete_icon_configs(self):
         configs = [setting.manager.config for setting in self._settings]
-        action = DeleteAction(configs)
+        action = DeleteAction(None, configs)
         action.execute()
         if not action.any_executed():
             return
