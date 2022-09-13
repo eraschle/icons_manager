@@ -65,9 +65,7 @@ class DesktopDeleteAction(DeleteAction):
 
     def can_execute(self, entry: PathModel) -> bool:
         can_execute = super().can_execute(entry)
-        if not can_execute or not isinstance(entry, File):
-            return False
-        return self.checker.is_app_file(entry)
+        return can_execute and self.checker.is_app_file(entry)
 
 
 class DesktopIniController(ContentController[DesktopIniFile]):
