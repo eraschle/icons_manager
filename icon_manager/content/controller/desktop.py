@@ -11,8 +11,8 @@ from icon_manager.content.models.matched import (MatchedIconFile,
                                                  MatchedRuleFolder)
 from icon_manager.crawler.filters import files_by_extension
 from icon_manager.data.ini_source import DesktopFileSource
-from icon_manager.helpers.decorator import execution
-from icon_manager.interfaces.actions import DeleteAction
+from icon_manager.helpers.decorator import execution, execution_action
+from icon_manager.interfaces.actions import Action, DeleteAction
 from icon_manager.interfaces.builder import FileCrawlerBuilder
 from icon_manager.interfaces.path import File, Folder, PathModel
 from icon_manager.library.models import IconSetting, LibraryIconFile
@@ -80,15 +80,15 @@ class DesktopIniController(ContentController[DesktopIniFile]):
         files = files_by_extension(folders, extensions)
         self.desktop_files = self.builder.build_models(files)
 
-    @execution(message='Deleted DESKTOP.INI-files')
-    def delete_content(self):
+    @execution_action(message='Deleted DESKTOP.INI-files')
+    def delete_content(self) -> Action:
         checker = DesktopFileChecker(DesktopFileSource())
         action = DesktopDeleteAction(self.user_config, self.desktop_files,
                                      checker)
         action.execute()
         if not action.any_executed():
-            return
-        log.info(action.get_log_message(DesktopIniFile))
+            return action
+        return action
 
 
 # endregion

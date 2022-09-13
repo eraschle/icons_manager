@@ -8,8 +8,9 @@ from icon_manager.content.controller.re_apply import ReApplyController
 from icon_manager.content.models.matched import MatchedRuleFolder
 from icon_manager.crawler.filters import filter_folders
 from icon_manager.crawler.options import FilterOptions
-from icon_manager.helpers.decorator import execution
+from icon_manager.helpers.decorator import execution, execution_action
 from icon_manager.helpers.string import ALIGN_LEFT, prefix_value
+from icon_manager.interfaces.actions import Action
 from icon_manager.interfaces.builder import FolderCrawlerBuilder
 from icon_manager.interfaces.path import Folder, FolderModel
 from icon_manager.library.models import IconSetting
@@ -81,13 +82,13 @@ class RulesApplyController:
         self.builder.setup(settings=settings)
         self.folders = self.builder.build_models(folders)
 
-    @ execution(message='Created matched icons', start_message='Creating matched icons')
-    def creating_found_matches(self, exclude: ExcludeManager):
+    @ execution_action(message='Created matched icons', start_message='Creating matched icons')
+    def creating_found_matches(self, exclude: ExcludeManager) -> Action:
         action = CreateIconAction(self.folders, self.user_config)
         action.async_execute()
         if not action.any_executed():
-            return
-        log.info(action.get_log_message(MatchedRuleFolder))
+            return action
+        return action
 
     def re_apply_matches(self, controller: ReApplyController):
         action = ReCreateIconAction(controller, self.user_config)
