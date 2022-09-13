@@ -73,7 +73,10 @@ class Rule(str, Enum):
     CONTAINS = 'contains'
     NOT_CONTAINS = 'not_contains'
     CHAINED = 'chained'
-    CONTAINS_FILE = 'contains_files'
+    CONTAINS_FILE = 'contains_file'
+    NOT_CONTAINS_FILE = 'not_contains_file'
+    CONTAINS_FOLDER = 'contains_folder'
+    NOT_CONTAINS_FOLDER = 'not_contains_folder'
 
 
 def get_rule(value) -> Rule:

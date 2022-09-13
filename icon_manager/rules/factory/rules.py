@@ -166,7 +166,8 @@ class ContainsFileRuleBuilder(ASingleRuleBuilder[ContainsFileRule]):
 
     @classmethod
     def builder_for_rules(cls) -> Iterable[str]:
-        return [Rule.CONTAINS_FILE]
+        return [Rule.CONTAINS_FILE, Rule.NOT_CONTAINS_FILE,
+                Rule.CONTAINS_FOLDER, Rule.NOT_CONTAINS_FOLDER]
 
     def __init__(self, **kwargs) -> None:
         super().__init__(rule_type=ContainsFileRule, **kwargs)

@@ -17,7 +17,10 @@
         "contains": "Does the attribute value contains in the rule values",
         "not_contains": "Does the attribute value NOT contains in the rule values",
         "chained": "Does the attribute value NOT contains in the rule values",
-        "contains_files": "Does files with the EXTENSIONS (rule values) exists"
+        "contains_file": "Does files contains with the EXTENSIONS (rule values) exists",
+        "not_contains_file": "Does NOT contains files with the EXTENSIONS (rule values) exists",
+        "contains_folder": "Does contains folders with the name (rule values) exists",
+        "not_contains_folder": "Does NOT contains folders with the name (rule values) exists"
     },
     "template": {
         "copy_icon": "Setting if the icon should be copied. No value means the settings are taken user config. This value overwrites all previous ones ",

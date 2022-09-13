@@ -192,8 +192,52 @@ class ContainsFileRule(FolderRule):
 
     @matched_value()
     def is_value_allowed(self, entry: Folder, _: str, rule_value: str) -> bool:
-        extensions = self.get_extensions(entry, level=0)
+        folder = entry
+        if self.attribute == RuleAttribute.PARENT_PATH and entry.parent is not None:
+            folder = entry.parent
+        extensions = self.get_extensions(folder, level=0)
         return any(ext.endswith(rule_value) for ext in extensions)
+
+
+class NotContainsFileRule(ContainsFileRule):
+
+    @matched_value()
+    def is_value_allowed(self, entry: Folder, value: str, rule_value: str) -> bool:
+        return not super().is_value_allowed(entry, value, rule_value)
+
+
+class ContainsFolderRule(ContainsFileRule):
+
+    def get_generators(self) -> Sequence[Generator]:
+        return []
+
+    def get_folder_names(self, folder: Folder) -> Set[str]:
+        names = [folder.name for folder in folder.folders]
+        return set(names)
+
+    def get_folders(self, entry: Folder, level: int) -> Iterable[str]:
+        folders = self.get_folder_names(entry)
+        level += 1
+        if level >= self.max_level:
+            return folders
+        for folder in entry.folders:
+            folders.update(self.get_folders(folder, level))
+        return folders
+
+    @matched_value()
+    def is_value_allowed(self, entry: Folder, _: str, rule_value: str) -> bool:
+        folder = entry
+        if self.attribute == RuleAttribute.PARENT_PATH and entry.parent is not None:
+            folder = entry.parent
+        folder_names = self.get_folders(folder, level=0)
+        return any(name == rule_value for name in folder_names)
+
+
+class NotContainsFolderRule(ContainsFolderRule):
+
+    @matched_value()
+    def is_value_allowed(self, entry: Folder, value: str, rule_value: str) -> bool:
+        return not super().is_value_allowed(entry, value, rule_value)
 
 
 # endregion
