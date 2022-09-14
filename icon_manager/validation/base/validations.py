@@ -1,10 +1,10 @@
 
 import re
 from datetime import datetime
-from typing import Collection, Generic, Optional, TypeVar, Union
+from typing import Collection, Optional, Union
 
-from icon_manager.validation.filter_rules import ValidationRule
-from icon_manager.validation.rules.validator import TValue
+from icon_manager.validation.base.validator import TValue
+from icon_manager.validation.validation_rules import ValidationRule
 
 DATA_ERRORS = (TypeError, IndexError, KeyError,
                NameError, ValueError, AttributeError)

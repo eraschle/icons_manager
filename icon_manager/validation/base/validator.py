@@ -45,7 +45,6 @@ class ConsiderationRule(ABC, Generic[TFilterRule]):
     @property
     def apply_to(self) -> TFilterRule:
         if isfunction(self.__apply_to):
-            # noinspection PyCallingNonCallable
             return self.__apply_to()
         return self.__apply_to
 

@@ -1,11 +1,11 @@
 from typing import List
 
 from icon_manager.rules.rules import EqualsRule, IPathOperationRule, IRuleValuesFilter
-from icon_manager.validation.filter_rules import (KnownOperatorRule,
-                                                  KnownRuleAttributeRule)
-from icon_manager.validation.rules.validations import (MinLengthRule,
-                                                       MinValueRule)
-from icon_manager.validation.rules.validator import ValidationRule, Validator
+from icon_manager.validation.validation_rules import (KnownOperatorRule,
+                                                      KnownRuleAttributeRule)
+from icon_manager.validation.base.validations import (MinLengthRule,
+                                                      MinValueRule)
+from icon_manager.validation.base.validator import ValidationRule, Validator
 
 
 def get_rule_values_validation_rules(rule: IRuleValuesFilter) -> List[ValidationRule]:

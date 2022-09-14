@@ -2,7 +2,7 @@
 from typing import Sequence
 
 from icon_manager.rules.base import Operator, RuleAttribute
-from icon_manager.validation.rules.validator import ValidationRule
+from icon_manager.validation.base.validator import ValidationRule
 
 
 class KnownRuleAttributeRule(ValidationRule[RuleAttribute]):
