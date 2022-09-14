@@ -22,7 +22,7 @@ class IconsAppService(ServiceProtocol):
         self.services: List[IConfigService] = []
 
     def _create_service(self, user_config: UserConfig) -> IConfigService:
-        library = IconLibraryController()
+        library = IconLibraryController(user_config)
         desktop = DesktopIniController(user_config)
         folders = IconFolderController(user_config)
         files = IconFileController(user_config)
