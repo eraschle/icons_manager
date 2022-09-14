@@ -125,10 +125,6 @@ class ISingleRule(IFilterRule):
     def name(self) -> str:
         ...
 
-    @property
-    def validator(self) -> IRuleValidator:
-        ...
-
     def is_allowed(self, entry: Folder) -> bool:
         ...
 

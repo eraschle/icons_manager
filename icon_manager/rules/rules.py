@@ -16,6 +16,35 @@ log = logging.getLogger(__name__)
 # region FOLDER RULES
 
 
+class IRuleValuesFilter(ISingleRule):
+    operator: Operator
+    attribute: RuleAttribute
+    rule_values: Collection[str]
+    is_case_sensitive: bool
+
+    @property
+    def name(self) -> str:
+        ...
+
+    def is_allowed(self, entry: Folder) -> bool:
+        ...
+
+    def is_empty(self) -> bool:
+        ...
+
+    def set_before_or_after(self, values: Iterable[str]) -> None:
+        ...
+
+    def setup_filter_rule(self) -> None:
+        ...
+
+    def prepare_rule_values(self, values: Collection[str]) -> Collection[str]:
+        ...
+
+    def prepare_element_value(self, value: str) -> str:
+        ...
+
+
 class FolderRule(ASingleRule):
 
     def __init__(self, attribute: RuleAttribute, operator: Operator,
@@ -153,7 +182,37 @@ class StartsOrEndsWithRule(FolderRule):
         return value.startswith(rule_value) or value.endswith(rule_value)
 
 
-class ContainsFileRule(FolderRule):
+class IPathOperationRule(IRuleValuesFilter):
+    operator: Operator
+    attribute: RuleAttribute
+    rule_values: Collection[str]
+    is_case_sensitive: bool
+    max_level: int
+
+    @property
+    def name(self) -> str:
+        ...
+
+    def is_allowed(self, entry: Folder) -> bool:
+        ...
+
+    def is_empty(self) -> bool:
+        ...
+
+    def set_before_or_after(self, values: Iterable[str]) -> None:
+        ...
+
+    def setup_filter_rule(self) -> None:
+        ...
+
+    def prepare_rule_values(self, values: Collection[str]) -> Collection[str]:
+        ...
+
+    def prepare_element_value(self, value: str) -> str:
+        ...
+
+
+class ContainsFileRule(FolderRule, IPathOperationRule):
 
     def __init__(self, attribute: RuleAttribute, operator: Operator, values: Collection[str],
                  case_sensitive: bool, before_or_after: bool,
