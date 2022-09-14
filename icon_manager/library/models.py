@@ -2,9 +2,8 @@ import logging
 import os
 from typing import Iterable, Optional, Sequence, Tuple
 
-from icon_manager.interfaces.path import Folder
-from icon_manager.interfaces.path import (FileModel, FolderModel, JsonFile,
-                                          PathModel)
+from icon_manager.interfaces.path import (FileModel, Folder, FolderModel,
+                                          JsonFile, PathModel)
 from icon_manager.rules.manager import RuleManager
 
 log = logging.getLogger(__name__)
@@ -105,10 +104,10 @@ class ArchiveFolder(FolderModel):
     folder_name: str = '__archive__'
 
     @ classmethod
-    def get_folder_path(cls, entry: PathModel) -> str:
+    def get_archive_folder(cls, entry: PathModel) -> 'ArchiveFolder':
         if entry.is_dir():
-            return os.path.join(entry.name, cls.folder_name)
-        return os.path.join(entry.parent_path, cls.folder_name)
+            return ArchiveFolder(os.path.join(entry.path, cls.folder_name))
+        return ArchiveFolder(os.path.join(entry.parent_path, cls.folder_name))
 
     @ classmethod
     def is_model(cls, path: str) -> bool:
@@ -120,3 +119,6 @@ class ArchiveFolder(FolderModel):
     def get_archive_file(self, file: FileModel) -> ArchiveFile:
         archive_path = self.get_archive_path(file)
         return ArchiveFile(archive_path)
+
+    def is_archive(self, path: str) -> bool:
+        return path.startswith(self.path)

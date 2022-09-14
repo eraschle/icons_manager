@@ -1,14 +1,13 @@
-import copy
 import logging
 from typing import Dict, Iterable, List, Optional, Sequence
 
+from icon_manager.config.user import UserConfig
 from icon_manager.content.models.matched import IconSetting
-from icon_manager.interfaces.path import File
 from icon_manager.helpers.resource import icon_setting_template
 from icon_manager.interfaces.actions import DeleteAction
 from icon_manager.interfaces.builder import FileCrawlerBuilder, ModelBuilder
 from icon_manager.interfaces.controller import IConfigHandler, ISettingsHandler
-from icon_manager.interfaces.path import FileModel, JsonFile, PathModel
+from icon_manager.interfaces.path import File, FileModel, JsonFile, PathModel
 from icon_manager.library.models import (ArchiveFolder, IconFile,
                                          LibraryIconFile)
 from icon_manager.rules.factory.manager import RuleManagerFactory
@@ -82,8 +81,9 @@ class IconLibraryController(IConfigHandler, ISettingsHandler):
         JsonFile.extension(with_point=False)
     ]
 
-    def __init__(self, builder: IconSettingBuilder = IconSettingBuilder()) -> None:
+    def __init__(self, user_config: UserConfig, builder: IconSettingBuilder = IconSettingBuilder()) -> None:
         self.builder = builder
+        self.user_config = user_config
         self.library_icons: Iterable[LibraryIconFile] = []
         self._settings: List[IconSetting] = []
 
@@ -99,10 +99,17 @@ class IconLibraryController(IConfigHandler, ISettingsHandler):
             setting.set_before_or_after(before_or_after)
         return settings
 
+    def remove_archived_files(self, files: Iterable[File]) -> List[File]:
+        library_path = self.user_config.icons_path
+        archive = ArchiveFolder.get_archive_folder(library_path)
+        return list(filter(lambda file: not archive.is_archive(file.path), files))
+
     def create_settings(self, content: Dict[str, List[File]]):
         rules = content.get(JsonFile.extension(with_point=False), [])
+        rules = self.remove_archived_files(rules)
         self.builder.update_rules(rules=rules)
         icons = content.get(LibraryIconFile.extension(with_point=False), [])
+        icons = self.remove_archived_files(icons)
         self.library_icons = self.builder.build_icons(icons)
         self._settings = self.builder.build_models(self.library_icons)
         self.clean_empty_rules()
@@ -150,8 +157,7 @@ class IconLibraryController(IConfigHandler, ISettingsHandler):
         file.remove()
 
     def get_archive_folder(self, icon: FileModel):
-        folder_path = ArchiveFolder.get_folder_path(icon)
-        folder = ArchiveFolder(folder_path)
+        folder = ArchiveFolder.get_archive_folder(icon)
         if not folder.exists():
             folder.create()
         return folder
