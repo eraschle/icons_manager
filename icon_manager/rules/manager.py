@@ -1,15 +1,16 @@
 import logging
 from typing import Iterable, Optional, Sequence
 
-from icon_manager.interfaces.managers import (IAttributeChecker, IChecker,
-                                              IRuleChecker)
+from icon_manager.interfaces.managers import (IAttributeRuleController,
+                                              IConfigManager,
+                                              IConfigRuleController)
 from icon_manager.interfaces.path import Folder, JsonFile
 from icon_manager.rules.base import ISingleRule, Operator, RuleAttribute
 
 log = logging.getLogger(__name__)
 
 
-class AttributeChecker(IAttributeChecker[Folder]):
+class AttributeRuleHandler(IAttributeRuleController[Folder]):
 
     def __init__(self, attribute: RuleAttribute, operator: Operator,
                  rules: Sequence[ISingleRule]) -> None:
@@ -49,38 +50,38 @@ class AttributeChecker(IAttributeChecker[Folder]):
         return self.__str__()
 
 
-class RuleChecker(IRuleChecker[Folder]):
+class ConfigRuleController(IConfigRuleController[Folder]):
 
-    def __init__(self, checkers: Sequence[AttributeChecker],
+    def __init__(self, checkers: Sequence[AttributeRuleHandler],
                  operator: Operator) -> None:
-        self.checkers = checkers
+        self.controllers = checkers
         self.operator = operator
 
     @property
     def name(self) -> str:
         attributes = ', '.join([checker.attribute.name
-                               for checker in self.checkers])
+                               for checker in self.controllers])
         return f'Rule Checker [{attributes}]'
 
     def is_empty(self) -> bool:
-        return all(checker.is_empty() for checker in self.checkers)
+        return all(checker.is_empty() for checker in self.controllers)
 
     def clean_empty(self) -> None:
-        checkers = []
-        for checker in self.checkers:
+        controllers = []
+        for checker in self.controllers:
             checker.clean_empty()
             if checker.is_empty():
                 continue
-            checkers.append(checker)
-        self.checkers = checkers
+            controllers.append(checker)
+        self.controllers = controllers
 
     def is_allowed(self, entry: Folder) -> bool:
         if self.operator == Operator.ALL:
-            return all(checker.is_allowed(entry) for checker in self.checkers)
-        return any(rule.is_allowed(entry) for rule in self.checkers)
+            return all(checker.is_allowed(entry) for checker in self.controllers)
+        return any(rule.is_allowed(entry) for rule in self.controllers)
 
     def setup_rules(self, before_or_after: Iterable[str]) -> None:
-        for checker in self.checkers:
+        for checker in self.controllers:
             checker.setup_rules(before_or_after)
 
     def __str__(self) -> str:
@@ -90,9 +91,10 @@ class RuleChecker(IRuleChecker[Folder]):
         return self.__str__()
 
 
-class RuleManager(IChecker[Folder]):
+class RuleManager(IConfigManager[Folder]):
 
-    def __init__(self, config: JsonFile, checker: RuleChecker, weight: int, copy_icon: Optional[bool]) -> None:
+    def __init__(self, config: JsonFile, checker: IConfigRuleController,
+                 weight: int, copy_icon: Optional[bool]) -> None:
         self.config = config
         self.checker = checker
         self.weight = weight
@@ -122,16 +124,13 @@ class RuleManager(IChecker[Folder]):
         return self.__str__()
 
 
-class ExcludeManager(IChecker[Folder]):
+class ExcludeManager(IConfigManager[Folder]):
 
-    def __init__(self, checkers: Sequence[IRuleChecker[Folder]]) -> None:
+    def __init__(self, checkers: Sequence[IConfigRuleController[Folder]]) -> None:
         self.checkers = checkers
 
     def is_empty(self) -> bool:
         return all(checker.is_empty() for checker in self.checkers)
-
-    def is_valid(self) -> bool:
-        return all(checker.is_valid() for checker in self.checkers)
 
     def clean_empty(self) -> None:
         checkers = []

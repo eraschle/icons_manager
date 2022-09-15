@@ -2,9 +2,9 @@ import pprint
 from abc import ABC, abstractmethod
 from enum import Enum
 from inspect import isfunction
-from typing import Generic, Optional, TypeVar
+from typing import Any, Dict, Generic, Iterable, Optional, Protocol, TypeVar
 
-from icon_manager.rules.base import IFilterRule
+from icon_manager.rules.base import RuleProtocol
 
 
 class JoinType(Enum):
@@ -14,15 +14,45 @@ class JoinType(Enum):
     NOT = 4
 
 
-TValue = TypeVar('TValue', bound=object)
-TFilterRule = TypeVar('TFilterRule', bound=IFilterRule)
+TValue = TypeVar('TValue', bound=object, covariant=True)
 
 
-class ConsiderationRule(ABC, Generic[TFilterRule]):
+class IValidatorRule(Protocol, Generic[TValue]):
+
+    @property
+    def apply_to(self) -> TValue:
+        ...
+
+    def apply(self) -> bool:
+        """
+        Abstract method that must be implemented by concrete get_rules in order to return a boolean
+        indicating whether the rule is respected or not.
+
+        :return: True if the rule is respected, False otherwise
+        :rtype: bool
+        """
+        ...
+
+    def get_violation(self) -> str:
+        """
+        Returns the message that will be used by the validator if the rule is not respected.
+        If a custom error message is provided during rule instantiation that one will be used,
+        otherwise the default one.
+
+        :return: Error message
+        :rtype: str
+        """
+        ...
+
+
+TRule = TypeVar('TRule', bound=RuleProtocol)
+
+
+class ConsiderRule(IValidatorRule[TRule]):
     """
     Base abstract rule class from which concrete ones must inherit from.
 
-    :param apply_to: The against which the rule is applied (TFilterRule).
+    :param apply_to: The against which the rule is applied (TRule).
     :type apply_to: object
     :param label: Short string describing the field that will be validated (e.g. "phone number", "user name"...). \
     This string will be used as the key in the ValidationResult error dictionary.
@@ -34,40 +64,30 @@ class ConsiderationRule(ABC, Generic[TFilterRule]):
     :type stop_if_invalid: bool
     """
 
+    @classmethod
+    def is_consideration(cls, rule: RuleProtocol) -> bool:
+        raise NotImplementedError
+
     #: Default error message for the rule (class attribute).
     default_consideration_message = 'Make this setting sense.'
 
-    def __init__(self, apply_to: TFilterRule, label: str, consideration: Optional[str] = None):
+    def __init__(self, apply_to: TRule, label: str = '',
+                 consideration: Optional[str] = None):
         self.__apply_to = apply_to
         self.label = label
         self.consideration = consideration
 
     @property
-    def apply_to(self) -> TFilterRule:
+    def apply_to(self) -> TRule:
         if isfunction(self.__apply_to):
             return self.__apply_to()
         return self.__apply_to
 
-    def get_consideration_message(self) -> str:
-        """
-        Returns the message that will be used by the validator if the rule is not respected.
-        If a custom error message is provided during rule instantiation that one will be used,
-        otherwise the default one.
-
-        :return: Error message
-        :rtype: str
-        """
+    def get_violation(self) -> str:
         return self.consideration or self.default_consideration_message
 
     @abstractmethod
     def apply(self) -> bool:
-        """
-        Abstract method that must be implemented by concrete get_rules in order to return a boolean
-        indicating whether the rule is respected or not.
-
-        :return: True if the rule is respected, False otherwise
-        :rtype: bool
-        """
         pass  # pragma: no cover
 
     def __invert__(self):
@@ -81,7 +101,7 @@ class ConsiderationRule(ABC, Generic[TFilterRule]):
         return self
 
 
-class ValidationRule(ABC, Generic[TValue]):
+class ValidationRule(IValidatorRule[TValue]):
     """
     Base abstract rule class from which concrete ones must inherit from.
 
@@ -114,26 +134,11 @@ class ValidationRule(ABC, Generic[TValue]):
             return self.__apply_to()
         return self.__apply_to
 
-    def get_error_message(self) -> str:
-        """
-        Returns the message that will be used by the validator if the rule is not respected.
-        If a custom error message is provided during rule instantiation that one will be used,
-        otherwise the default one.
-
-        :return: Error message
-        :rtype: str
-        """
+    def get_violation(self) -> str:
         return self.custom_error_message or self.default_error_message
 
     @abstractmethod
     def apply(self) -> bool:
-        """
-        Abstract method that must be implemented by concrete get_rules in order to return a boolean
-        indicating whether the rule is respected or not.
-
-        :return: True if the rule is respected, False otherwise
-        :rtype: bool
-        """
         pass  # pragma: no cover
 
     def __invert__(self):
@@ -210,8 +215,8 @@ class RuleGroup(ValidationRule):
 
     def get_error_message(self) -> str:
         if isinstance(self._failed_rule, ValidationRule):
-            return self._failed_rule.get_error_message()
-        return super().get_error_message()
+            return self._failed_rule.get_violation()
+        return super().get_violation()
 
     def apply(self) -> bool:
         for entry in self.rules:
@@ -226,7 +231,24 @@ class RuleGroup(ValidationRule):
         return True
 
 
-class ValidationResult:
+class IRuleViolation(Protocol):
+
+    @property
+    def violations(self) -> Dict[str, Any]:
+        ...
+
+    @property
+    def considers(self) -> Dict[str, Any]:
+        ...
+
+    def is_successful(self) -> bool:
+        ...
+
+    def any_considers(self) -> bool:
+        ...
+
+
+class RuleViolations(IRuleViolation):
     """
     Represents a report of Validator's validate() call.
 
@@ -234,10 +256,20 @@ class ValidationResult:
     :type errors: dict
     """
 
-    def __init__(self, errors: Optional[dict] = None):
-        self.errors = errors or {}
+    def __init__(self, errors: Optional[Dict[str, Any]] = None,
+                 considers: Optional[Dict[str, Any]] = None):
+        self._errors = errors or {}
+        self._considers = considers or {}
 
-    def annotate_rule_violation(self, rule: ValidationRule) -> None:
+    @property
+    def violations(self) -> Dict[str, Any]:
+        return self._errors
+
+    @property
+    def considers(self) -> Dict[str, Any]:
+        return self._considers
+
+    def annotate_considers(self, rule: ConsiderRule) -> None:
         """
         Takes note of a rule validation failure by collecting its error message.
 
@@ -245,11 +277,24 @@ class ValidationResult:
         :type rule: ValidationRule
         :return: None
         """
-        if self.errors.get(rule.label) is None:
-            self.errors[rule.label] = []
-        self.errors[rule.label].append(rule.get_error_message())
+        if self.considers.get(rule.label) is None:
+            self.considers[rule.label] = []
+        self.considers[rule.label].append(rule.get_violation())
 
-    def annotate_exception(self, exception: Exception, rule: Optional[ValidationRule] = None) -> None:
+    def annotate_violation(self, rule: ValidationRule) -> None:
+        """
+        Takes note of a rule validation failure by collecting its error message.
+
+        :param rule: Rule that failed validation.
+        :type rule: ValidationRule
+        :return: None
+        """
+        if self.violations.get(rule.label) is None:
+            self.violations[rule.label] = []
+        self.violations[rule.label].append(rule.get_violation())
+
+    def annotate_exception(self, exception: Exception,
+                           rule: Optional[ValidationRule] = None) -> None:
         """
         Takes note of an exception occurred during validation.
         (Typically caused by an invalid attribute/key access inside get_rules() method)
@@ -262,9 +307,9 @@ class ValidationResult:
         """
         error_key = rule.label if isinstance(
             rule, ValidationRule) else 'get_rules'
-        if self.errors.get(error_key) is None:
-            self.errors[error_key] = []
-        self.errors[error_key].append(str(exception))
+        if self.violations.get(error_key) is None:
+            self.violations[error_key] = []
+        self.violations[error_key].append(str(exception))
 
     def is_successful(self) -> bool:
         """
@@ -273,41 +318,46 @@ class ValidationResult:
         :return: True if the validation is successful, False otherwise.
         :rtype: bool
         """
-        return len(self.errors) == 0
+        return len(self.violations) == 0
 
-    def __str__(self):
-        info = {'errors': self.errors or {}}
-        formatted_string = pprint.pformat(info)
-        return formatted_string
+    def any_considers(self) -> bool:
+        """
+        Checks that the validation result does not contain errors.
+
+        :return: True if the validation is successful, False otherwise.
+        :rtype: bool
+        """
+        return len(self.considers) > 0
+
+    def __str__(self) -> str:
+        return f'Violations: {len(self.violations)} Considers: {len(self.considers)}'
+
+    def __repr__(self) -> str:
+        return self.__str__()
 
 
 class ValidationException(Exception):
-    """
-    Internal exception used by the library to represent a validation failure when using a Validator as a context
-    processor.
 
-    :param validation_result: Validation result returned by validator.
-    :type validation_result: ValidationResult
-    :param message: Error message
-    :type message: str
-    """
-
-    def __init__(self, validation_result: ValidationResult, message: str = 'Data did not validate.'):
+    def __init__(self, validation_result: RuleViolations,
+                 message: str = 'Data did not validate.'):
         super().__init__(message)
         self.message = message
         self.validation_result = validation_result
 
     def __str__(self):
         info = {'message': self.message,
-                'errors': self.validation_result.errors}
+                'errors': self.validation_result.violations}
         formatted_string = pprint.pformat(info)
         return formatted_string
 
 
-TRule = TypeVar('TRule', bound=IFilterRule)
+class IValidator(Protocol):
+
+    def analyze(self) -> IRuleViolation:
+        ...
 
 
-class Validator(ABC, Generic[TRule]):
+class Validator(ABC, IValidator, Generic[TRule]):
     """
     Validate a rule model against a list of ValidationRule(s).
     This class is abstract, concrete validators must inherit from Validator in order to provide a
@@ -317,11 +367,15 @@ class Validator(ABC, Generic[TRule]):
     :type rule: TRule
     """
 
-    def __init__(self, data: TRule):
-        self.data = data
+    @classmethod
+    def is_validator(cls, rule: RuleProtocol) -> bool:
+        raise NotImplementedError
+
+    def __init__(self, rule: TRule):
+        self.rule = rule
 
     def __enter__(self):
-        validation = self.validate()
+        validation = self.analyze()
         if not validation.is_successful():
             raise ValidationException(validation)
         return self
@@ -329,45 +383,36 @@ class Validator(ABC, Generic[TRule]):
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
 
-    @abstractmethod
-    def get_validations(self) -> list:
-        """
-        Concrete validators must implement this abstract method in order to return a list of ValidationRule(s),
-        that will be used to validate the model.
-
-        :return: ValidationRule list
-        :rtype: list
-        """
-        pass  # pragma: no cover
+    def analyze(self) -> RuleViolations:
+        result = self.validate(RuleViolations())
+        return self.consider(result)
 
     @abstractmethod
-    def get_considerations(self) -> list:
-        """
-        Concrete validators must implement this abstract method in order to return a list of ConsiderationRule (s),
-        that will applied on the model.
-
-        :return: ConsiderationRule list
-        :rtype: list
-        """
+    def get_validations(self) -> Iterable[ValidationRule]:
         pass  # pragma: no cover
 
-    def validate(self) -> ValidationResult:
-        """
-        Apply the configured ValidationRule(s) (in the given order) and return a ValidationResult object.
-
-        :return: validation result
-        :rtype: ValidationResult
-        """
-        result = ValidationResult()
+    def validate(self, result: RuleViolations) -> RuleViolations:
         try:
-            for rule in self.get_validations():
+            for validation in self.get_validations():
                 try:
-                    if not rule.apply():
-                        result.annotate_rule_violation(rule)
-                        if rule.stop_if_invalid:
-                            break
+                    if validation.apply():
+                        continue
+                    result.annotate_violation(validation)
+                    if validation.stop_if_invalid:
+                        break
                 except Exception as e:
-                    result.annotate_exception(e, rule)
+                    result.annotate_exception(e, validation)
         except Exception as e:
             result.annotate_exception(e, None)
+        return result
+
+    @abstractmethod
+    def get_considerations(self) -> Iterable[ConsiderRule]:
+        pass  # pragma: no cover
+
+    def consider(self, result: RuleViolations) -> RuleViolations:
+        for rule in self.get_considerations():
+            if not rule.apply():
+                continue
+            result.annotate_considers(rule)
         return result

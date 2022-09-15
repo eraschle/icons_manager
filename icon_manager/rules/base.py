@@ -25,6 +25,10 @@ TEntry = TypeVar('TEntry', bound=object, contravariant=True)
 class RuleProtocol(Protocol, Generic[TEntry]):
     operator: Operator
 
+    @property
+    def name(self) -> str:
+        ...
+
     def is_allowed(self, entry: TEntry) -> bool:
         ...
 
