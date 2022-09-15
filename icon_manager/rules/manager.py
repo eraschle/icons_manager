@@ -1,10 +1,9 @@
 import logging
 from typing import Iterable, Optional, Sequence
 
-from icon_manager.interfaces.path import Folder
 from icon_manager.interfaces.managers import (IAttributeChecker, IChecker,
                                               IRuleChecker)
-from icon_manager.interfaces.path import JsonFile
+from icon_manager.interfaces.path import Folder, JsonFile
 from icon_manager.rules.base import ISingleRule, Operator, RuleAttribute
 
 log = logging.getLogger(__name__)

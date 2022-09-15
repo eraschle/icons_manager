@@ -39,10 +39,10 @@ class ConfigService(IConfigService):
         return self.__exclude
 
     @execution(message='Created icon settings')
-    def create_settings(self):
+    def create_icon_settings(self):
         extensions = IconLibraryController.icons_extensions
         content = crawling_icons(self.user_config.icons_path, extensions)
-        self.settings.create_settings(content)
+        self.settings.create_icon_settings(content)
 
     def create_icon_configs(self):
         self.settings.create_icon_configs()
@@ -67,7 +67,7 @@ class ConfigService(IConfigService):
 
     @execution(message='Found & applied icons', start_message='Start find & apply icons')
     def find_and_apply(self):
-        settings = self.settings.create_icon_settings(self._before_or_after)
+        settings = self.settings.updated_settings(self._before_or_after)
         entries = self.crawling_search_folders()
         entries = self.rules.crawle_and_build_result(entries, self.exclude)
         self.rules.search_and_find_matches(entries, settings)

@@ -92,7 +92,7 @@ class IconLibraryController(IConfigHandler, ISettingsHandler):
             return list(filter(lambda ico: not ico.is_empty(), self._settings))
         return self._settings
 
-    def create_icon_settings(self, before_or_after: Iterable[str]) -> Sequence[IconSetting]:
+    def updated_settings(self, before_or_after: Iterable[str]) -> Sequence[IconSetting]:
         # settings = copy.deepcopy(self.settings(clean_empty=True))
         settings = self.settings(clean_empty=True)
         for setting in settings:
@@ -104,7 +104,7 @@ class IconLibraryController(IConfigHandler, ISettingsHandler):
         archive = ArchiveFolder.get_archive_folder(library_path)
         return list(filter(lambda file: not archive.is_archive(file.path), files))
 
-    def create_settings(self, content: Dict[str, List[File]]):
+    def create_icon_settings(self, content: Dict[str, List[File]]):
         rules = content.get(JsonFile.extension(with_point=False), [])
         rules = self.remove_archived_files(rules)
         self.builder.update_rules(rules=rules)

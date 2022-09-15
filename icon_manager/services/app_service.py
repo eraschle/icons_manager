@@ -41,7 +41,7 @@ class IconsAppService(ServiceProtocol):
 
     def create_settings(self):
         for service in self.services:
-            service.create_settings()
+            service.create_icon_settings()
 
     def create_library_configs(self):
         for service in self.services:
@@ -72,8 +72,7 @@ class IconsAppService(ServiceProtocol):
     def async_find_and_apply_matches(self):
         with ThreadPoolExecutor(thread_name_prefix='find_and_apply_matches',
                                 max_workers=thread_count(self.services)) as executor:
-            task = {executor.submit(srv.find_and_apply)
-                                    : srv for srv in self.services}
+            task = {executor.submit(service.find_and_apply): service for service in self.services}
             for future in as_completed(task):
                 user_service = task[future]
                 try:
@@ -88,8 +87,7 @@ class IconsAppService(ServiceProtocol):
     def async_find_existing_content(self):
         with ThreadPoolExecutor(thread_name_prefix='find_existing_content',
                                 max_workers=thread_count(self.services)) as executor:
-            task = {executor.submit(srv.find_existing)
-                                    : srv for srv in self.services}
+            task = {executor.submit(service.find_existing): service for service in self.services}
             for future in as_completed(task):
                 user_service = task[future]
                 try:
@@ -108,8 +106,7 @@ class IconsAppService(ServiceProtocol):
     def async_delete_icon_settings(self):
         with ThreadPoolExecutor(thread_name_prefix='delete_icon_settings',
                                 max_workers=thread_count(self.services)) as executor:
-            task = {executor.submit(srv.delete_setting)
-                                    : srv for srv in self.services}
+            task = {executor.submit(service.delete_setting): service for service in self.services}
             for future in as_completed(task):
                 user_service = task[future]
                 try:

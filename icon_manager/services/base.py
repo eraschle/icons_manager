@@ -8,7 +8,7 @@ from icon_manager.rules.manager import ExcludeManager
 class IConfigService(IConfigHandler):
     user_config: UserConfig
 
-    def create_settings(self):
+    def create_icon_settings(self):
         ...
 
     def create_icon_configs(self):
