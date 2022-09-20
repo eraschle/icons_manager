@@ -11,13 +11,14 @@ from icon_manager.rules.base import (IFilterRule, ISingleRule, Operator,
                                      RuleAttribute)
 from icon_manager.rules.factory.rules import (ConfigKeys, get_builders,
                                               pop_operator)
-from icon_manager.rules.manager import (AttributeChecker, ExcludeManager,
-                                        RuleChecker, RuleManager)
+from icon_manager.rules.manager import (AttributeRuleHandler,
+                                        ConfigRuleController, ExcludeManager,
+                                        RuleManager)
 
 log = logging.getLogger(__name__)
 
 
-class AttributeCheckerFactory(ContentFactory[Dict[str, Any], AttributeChecker]):
+class AttributeCheckerFactory(ContentFactory[Dict[str, Any], AttributeRuleHandler]):
 
     def __init__(self) -> None:
         super().__init__()
@@ -37,11 +38,11 @@ class AttributeCheckerFactory(ContentFactory[Dict[str, Any], AttributeChecker]):
             rules.append(rule)
         return rules
 
-    def create(self, config: Dict[str, Any], **kwargs) -> AttributeChecker:
+    def create(self, config: Dict[str, Any], **kwargs) -> AttributeRuleHandler:
         attribute = kwargs.get(ConfigKeys.ATTRIBUTE, RuleAttribute.UNKNOWN)
         operator = pop_operator(config, Operator.ANY)
         rules = self.create_rules(config, **kwargs)
-        return AttributeChecker(attribute, operator, rules)
+        return AttributeRuleHandler(attribute, operator, rules)
 
 
 def get_rule_attribute(value) -> RuleAttribute:
@@ -54,13 +55,13 @@ def get_rule_attribute(value) -> RuleAttribute:
     return RuleAttribute.UNKNOWN
 
 
-class SourceCheckerBuilder(ContentFactory[Dict[str, Any], RuleChecker]):
+class SourceCheckerBuilder(ContentFactory[Dict[str, Any], ConfigRuleController]):
 
     def __init__(self, source: Source = JsonSource()) -> None:
         self.source = source
         self.factory = AttributeCheckerFactory()
 
-    def get_attribute_checkers(self, config: Dict[str, Any]) -> Sequence[AttributeChecker]:
+    def get_attribute_checkers(self, config: Dict[str, Any]) -> Sequence[AttributeRuleHandler]:
         managers = []
         for attribute, rules_configs in config.items():
             rule_attr = get_rule_attribute(attribute)
@@ -68,10 +69,10 @@ class SourceCheckerBuilder(ContentFactory[Dict[str, Any], RuleChecker]):
             managers.append(manager)
         return managers
 
-    def create(self, config: Dict[str, Any], **kwargs) -> RuleChecker:
+    def create(self, config: Dict[str, Any], **kwargs) -> ConfigRuleController:
         operator = pop_operator(config, Operator.ALL)
         managers = self.get_attribute_checkers(config)
-        return RuleChecker(managers, operator)
+        return ConfigRuleController(managers, operator)
 
 
 TModel = TypeVar('TModel', bound=object, covariant=True)
