@@ -5,12 +5,6 @@ description = "Adds icons to specified folders"
 authors = ["Erich Raschle <erichraschle@gmail.com>"]
 license = "MIT"
 
-[tool.pyright]
-include = ["icon_manager"]
-exclude = [
-    "**/__pycache__"
-]
-
 [tool.poetry.dependencies]
 python = "^3.8"
 
@@ -21,3 +15,21 @@ autopep8 = "^1.7.0"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+
+[tool.pyright]
+include = ["icon_manager"]
+exclude = [
+    "**/__pycache__"
+]
+reportImportCycles = true
+reportUnusedVariable = true
+reportUnusedFunction = true
+reportUnusedClass = true
+reportUnusedImport = true
+reportOptionalOperand = true
+reportOptionalContextManager = true
+reportOptionalIterable = true
+reportOptionalCall = true
+reportPrivateUsage = true
+reportImplicitStringConcatenation = true
