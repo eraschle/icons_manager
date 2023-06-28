@@ -4,7 +4,7 @@ import shutil
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Dict, Iterable, List, Optional, Tuple
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 log = logging.getLogger(__name__)
 

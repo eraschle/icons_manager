@@ -69,9 +69,10 @@ class ContainsShortRuleValueConsideration(ConsiderRule[ContainsRule]):
         return isinstance(rule, (ContainsRule, NotContainsRule))
 
     def __init__(self, apply_to: ContainsRule):
+        message = '\n'.join([f'Contains rule with short rule values [{self.__class__.length_short}] ',
+                             f'and ANY can have many hits'])
         super().__init__(apply_to, label='contains rule length and operator',
-                         consideration=f'Contains rule with short rule values [{self.__class__.length_short}] '
-                         f'and ANY can have many hits')
+                         consideration=message)
 
     def apply(self):
         length_short = self.__class__.length_short
@@ -108,9 +109,10 @@ class PathAndGreatLevelConsideration(ConsiderRule[IPathOperationRule]):
         return isinstance(rule, IPathOperationRule)
 
     def __init__(self, apply_to: IPathOperationRule):
+        message = '\n'.join([f'Many levels are slow  [greater then {self.__class__.max_levels}].',
+                            'Does it REALLY need a dependency on files or folders deep in the file system'])
         super().__init__(apply_to, label='path rules and max_level',
-                         consideration=f'Many levels are slow  [greater then {self.__class__.max_levels}].'
-                         f'Does it REALLY need a dependency on files or folders deep in the file system')
+                         consideration=message)
 
     def apply(self):
         return self.apply_to.max_level > self.__class__.max_levels

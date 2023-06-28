@@ -1,7 +1,5 @@
 import os
-from typing import Iterable, List, Optional
-
-from icon_manager.interfaces.path import File, Folder
+from typing import List, Optional
 
 
 def is_file(path: str, name: str, extension: Optional[str] = None) -> bool:

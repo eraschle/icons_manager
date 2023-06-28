@@ -201,8 +201,7 @@ class RuleGroup(ValidationRule):
         rule_class = entry
         if isinstance(entry, (list, tuple)):
             if len(entry) != 2 or not issubclass(entry[0], ValidationRule) or not isinstance(entry[1], dict):
-                msg = 'Provided rule configuration does not respect the format: ' \
-                      '(rule_class: ValidationRule, rule_config: dict)'
+                msg = 'Provided rule configuration does not respect the format: (rule_class: ValidationRule, rule_config: dict)'
                 raise InvalidRuleGroupException(msg)
             rule_class = entry[0]
             rule_config.update(entry[1])
