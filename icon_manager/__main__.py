@@ -104,7 +104,6 @@ def main():
             service.archive_icons_and_configs()
     elif namespace.content:
         service.setup_and_merge_user_service()
-        find_matches = namespace.content and not namespace.delete
         if namespace.delete or namespace.re_create:
             service.async_find_existing_content()
         if namespace.delete:
