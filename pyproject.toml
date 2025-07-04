@@ -1,17 +1,17 @@
-[tool.poetry]
-name = "icon_manager"
+[project]
+name = "icons-manager"
 version = "0.1.0"
-description = "Adds icons to specified folders"
-authors = ["Erich Raschle <erichraschle@gmail.com>"]
-license = "MIT"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = []
 
-[tool.poetry.dependencies]
-python = "^3.8"
-
-[tool.poetry.dev-dependencies]
-mypy = "^0.971"
-autopep8 = "^1.7.0"
-
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+[dependency-groups]
+dev = [
+    "isort>=6.0.1",
+    "pyright>=1.1.402",
+    "pytest>=8.4.1",
+    "pytest-cov>=6.2.1",
+    "pytest-mock>=3.14.1",
+    "ruff>=0.12.2",
+]
