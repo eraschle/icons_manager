@@ -1,8 +1,12 @@
 import logging
 import os
 
-from icon_manager.helpers.string import (ALIGN_CENTRE, ALIGN_LEFT, ALIGN_RIGHT,
-                                         fixed_length)
+from icon_manager.helpers.string import (
+    ALIGN_CENTRE,
+    ALIGN_LEFT,
+    ALIGN_RIGHT,
+    fixed_length,
+)
 
 log = logging.getLogger(__name__)
 
@@ -11,15 +15,15 @@ log = logging.getLogger(__name__)
 
 
 def _short_value(value: str, width=5, align=ALIGN_RIGHT):
-    return f'{fixed_length(value, width=width, align=align)}'
+    return f"{fixed_length(value, width=width, align=align)}"
 
 
 def _long_value(value: str, width=10, align=ALIGN_RIGHT):
-    return f'{fixed_length(value, width=width, align=align)}'
+    return f"{fixed_length(value, width=width, align=align)}"
 
 
 def _prefix_value(prefix):
-    return f'{fixed_length(prefix, width=15, align=ALIGN_LEFT)}'
+    return f"{fixed_length(prefix, width=15, align=ALIGN_LEFT)}"
 
 
 def _rule_name(rule, width=15):
@@ -31,7 +35,7 @@ def _rule_logic(rule, width=5):
 
 
 def _rule_values(rule):
-    return ', '.join(rule.original_values)
+    return ", ".join(rule.original_values)
 
 
 def _attr_name(rule):
@@ -48,13 +52,13 @@ def _rule_log(rule):
 def _value_with_width(value: str, width):
     if value is None or len(value) < width:
         return value
-    epsilon = '...'
+    epsilon = "..."
     max_idx = width - len(epsilon)
     return value[:max_idx] + epsilon
 
 
 def bool_as_str(value: bool):
-    return 'YES' if value else 'NO'
+    return "YES" if value else "NO"
 
 
 def _value_log(rule, *args):
@@ -63,9 +67,9 @@ def _value_log(rule, *args):
     attr_value = _long_value(value, width=width, align=ALIGN_RIGHT)
     value = _value_with_width(args[2], width)
     rule_value = _long_value(value, width=width, align=ALIGN_LEFT)
-    bool_val = bool_as_str(getattr(rule, 'is_case_sensitive'))
+    bool_val = bool_as_str(rule.is_case_sensitive)
     is_case = _short_value(bool_val, width=6, align=ALIGN_LEFT)
-    bool_val = bool_as_str(getattr(rule, 'add_before_or_after_values'))
+    bool_val = bool_as_str(rule.add_before_or_after_values)
     surround = _short_value(bool_val, width=6, align=ALIGN_LEFT)
     return f'Attr "{attr_value}" == "{rule_value}" Rule [case: {is_case} for//after: {surround}]'
 
@@ -73,7 +77,7 @@ def _value_log(rule, *args):
 def _elem_message(elem):
     elem_value = _elem_name(elem)
     parent, _ = os.path.split(_elem_path(elem))
-    log.debug(f'{elem_value} [{parent}]')
+    log.debug(f"{elem_value} [{parent}]")
 
 
 LOG_MATCH_VALUES: bool = False
@@ -90,7 +94,9 @@ def matched_value():
                 log.info(_elem_message(args[0]))
                 log.info(_value_log(self, *args))
             return result
+
         return matching
+
     return actual_decorator
 
 
@@ -101,27 +107,27 @@ def matched_value():
 
 
 def _match_rule_names(rule):
-    prefix = _prefix_value('RULE-INFO')
+    prefix = _prefix_value("RULE-INFO")
     name_val = _rule_name(rule, width=12)
     name_val = _rule_name(rule, width=12)
     attr_val = _attr_name(rule)
-    return f'{prefix} {name_val} {attr_val}'
+    return f"{prefix} {name_val} {attr_val}"
 
 
 def _match_rule_values(rule):
-    prefix = _prefix_value('WERTE')
+    prefix = _prefix_value("WERTE")
     logic_val = _rule_logic(rule)
     values = _rule_values(rule)
     return f'{prefix} {logic_val} "{values}"'
 
 
 def _elem_name(elem):
-    name = getattr(elem, 'name', "*** NO NAME ***")
+    name = getattr(elem, "name", "*** NO NAME ***")
     return _long_value(name, width=20, align=ALIGN_LEFT)
 
 
 def _elem_path(elem, width=30, align=ALIGN_LEFT):
-    path = getattr(elem, 'path', "*** NO PATH ***")
+    path = getattr(elem, "path", "*** NO PATH ***")
     parent, _ = os.path.split(path)
     parent = _long_value(parent, width=width, align=align)
     return _value_with_width(parent, width=width)
@@ -139,7 +145,7 @@ def _elem_attr_name(rule, width=15, align=ALIGN_LEFT):
 
 
 def _match_elem_log(elem, rule):
-    prefix = _prefix_value('ELEMENT-INFO:')
+    prefix = _prefix_value("ELEMENT-INFO:")
     name = _elem_name(elem)
     attr = _elem_attr_name(rule)
     value = _elem_value(elem, rule)
@@ -162,7 +168,9 @@ def matched_rule():
                 # log.info(_match_rule_values(self))
                 log.info(_match_elem_log(args[0], self))
             return result
+
         return matching
+
     return actual_decorator
 
 

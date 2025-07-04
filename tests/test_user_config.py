@@ -1,6 +1,9 @@
-import pytest
+from typing import Any
 from unittest.mock import Mock, patch
 from uuid import UUID
+
+import pytest
+
 from icon_manager.config.user import (
     UserConfig,
     UserConfigFactory,
@@ -10,7 +13,7 @@ from icon_manager.config.user import (
     get_search_folders,
 )
 from icon_manager.data.json_source import JsonSource
-from icon_manager.interfaces.path import ConfigFile, SearchFolder, IconSearchFolder
+from icon_manager.interfaces.path import ConfigFile, IconSearchFolder, SearchFolder
 
 
 class TestUserConfig:
@@ -95,7 +98,9 @@ class TestUserConfig:
 class TestGetIconsPath:
     def test_get_icons_path_returns_search_folder(self):
         mock_file = Mock(spec=ConfigFile)
-        content = {UserConfigs.ICONS_PATH: "/test/icons"}
+        content: dict[str, Any] = {
+            UserConfigs.ICONS_PATH: "/test/icons",
+        }
 
         with patch("icon_manager.config.user.get_converted_env_path") as mock_convert:
             mock_convert.return_value = "/converted/icons"
@@ -117,7 +122,10 @@ class TestGetIconsPath:
 
 class TestGetIconsSearchFolder:
     def test_get_icons_search_folder_creates_folder_with_copy_icon(self):
-        content = {UserConfigs.SEARCH_PATH: "/test/search", UserConfigs.COPY_ICONS: True}
+        content: dict[str, Any] = {
+            UserConfigs.SEARCH_PATH: "/test/search",
+            UserConfigs.COPY_ICONS: True,
+        }
 
         with patch("icon_manager.config.user.get_converted_env_path") as mock_convert:
             mock_convert.return_value = "/converted/search"
@@ -129,7 +137,9 @@ class TestGetIconsSearchFolder:
             assert result.path == "/converted/search"
 
     def test_get_icons_search_folder_raises_error_when_no_path(self):
-        content = {UserConfigs.COPY_ICONS: True}
+        content: dict[str, Any] = {
+            UserConfigs.COPY_ICONS: True,
+        }
 
         with pytest.raises(ValueError, match="NO path for search folders found"):
             get_icons_search_folder(content)
@@ -138,10 +148,16 @@ class TestGetIconsSearchFolder:
 class TestGetSearchFolders:
     def test_get_search_folders_returns_valid_folders(self):
         mock_file = Mock(spec=ConfigFile)
-        content = {
+        content: dict[str, Any] = {
             UserConfigs.SEARCH_FOLDERS: [
-                {UserConfigs.SEARCH_PATH: "/test/search1", UserConfigs.COPY_ICONS: True},
-                {UserConfigs.SEARCH_PATH: "/test/search2", UserConfigs.COPY_ICONS: False},
+                {
+                    UserConfigs.SEARCH_PATH: "/test/search1",
+                    UserConfigs.COPY_ICONS: True,
+                },
+                {
+                    UserConfigs.SEARCH_PATH: "/test/search2",
+                    UserConfigs.COPY_ICONS: False,
+                },
             ]
         }
 
@@ -160,7 +176,7 @@ class TestGetSearchFolders:
 
     def test_get_search_folders_skips_non_existing_folders(self):
         mock_file = Mock(spec=ConfigFile)
-        content = {
+        content: dict[str, Any] = {
             UserConfigs.SEARCH_FOLDERS: [
                 {UserConfigs.SEARCH_PATH: "/test/search1"},
                 {UserConfigs.SEARCH_PATH: "/test/search2"},
@@ -192,14 +208,18 @@ class TestGetSearchFolders:
     def test_get_search_folders_raises_error_when_empty_list(self):
         mock_file = Mock(spec=ConfigFile)
         mock_file.path = "/test/config.json"
-        content = {UserConfigs.SEARCH_FOLDERS: []}
+        content: dict[str, Any] = {
+            UserConfigs.SEARCH_FOLDERS: [],
+        }
 
         with pytest.raises(ValueError, match="Search folders specified in /test/config.json"):
             get_search_folders(mock_file, content)
 
     def test_get_search_folders_raises_error_when_invalid_config(self):
         mock_file = Mock(spec=ConfigFile)
-        content = {UserConfigs.SEARCH_FOLDERS: ["invalid_config"]}
+        content: dict[str, Any] = {
+            UserConfigs.SEARCH_FOLDERS: ["invalid_config"],
+        }
 
         with pytest.raises(ValueError, match="Search folder config is a list of Dicts"):
             get_search_folders(mock_file, content)
@@ -226,7 +246,10 @@ class TestUserConfigFactory:
             UserConfigs.CONFIG_SECTION: {
                 UserConfigs.ICONS_PATH: "/test/icons",
                 UserConfigs.SEARCH_FOLDERS: [
-                    {UserConfigs.SEARCH_PATH: "/test/search1", UserConfigs.COPY_ICONS: True}
+                    {
+                        UserConfigs.SEARCH_PATH: "/test/search1",
+                        UserConfigs.COPY_ICONS: True,
+                    }
                 ],
                 UserConfigs.COPY_ICONS: True,
                 UserConfigs.BEFORE_OR_AFTER: ["before", "after"],

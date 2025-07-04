@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 from icon_manager.config.app import AppConfig
 from icon_manager.config.user import UserConfig
@@ -14,11 +13,10 @@ from icon_manager.services.config_service import ConfigService
 log = logging.getLogger(__name__)
 
 
-class IconsAppService (ServiceProtocol):
-
+class IconsAppService(ServiceProtocol):
     def __init__(self, config: AppConfig) -> None:
         self.config = config
-        self.services: List[IConfigService] = []
+        self.services: list[IConfigService] = []
 
     def _create_service(self, user_config: UserConfig) -> IConfigService:
         library = IconLibraryController()
@@ -26,8 +24,14 @@ class IconsAppService (ServiceProtocol):
         folders = IconFolderController(user_config)
         files = IconFileController(user_config)
         rules = RulesApplyController(user_config)
-        return ConfigService(user_config, settings=library, desktop=desktop,
-                             icon_folders=folders, icon_files=files, rules=rules)
+        return ConfigService(
+            user_config,
+            settings=library,
+            desktop=desktop,
+            icon_folders=folders,
+            icon_files=files,
+            rules=rules,
+        )
 
     def setup(self):
         for user_config in self.config.user_configs:

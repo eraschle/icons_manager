@@ -1,19 +1,15 @@
 import logging
-from typing import Iterable, Optional, Sequence
+from collections.abc import Iterable, Sequence
 
-from icon_manager.interfaces.path import Folder
-from icon_manager.interfaces.managers import (IAttributeChecker, IChecker,
-                                              IRuleChecker)
-from icon_manager.interfaces.path import JsonFile
+from icon_manager.interfaces.managers import IAttributeChecker, IChecker, IRuleChecker
+from icon_manager.interfaces.path import Folder, JsonFile
 from icon_manager.rules.base import ISingleRule, Operator, RuleAttribute
 
 log = logging.getLogger(__name__)
 
 
 class AttributeChecker(IAttributeChecker[Folder]):
-
-    def __init__(self, attribute: RuleAttribute, operator: Operator,
-                 rules: Sequence[ISingleRule]) -> None:
+    def __init__(self, attribute: RuleAttribute, operator: Operator, rules: Sequence[ISingleRule]) -> None:
         self.attribute = attribute
         self.operator = operator
         self.rules = rules
@@ -51,17 +47,14 @@ class AttributeChecker(IAttributeChecker[Folder]):
 
 
 class RuleChecker(IRuleChecker[Folder]):
-
-    def __init__(self, checkers: Sequence[AttributeChecker],
-                 operator: Operator) -> None:
+    def __init__(self, checkers: Sequence[AttributeChecker], operator: Operator) -> None:
         self.checkers = checkers
         self.operator = operator
 
     @property
     def name(self) -> str:
-        attributes = ', '.join([checker.attribute.name
-                               for checker in self.checkers])
-        return f'Rule Checker [{attributes}]'
+        attributes = ", ".join([checker.attribute.name for checker in self.checkers])
+        return f"Rule Checker [{attributes}]"
 
     def is_empty(self) -> bool:
         return all(checker.is_empty() for checker in self.checkers)
@@ -92,8 +85,13 @@ class RuleChecker(IRuleChecker[Folder]):
 
 
 class RuleManager(IChecker[Folder]):
-
-    def __init__(self, config: JsonFile, checker: RuleChecker, weight: int, copy_icon: Optional[bool]) -> None:
+    def __init__(
+        self,
+        config: JsonFile,
+        checker: RuleChecker,
+        weight: int,
+        copy_icon: bool | None,
+    ) -> None:
         self.config = config
         self.checker = checker
         self.weight = weight
@@ -124,7 +122,6 @@ class RuleManager(IChecker[Folder]):
 
 
 class ExcludeManager(IChecker[Folder]):
-
     def __init__(self, checkers: Sequence[IRuleChecker[Folder]]) -> None:
         self.checkers = checkers
 
@@ -158,7 +155,7 @@ class ExcludeManager(IChecker[Folder]):
             checker.setup_rules(before_or_after)
 
     def __str__(self) -> str:
-        return f'Exclude Manager [{len(self.checkers)}]'
+        return f"Exclude Manager [{len(self.checkers)}]"
 
     def __repr__(self) -> str:
         return self.__str__()

@@ -1,42 +1,38 @@
 import logging
 import os
-from typing import Iterable, Optional, Sequence, Tuple
+from collections.abc import Iterable, Sequence
 
-from icon_manager.interfaces.path import Folder
-from icon_manager.interfaces.path import (FileModel, FolderModel, JsonFile,
-                                          PathModel)
+from icon_manager.interfaces.path import FileModel, Folder, FolderModel, JsonFile, PathModel
 from icon_manager.rules.manager import RuleManager
 
 log = logging.getLogger(__name__)
 
 
 class PngFile(FileModel):
-    @ classmethod
+    @classmethod
     def _extension(cls) -> str:
-        return 'png'
+        return "png"
 
 
 class JpgFile(FileModel):
-    @ classmethod
+    @classmethod
     def _extension(cls) -> str:
-        return 'jpg'
+        return "jpg"
 
 
 class JpegFile(FileModel):
-    @ classmethod
+    @classmethod
     def _extension(cls) -> str:
-        return 'jpeg'
+        return "jpeg"
 
 
 class IconFile(FileModel):
-
-    @ classmethod
+    @classmethod
     def _extension(cls) -> str:
-        return 'ico'
+        return "ico"
 
 
 class LibraryIconFile(IconFile):
-
     def __init__(self, full_path: str) -> None:
         super().__init__(full_path)
         self.__config = self.__create_config()
@@ -46,13 +42,12 @@ class LibraryIconFile(IconFile):
 
     def __create_config(self) -> JsonFile:
         file_name = self.name_wo_extension
-        file_name = f'{file_name}{JsonFile.extension()}'
+        file_name = f"{file_name}{JsonFile.extension()}"
         file_path = self.path.replace(self.name, file_name)
         return JsonFile(file_path)
 
 
 class IconSetting:
-
     def __init__(self, icon: LibraryIconFile, manager: RuleManager) -> None:
         self.icon = icon
         self.manager = manager
@@ -62,21 +57,22 @@ class IconSetting:
         return self.icon.name_wo_extension
 
     @property
-    def order_key(self) -> Tuple[str, str]:
-        weight = f'{self.manager.weight:02d}'
+    def order_key(self) -> tuple[str, str]:
+        weight = f"{self.manager.weight:02d}"
         return (weight, self.manager.name)
 
     @property
-    def copy_icon(self) -> Optional[bool]:
+    def copy_icon(self) -> bool | None:
         return self.manager.copy_icon
 
     def archive_files(self) -> Sequence[FileModel]:
         name = self.icon.name_wo_extension
         files = [
-            self.icon, self.manager.config,
-            PngFile(self.icon.sibling_path(f'{name}{PngFile.extension()}')),
-            JpgFile(self.icon.sibling_path(f'{name}{JpgFile.extension()}')),
-            JpegFile(self.icon.sibling_path(f'{name}{JpegFile.extension()}'))
+            self.icon,
+            self.manager.config,
+            PngFile(self.icon.sibling_path(f"{name}{PngFile.extension()}")),
+            JpgFile(self.icon.sibling_path(f"{name}{JpgFile.extension()}")),
+            JpegFile(self.icon.sibling_path(f"{name}{JpegFile.extension()}")),
         ]
         return [file for file in files if file.exists()]
 
@@ -90,7 +86,7 @@ class IconSetting:
         return self.manager.is_empty()
 
     def __str__(self) -> str:
-        return f'Icon Setting: {self.icon.name_wo_extension}'
+        return f"Icon Setting: {self.icon.name_wo_extension}"
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -101,16 +97,15 @@ class ArchiveFile(FileModel):
 
 
 class ArchiveFolder(FolderModel):
+    folder_name: str = "__archive__"
 
-    folder_name: str = '__archive__'
-
-    @ classmethod
+    @classmethod
     def get_folder_path(cls, entry: PathModel) -> str:
         if entry.is_dir():
             return os.path.join(entry.name, cls.folder_name)
         return os.path.join(entry.parent_path, cls.folder_name)
 
-    @ classmethod
+    @classmethod
     def is_model(cls, path: str) -> bool:
         return path.endswith(cls.folder_name)
 

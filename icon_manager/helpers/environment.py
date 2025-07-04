@@ -1,23 +1,22 @@
 import os
 import re
-from typing import Optional
 
-GROUP_NAME = 'env'
-ENV_PATTERN = re.compile(r'(?P<env>%[a-zA-Z0-9_-]*%)')
+GROUP_NAME = "env"
+ENV_PATTERN = re.compile(r"(?P<env>%[a-zA-Z0-9_-]*%)")
 
 
 def get_env_var_value_of(value: str) -> str:
     matches = ENV_PATTERN.match(value)
     if matches is None:
-        raise LookupError('No ENVIRONMENT variable found')
+        raise LookupError("No ENVIRONMENT variable found")
     match_groups = matches.groupdict()
     variable = match_groups.get(GROUP_NAME, None)
     if variable is None:
-        raise LookupError('No pattern %%ENVIRONMENT%% found')
+        raise LookupError("No pattern %%ENVIRONMENT%% found")
     return variable
 
 
-def get_env_var_value(value: str) -> Optional[str]:
+def get_env_var_value(value: str) -> str | None:
     env_var_value = get_env_var_value_of(value)
     env_var = env_var_value[1:-1]
     env_value = os.getenv(env_var, None)

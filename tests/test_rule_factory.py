@@ -1,18 +1,25 @@
-import pytest
 from unittest.mock import Mock, patch
-from icon_manager.rules.factory.manager import (
-    AttributeCheckerFactory,
-    SourceCheckerBuilder,
-    AManagerFactory,
-    RuleManagerFactory,
-    ExcludeManagerFactory,
-)
-from icon_manager.rules.factory.rules import ConfigKeys
-from icon_manager.rules.manager import AttributeChecker, RuleChecker, RuleManager, ExcludeManager
-from icon_manager.rules.base import ISingleRule, IFilterRule, Operator, RuleAttribute
+
+import pytest
+
 from icon_manager.data.base import Source
 from icon_manager.data.json_source import JsonSource
-from icon_manager.interfaces.path import JsonFile, ConfigFile
+from icon_manager.interfaces.path import ConfigFile, JsonFile
+from icon_manager.rules.base import IFilterRule, ISingleRule, Operator, RuleAttribute
+from icon_manager.rules.factory.manager import (
+    AManagerFactory,
+    AttributeCheckerFactory,
+    ExcludeManagerFactory,
+    RuleManagerFactory,
+    SourceCheckerBuilder,
+)
+from icon_manager.rules.factory.rules import ConfigKeys
+from icon_manager.rules.manager import (
+    AttributeChecker,
+    ExcludeManager,
+    RuleChecker,
+    RuleManager,
+)
 
 
 class TestAttributeCheckerFactory:
@@ -57,7 +64,10 @@ class TestAttributeCheckerFactory:
 
     def test_create_rules_creates_list_of_rules(self, factory):
         config = {
-            "rules": [{"type": "contains", "value": "test1"}, {"type": "equals", "value": "test2"}]
+            "rules": [
+                {"type": "contains", "value": "test1"},
+                {"type": "equals", "value": "test2"},
+            ]
         }
 
         mock_rule1 = Mock(spec=IFilterRule)
@@ -116,9 +126,7 @@ class TestSourceCheckerBuilder:
         assert isinstance(builder.source, JsonSource)
 
     @patch("icon_manager.rules.factory.manager.get_rule_attribute")
-    def test_get_attribute_checkers_creates_checkers_for_each_attribute(
-        self, mock_get_rule_attr, builder
-    ):
+    def test_get_attribute_checkers_creates_checkers_for_each_attribute(self, mock_get_rule_attr, builder):
         config = {
             "path": {"operator": "any", "rules": []},
             "name": {"operator": "all", "rules": []},
@@ -215,7 +223,11 @@ class TestRuleManagerFactory:
         return RuleManagerFactory()
 
     def test_create_with_content_builds_rule_manager(self, factory):
-        config = {"copy_icon": True, "order": 10, "path": {"operator": "any", "rules": []}}
+        config = {
+            "copy_icon": True,
+            "order": 10,
+            "path": {"operator": "any", "rules": []},
+        }
         mock_file = Mock(spec=JsonFile)
 
         mock_rule_checker = Mock(spec=RuleChecker)
@@ -249,12 +261,15 @@ class TestRuleManagerFactory:
 
     def test_update_updates_config_with_template(self, factory):
         mock_config = Mock(spec=JsonFile)
-        mock_config.path = '/test/config.json'
+        mock_config.path = "/test/config.json"
         mock_template = Mock(spec=JsonFile)
-        mock_template.path = '/test/template.json'
+        mock_template.path = "/test/template.json"
 
         existing_content = {"config": {"path": {"existing": "config"}}}
-        template_content = {"config": {"template": "values"}, "other_section": {"template": "data"}}
+        template_content = {
+            "config": {"template": "values"},
+            "other_section": {"template": "data"},
+        }
 
         factory.source.read = Mock()
         factory.source.read.side_effect = [existing_content, template_content]
@@ -307,7 +322,7 @@ class TestExcludeManagerFactory:
 
     def test_prepare_template_reads_and_writes_content(self, factory):
         mock_config = Mock(spec=ConfigFile)
-        mock_config.path = '/test/config.json'
+        mock_config.path = "/test/config.json"
         mock_content = {"config": []}
 
         # Reset any previous side_effect
@@ -333,7 +348,7 @@ class TestExcludeManagerFactory:
     def test_integration_create_from_file(self, factory):
         # Integration test for the complete creation workflow
         mock_file = Mock(spec=JsonFile)
-        mock_file.path = '/test/exclude.json'
+        mock_file.path = "/test/exclude.json"
         mock_content = {"config": [{"operator": "any", "path": {"rules": []}}]}
 
         # Reset any previous side_effect

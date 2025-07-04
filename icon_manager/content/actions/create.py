@@ -1,5 +1,5 @@
 import logging
-from typing import Iterable
+from collections.abc import Iterable
 
 from icon_manager.config.user import UserConfig
 from icon_manager.content.controller.desktop import DesktopIniCreator
@@ -11,9 +11,13 @@ log = logging.getLogger(__name__)
 
 
 class CreateIconAction(Action[MatchedRuleFolder]):
-
-    def __init__(self, entries: Iterable[MatchedRuleFolder], user_config: UserConfig,
-                 action_log: str = 'Added Icons to Folders', controller: DesktopIniCreator = DesktopIniCreator()) -> None:
+    def __init__(
+        self,
+        entries: Iterable[MatchedRuleFolder],
+        user_config: UserConfig,
+        action_log: str = "Added Icons to Folders",
+        controller: DesktopIniCreator = DesktopIniCreator(),
+    ) -> None:
         super().__init__(entries, action_log)
         self.user_config = user_config
         self.controller = controller
@@ -43,8 +47,15 @@ class CreateIconAction(Action[MatchedRuleFolder]):
 
 
 class ReCreateIconAction(CreateIconAction):
-
-    def __init__(self, re_apply: ReApplyController, user_config: UserConfig,
-                 controller: DesktopIniCreator = DesktopIniCreator()) -> None:
-        super().__init__(re_apply.get_rule_folders(), user_config,
-                         action_log='Re added Icons to folder', controller=controller)
+    def __init__(
+        self,
+        re_apply: ReApplyController,
+        user_config: UserConfig,
+        controller: DesktopIniCreator = DesktopIniCreator(),
+    ) -> None:
+        super().__init__(
+            re_apply.get_rule_folders(),
+            user_config,
+            action_log="Re added Icons to folder",
+            controller=controller,
+        )

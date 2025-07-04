@@ -1,12 +1,10 @@
 import concurrent.futures
 import os
-from typing import Dict, Iterable, List, Sequence
+from collections.abc import Iterable, Sequence
 
-from icon_manager.crawler.filters import (files_by_extension,
-                                          is_file_with_extensions)
+from icon_manager.crawler.filters import files_by_extension, is_file_with_extensions
 from icon_manager.helpers.path import crawle_folder
-from icon_manager.interfaces.path import (File, Folder, IconSearchFolder,
-                                          SearchFolder)
+from icon_manager.interfaces.path import File, Folder, IconSearchFolder, SearchFolder
 
 
 def _crawling(root: SearchFolder) -> Folder:
@@ -20,7 +18,7 @@ def _crawling(root: SearchFolder) -> Folder:
 
 
 # @crawler_result(message='Crawler found', log_start='SYNC crawler started')
-def crawling_folders(roots: Sequence[IconSearchFolder]) -> List[Folder]:
+def crawling_folders(roots: Sequence[IconSearchFolder]) -> list[Folder]:
     folders = []
     for root in roots:
         folders.append(_crawling(root))
@@ -28,7 +26,7 @@ def crawling_folders(roots: Sequence[IconSearchFolder]) -> List[Folder]:
 
 
 # @crawler_result(message='Crawler found', log_start='ASYNC_crawler started')
-def async_crawling_folders(roots: Sequence[IconSearchFolder]) -> List[Folder]:
+def async_crawling_folders(roots: Sequence[IconSearchFolder]) -> list[Folder]:
     folders = []
     with concurrent.futures.ThreadPoolExecutor() as executor:
         task = {executor.submit(_crawling, root): root for root in roots}
@@ -38,12 +36,12 @@ def async_crawling_folders(roots: Sequence[IconSearchFolder]) -> List[Folder]:
                 folder = future.result()
                 folders.append(folder)
             except Exception as exc:
-                print('%r Exception: %s' % (root_folder.path, exc))
+                print("%r Exception: %s" % (root_folder.path, exc))
     return folders
 
 
-def _group_by_extension(files: Iterable[File], extensions: Sequence[str]) -> Dict[str, List[File]]:
-    grouped: Dict[str, List[File]] = {}
+def _group_by_extension(files: Iterable[File], extensions: Sequence[str]) -> dict[str, list[File]]:
+    grouped: dict[str, list[File]] = {}
     for file in files:
         if file.ext is None:
             continue
@@ -55,7 +53,7 @@ def _group_by_extension(files: Iterable[File], extensions: Sequence[str]) -> Dic
     return grouped
 
 
-def crawling_icons(root: SearchFolder, extensions: Sequence[str]) -> Dict[str, List[File]]:
+def crawling_icons(root: SearchFolder, extensions: Sequence[str]) -> dict[str, list[File]]:
     folder = _crawling(root)
     files = files_by_extension([folder], extensions)
     return _group_by_extension(files, extensions)

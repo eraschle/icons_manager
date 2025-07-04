@@ -1,13 +1,14 @@
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
+
+from icon_manager.config.user import UserConfig
 from icon_manager.content.controller.rules_apply import (
     RulesApplyBuilder,
-    RulesApplyOptions,
     RulesApplyController,
+    RulesApplyOptions,
 )
-from icon_manager.config.user import UserConfig
 from icon_manager.content.models.matched import MatchedRuleFolder
-from icon_manager.crawler.options import FilterOptions
 from icon_manager.interfaces.path import Folder, FolderModel
 from icon_manager.library.models import IconSetting, LibraryIconFile
 from icon_manager.rules.manager import ExcludeManager
@@ -232,9 +233,7 @@ class TestRulesApplyController:
         mock_action.get_log_message.assert_called_once_with(MatchedRuleFolder)
 
     @patch("icon_manager.content.controller.rules_apply.CreateIconAction")
-    def test_creating_found_matches_skips_logging_when_nothing_executed(
-        self, mock_action_class, controller
-    ):
+    def test_creating_found_matches_skips_logging_when_nothing_executed(self, mock_action_class, controller):
         controller.folders = []
         mock_exclude = Mock(spec=ExcludeManager)
 
@@ -263,9 +262,7 @@ class TestRulesApplyController:
         mock_action.get_log_message.assert_called_once_with(MatchedRuleFolder)
 
     @patch("icon_manager.content.controller.rules_apply.ReCreateIconAction")
-    def test_re_apply_matches_skips_logging_when_nothing_executed(
-        self, mock_action_class, controller
-    ):
+    def test_re_apply_matches_skips_logging_when_nothing_executed(self, mock_action_class, controller):
         mock_re_apply_controller = Mock()
 
         mock_action = Mock()
@@ -295,9 +292,7 @@ class TestRulesApplyController:
             mock_filter.return_value = mock_folders
             controller.builder.build_models.return_value = mock_matched_folders
 
-            with patch(
-                "icon_manager.content.controller.rules_apply.CreateIconAction"
-            ) as mock_action_class:
+            with patch("icon_manager.content.controller.rules_apply.CreateIconAction") as mock_action_class:
                 mock_action = Mock()
                 mock_action.any_executed.return_value = True
                 mock_action.get_log_message.return_value = "Success"

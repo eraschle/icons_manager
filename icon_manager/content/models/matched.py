@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Sequence
+from collections.abc import Sequence
 
 from icon_manager.content.models.desktop import DesktopIniFile
 from icon_manager.helpers.path import get_files
@@ -15,10 +15,9 @@ class MatchedIconFile(IconFile):
 
 
 class MatchedIconFolder(FolderModel):
+    folder_name: str = "__icon__"
 
-    folder_name: str = '__icon__'
-
-    @ classmethod
+    @classmethod
     def is_model(cls, path: str) -> bool:
         return path.endswith(cls.folder_name)
 
@@ -35,26 +34,25 @@ class MatchedIconFolder(FolderModel):
 
 
 class MatchedRuleFolder(FolderModel):
-
     def __init__(self, entry: FolderModel, setting: IconSetting) -> None:
         super().__init__(entry.path)
         self.setting = setting
 
-    @ property
+    @property
     def library_icon(self) -> LibraryIconFile:
         return self.setting.icon
 
-    @ property
+    @property
     def desktop_ini(self) -> DesktopIniFile:
         file_path = self.child_path(DesktopIniFile.file_name)
         return DesktopIniFile(file_path)
 
-    @ property
+    @property
     def icon_folder(self) -> MatchedIconFolder:
         path = self.child_path(MatchedIconFolder.folder_name)
         return MatchedIconFolder(path)
 
-    @ property
+    @property
     def local_icon(self) -> MatchedIconFile:
         return self.icon_folder.create_icon(self.library_icon)
 
@@ -65,7 +63,7 @@ class MatchedRuleFolder(FolderModel):
         return self.library_icon.path
 
     def __str__(self) -> str:
-        return f'{self.name} [{self.setting}]'
+        return f"{self.name} [{self.setting}]"
 
     def __repr__(self) -> str:
         return self.__str__()

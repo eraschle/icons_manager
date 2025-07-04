@@ -1,36 +1,31 @@
 from abc import ABC, abstractmethod
-from typing import Generic, Iterable, List, Optional, Protocol, TypeVar
+from collections.abc import Iterable
+from typing import Generic, Protocol, TypeVar
 
-from icon_manager.interfaces.path import Folder, Node
-from icon_manager.interfaces.path import PathModel
+from icon_manager.interfaces.path import Folder, Node, PathModel
 
-TModel = TypeVar('TModel', bound=object)
+TModel = TypeVar("TModel", bound=object)
 
-TEntry = TypeVar('TEntry', PathModel, Node, contravariant=True)
+TEntry = TypeVar("TEntry", PathModel, Node, contravariant=True)
 
 
 class Builder(Protocol, Generic[TEntry, TModel]):
+    def setup(self, **kwargs) -> None: ...
 
-    def setup(self, **kwargs) -> None:
-        ...
+    def build_models(self, nodes: Iterable[TEntry], **kwargs) -> list[TModel]: ...
 
-    def build_models(self, nodes: Iterable[TEntry], **kwargs) -> List[TModel]:
-        ...
-
-    def build_model(self, node: TEntry, **kwargs) -> Optional[TModel]:
-        ...
+    def build_model(self, node: TEntry, **kwargs) -> TModel | None: ...
 
 
 class CrawlerBuilder(ABC, Builder[Node, TModel]):
-
     def __init__(self) -> None:
         super().__init__()
-        self.models: List[TModel] = []
+        self.models: list[TModel] = []
 
     def setup(self, **kwargs) -> None:
         pass
 
-    def build_models(self, nodes: Iterable[Node], **kwargs) -> List[TModel]:
+    def build_models(self, nodes: Iterable[Node], **kwargs) -> list[TModel]:
         models = []
         for entry in nodes:
             if entry.excluded:
@@ -59,7 +54,7 @@ class CrawlerBuilder(ABC, Builder[Node, TModel]):
     #                 print('%r Exception: %s' % (entry.path, exc))
     #     return models
 
-    def build_model(self, node: Node, **kwargs) -> Optional[TModel]:
+    def build_model(self, node: Node, **kwargs) -> TModel | None:
         if node.is_dir():
             if not self.can_build_folder(node, **kwargs):
                 return None
@@ -73,7 +68,7 @@ class CrawlerBuilder(ABC, Builder[Node, TModel]):
         pass
 
     @abstractmethod
-    def build_folder_model(self, folder: Node, **kwargs) -> Optional[TModel]:
+    def build_folder_model(self, folder: Node, **kwargs) -> TModel | None:
         pass
 
     @abstractmethod
@@ -81,39 +76,35 @@ class CrawlerBuilder(ABC, Builder[Node, TModel]):
         pass
 
     @abstractmethod
-    def build_file_model(self, file: Node, **kwargs) -> Optional[TModel]:
+    def build_file_model(self, file: Node, **kwargs) -> TModel | None:
         pass
 
 
 class FolderCrawlerBuilder(CrawlerBuilder[TModel]):
-
     def can_build_file(self, file: Node, **kwargs) -> bool:
         return False
 
-    def build_file_model(self, file: Node, **kwargs) -> Optional[TModel]:
+    def build_file_model(self, file: Node, **kwargs) -> TModel | None:
         return None
 
 
 class FileCrawlerBuilder(CrawlerBuilder[TModel]):
-
     def can_build_folder(self, folder: Node, **kwargs) -> bool:
         return False
 
-    def build_folder_model(self, folder: Node, **kwargs) -> Optional[TModel]:
+    def build_folder_model(self, folder: Node, **kwargs) -> TModel | None:
         return None
 
 
 class ModelBuilder(ABC, Builder[PathModel, TModel]):
-
     def setup(self, **kwargs) -> None:
         pass
 
-    @ abstractmethod
-    def can_build(self, entry: PathModel, **kwargs) -> bool:
-        ...
+    @abstractmethod
+    def can_build(self, entry: PathModel, **kwargs) -> bool: ...
 
-    def build_models(self, nodes: Iterable[PathModel], **kwargs) -> List[TModel]:
-        models: List[TModel] = []
+    def build_models(self, nodes: Iterable[PathModel], **kwargs) -> list[TModel]:
+        models: list[TModel] = []
         for entry in nodes:
             if not self.can_build(entry):
                 continue
@@ -123,6 +114,5 @@ class ModelBuilder(ABC, Builder[PathModel, TModel]):
             models.append(model, **kwargs)
         return models
 
-    @ abstractmethod
-    def build_model(self, node: PathModel, **kwargs) -> Optional[TModel]:
-        ...
+    @abstractmethod
+    def build_model(self, node: PathModel, **kwargs) -> TModel | None: ...

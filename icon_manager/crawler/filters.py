@@ -1,4 +1,4 @@
-from typing import Iterable, List, Optional, Sequence
+from collections.abc import Iterable, Sequence
 
 from icon_manager.crawler.options import FilterOptions
 from icon_manager.interfaces.path import File, Folder
@@ -29,7 +29,7 @@ def _is_clean_recursive(entry: Folder, options: FilterOptions) -> bool:
     return any(folder.name in PROJECT_FOLDERS for folder in entry.parent.folders)
 
 
-def filter_folder(entry: Folder, options: FilterOptions) -> Optional[Folder]:
+def filter_folder(entry: Folder, options: FilterOptions) -> Folder | None:
     if _is_exclude_rule(entry, options) or _is_clean_recursive(entry, options):
         entry.mark_children()
         return entry
@@ -47,7 +47,7 @@ def filter_folder(entry: Folder, options: FilterOptions) -> Optional[Folder]:
     return entry
 
 
-def filter_folders(folders: List[Folder], options: FilterOptions) -> List[Folder]:
+def filter_folders(folders: list[Folder], options: FilterOptions) -> list[Folder]:
     if not options.clean_excluded and not options.clean_project and not options.clean_recursive:
         return folders
     filtered = []
@@ -64,7 +64,7 @@ def is_folder_with_name(folder: Folder, names: Sequence[str]) -> bool:
     return folder.name in names
 
 
-def folders_by_name(folders: Sequence[Folder], names: Sequence[str]) -> List[Folder]:
+def folders_by_name(folders: Sequence[Folder], names: Sequence[str]) -> list[Folder]:
     filtered = []
     for folder in folders:
         if is_folder_with_name(folder, names):
@@ -77,7 +77,7 @@ def is_file_with_extensions(file: File, extensions: Sequence[str]) -> bool:
     return file.ext is not None and file.ext in extensions
 
 
-def _files_by_extension(files: List[File], extensions: Optional[Sequence[str]] = None) -> List[File]:
+def _files_by_extension(files: list[File], extensions: Sequence[str] | None = None) -> list[File]:
     if extensions is None or len(extensions) == 0:
         return files
     filtered = []
@@ -88,7 +88,7 @@ def _files_by_extension(files: List[File], extensions: Optional[Sequence[str]] =
     return filtered
 
 
-def files_by_extension(folders: Sequence[Folder], extensions: Optional[Sequence[str]] = None) -> List[File]:
+def files_by_extension(folders: Sequence[Folder], extensions: Sequence[str] | None = None) -> list[File]:
     files = []
     for folder in folders:
         files.extend(_files_by_extension(folder.files, extensions))

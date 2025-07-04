@@ -1,14 +1,16 @@
-import pytest
 from unittest.mock import Mock, patch
-from icon_manager.library.controller import (
-    RuleManagerBuilder,
-    LibraryIconFileBuilder,
-    IconSettingBuilder,
-    IconLibraryController,
-)
+
+import pytest
+
 from icon_manager.content.models.matched import IconSetting
-from icon_manager.interfaces.path import File, JsonFile, FileModel
-from icon_manager.library.models import LibraryIconFile, ArchiveFolder, IconFile
+from icon_manager.interfaces.path import File, FileModel, JsonFile
+from icon_manager.library.controller import (
+    IconLibraryController,
+    IconSettingBuilder,
+    LibraryIconFileBuilder,
+    RuleManagerBuilder,
+)
+from icon_manager.library.models import ArchiveFolder, IconFile, LibraryIconFile
 from icon_manager.rules.factory.manager import RuleManagerFactory
 from icon_manager.rules.manager import RuleManager
 
@@ -349,9 +351,7 @@ class TestIconLibraryController:
         mock_setting2.manager.clean_empty.assert_called_once()
 
     @patch("icon_manager.library.controller.icon_setting_template")
-    def test_create_icon_configs_creates_templates_for_missing_configs(
-        self, mock_template_func, controller
-    ):
+    def test_create_icon_configs_creates_templates_for_missing_configs(self, mock_template_func, controller):
         mock_template = Mock()
         mock_template_func.return_value = mock_template
 

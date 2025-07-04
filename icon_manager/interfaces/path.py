@@ -2,31 +2,32 @@ import logging
 import os
 import shutil
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Optional, Tuple
-from uuid import UUID, uuid4
+from typing import Optional
+from uuid import uuid4
 
 log = logging.getLogger(__name__)
 
 
-def get_parent_and_name(path: str) -> Tuple[str, str]:
+def get_parent_and_name(path: str) -> tuple[str, str]:
     return os.path.split(path)
 
 
-_POINT = '.'
+_POINT = "."
 
 
-def get_name_and_extension(path: str) -> Tuple[str, Optional[str]]:
+def get_name_and_extension(path: str) -> tuple[str, str | None]:
     _, name = get_parent_and_name(path)
     if _POINT not in name or name.startswith(_POINT):
         return name, None
     splitted = name.split(_POINT)
-    return '.'.join(splitted[:-1]), splitted[-1]
+    return ".".join(splitted[:-1]), splitted[-1]
 
 
 @dataclass
 class Node:
-    parent: Optional['Node'] = field(repr=False, compare=False)
+    parent: Optional["Node"] = field(repr=False, compare=False)
     name: str = field(repr=True, init=False)
     path: str = field(compare=True, repr=False)
     excluded: bool = field(repr=False, init=False)
@@ -64,9 +65,9 @@ class Node:
 
 @dataclass()
 class File(Node):
-    parent: Optional['Folder'] = field(repr=False)
+    parent: Optional["Folder"] = field(repr=False)
     name_wo_ext: str = field(repr=False, init=False)
-    ext: Optional[str] = field(repr=True, init=False)
+    ext: str | None = field(repr=True, init=False)
 
     def __post_init__(self):
         super().__post_init__()
@@ -75,18 +76,18 @@ class File(Node):
         self.ext = ext
 
     @classmethod
-    def from_path(cls, path: str, parent: Optional['Folder']) -> 'File':
+    def from_path(cls, path: str, parent: Optional["Folder"]) -> "File":
         return File(parent=parent, path=path)
 
 
 @dataclass()
 class Folder(Node):
-    parent: Optional['Folder'] = field(repr=False)
-    folders: List['Folder'] = field(default_factory=list)
-    files: List[File] = field(default_factory=list)
+    parent: Optional["Folder"] = field(repr=False)
+    folders: list["Folder"] = field(default_factory=list)
+    files: list[File] = field(default_factory=list)
 
     @classmethod
-    def from_path(cls, path: str, parent: Optional['Folder']) -> 'Folder':
+    def from_path(cls, path: str, parent: Optional["Folder"]) -> "Folder":
         return Folder(parent=parent, path=path, files=[], folders=[])
 
     def mark_children(self) -> None:
@@ -105,17 +106,16 @@ class Folder(Node):
         self.files.clear()
 
 
-def get_attr_bit_dict(attributes: Iterable[str], is_enable: bool) -> Dict[str, str]:
+def get_attr_bit_dict(attributes: Iterable[str], is_enable: bool) -> dict[str, str]:
     attr_dict = {}
     for attribute in attributes:
-        value = '+' if is_enable else '-'
+        value = "+" if is_enable else "-"
         attr_dict[attribute] = value
     return attr_dict
 
 
 class PathModel(ABC):
-
-    @ classmethod
+    @classmethod
     def is_model(cls, path: str) -> bool:
         return False
 
@@ -129,7 +129,7 @@ class PathModel(ABC):
 
     @property
     def escape_path(self) -> str:
-        if ' ' not in self.path:
+        if " " not in self.path:
             return self.path
         return f'"{self.path}"'
 
@@ -141,8 +141,7 @@ class PathModel(ABC):
         return head
 
     @abstractmethod
-    def child_path(self, child_name: str) -> str:
-        ...
+    def child_path(self, child_name: str) -> str: ...
 
     def sibling_path(self, entry_name: str) -> str:
         return os.path.join(self.parent_path, entry_name)
@@ -151,30 +150,28 @@ class PathModel(ABC):
         return self.is_file() or self.is_dir()
 
     @abstractmethod
-    def is_file(self) -> bool:
-        ...
+    def is_file(self) -> bool: ...
 
     @abstractmethod
-    def is_dir(self) -> bool:
-        ...
+    def is_dir(self) -> bool: ...
 
-    def __command(self, attributes: Dict[str, str]) -> str:
-        commands = ['attrib']
+    def __command(self, attributes: dict[str, str]) -> str:
+        commands = ["attrib"]
         for attr, value in attributes.items():
-            commands.append(f'{value}{attr}')
+            commands.append(f"{value}{attr}")
         commands.append(self.escape_path)
-        return ' '.join(commands)
+        return " ".join(commands)
 
-    def set_attrib(self, attributes: Dict[str, str]) -> None:
+    def set_attrib(self, attributes: dict[str, str]) -> None:
         command = self.__command(attributes)
         os.system(command)
 
     def set_read_only(self, is_read_only: bool) -> None:
-        attr_dict = get_attr_bit_dict(['r'], is_read_only)
+        attr_dict = get_attr_bit_dict(["r"], is_read_only)
         self.set_attrib(attr_dict)
 
     def set_hidden(self, is_hidden: bool) -> None:
-        attr_dict = get_attr_bit_dict(['s', 'h'], is_hidden)
+        attr_dict = get_attr_bit_dict(["s", "h"], is_hidden)
         self.set_attrib(attr_dict)
 
     def remove(self) -> None:
@@ -184,12 +181,12 @@ class PathModel(ABC):
             else:
                 shutil.rmtree(self.path, ignore_errors=False)
         except Exception as ex:
-            message = f'Can not delete {self.name} in {self.parent_path}'
+            message = f"Can not delete {self.name} in {self.parent_path}"
             log.exception(message, ex)
 
     def copy_to(self, destination):
         if not isinstance(destination, PathModel):
-            message = f'Expected  PathModel but got {type(destination)}'
+            message = f"Expected  PathModel but got {type(destination)}"
             raise AttributeError(message)
         shutil.copy(self.path, destination.path)
 
@@ -202,35 +199,34 @@ class PathModel(ABC):
         return hash(self.path)
 
     def __str__(self) -> str:
-        return f'{self.name} [{self.parent_path}]'
+        return f"{self.name} [{self.parent_path}]"
 
     def __repr__(self) -> str:
-        return f'{self.__class__.__name__}: {self.__str__()}'
+        return f"{self.__class__.__name__}: {self.__str__()}"
 
 
 class FileModel(PathModel):
-
-    @ classmethod
+    @classmethod
     def is_model(cls, path: str) -> bool:
         return path.endswith(cls.extension())
 
-    @ classmethod
+    @classmethod
     def extension(cls, with_point: bool = True) -> str:
         if with_point:
-            return f'.{cls._extension()}'
+            return f".{cls._extension()}"
         return cls._extension()
 
-    @ classmethod
+    @classmethod
     def _extension(cls) -> str:
         raise NotImplementedError
 
     def __init__(self, path: str) -> None:
         super().__init__(path)
 
-    @ property
+    @property
     def name_wo_extension(self) -> str:
         extension = self.__class__.extension()
-        return self.name.replace(extension, '')
+        return self.name.replace(extension, "")
 
     def child_path(self, child_name: str) -> str:
         path = self.parent_path
@@ -244,22 +240,19 @@ class FileModel(PathModel):
 
 
 class JsonFile(FileModel):
-
-    @ classmethod
+    @classmethod
     def _extension(cls) -> str:
-        return 'json'
+        return "json"
 
 
 class ConfigFile(JsonFile):
-
-    @ classmethod
+    @classmethod
     def _extension(cls) -> str:
-        return 'config'
+        return "config"
 
 
 class FolderModel(PathModel):
-
-    @ classmethod
+    @classmethod
     def is_model(cls, path: str) -> bool:
         return os.path.isdir(path)
 
@@ -290,6 +283,6 @@ class SearchFolder(FolderModel):
 
 
 class IconSearchFolder(SearchFolder):
-    def __init__(self, path: str, copy_icon: Optional[bool]) -> None:
+    def __init__(self, path: str, copy_icon: bool | None) -> None:
         super().__init__(path)
         self.copy_icon = copy_icon

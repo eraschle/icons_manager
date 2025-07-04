@@ -1,19 +1,21 @@
+from unittest.mock import Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+
+from icon_manager.config.user import UserConfig
 from icon_manager.content.controller.desktop import (
+    DesktopDeleteAction,
     DesktopFileChecker,
     DesktopIniBuilder,
-    DesktopDeleteAction,
-    DesktopIniController,
-    RuleFolderCommand,
-    IconFolderCommand,
-    IconFileCommand,
     DesktopIniCommand,
+    DesktopIniController,
     DesktopIniCreator,
-    get_commands,
+    IconFileCommand,
+    IconFolderCommand,
+    RuleFolderCommand,
     error_message,
+    get_commands,
 )
-from icon_manager.config.user import UserConfig
 from icon_manager.content.models.desktop import DesktopIniFile, Git
 from icon_manager.content.models.matched import (
     MatchedIconFile,
@@ -208,9 +210,7 @@ class TestDesktopIniController:
 
     @patch("icon_manager.content.controller.desktop.DesktopDeleteAction")
     @patch("icon_manager.content.controller.desktop.DesktopFileChecker")
-    def test_delete_content_executes_delete_action(
-        self, mock_checker_class, mock_action_class, controller
-    ):
+    def test_delete_content_executes_delete_action(self, mock_checker_class, mock_action_class, controller):
         mock_desktop_files = [Mock(spec=DesktopIniFile)]
         controller.desktop_files = mock_desktop_files
 

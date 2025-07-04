@@ -1,20 +1,21 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Iterable, List, Optional, Sequence, Union
+from collections.abc import Iterable, Sequence
 
 from icon_manager.config.user import UserConfig
 from icon_manager.content.controller.base import ContentController
 from icon_manager.content.models.desktop import DesktopIniFile, Git
-from icon_manager.content.models.matched import (MatchedIconFile,
-                                                 MatchedIconFolder,
-                                                 MatchedRuleFolder)
+from icon_manager.content.models.matched import (
+    MatchedIconFile,
+    MatchedIconFolder,
+    MatchedRuleFolder,
+)
 from icon_manager.crawler.filters import files_by_extension
 from icon_manager.data.ini_source import DesktopFileSource
 from icon_manager.helpers.decorator import execution
-from icon_manager.interfaces.path import File, Folder
 from icon_manager.interfaces.actions import DeleteAction
 from icon_manager.interfaces.builder import FileCrawlerBuilder
-from icon_manager.interfaces.path import PathModel
+from icon_manager.interfaces.path import File, Folder, PathModel
 from icon_manager.library.models import IconSetting, LibraryIconFile
 
 log = logging.getLogger(__name__)
@@ -24,11 +25,10 @@ log = logging.getLogger(__name__)
 
 
 class DesktopFileChecker:
-
     def __init__(self, source: DesktopFileSource) -> None:
         self.source = source
 
-    def is_app_file(self, file: Union[File, PathModel]) -> bool:
+    def is_app_file(self, file: File | PathModel) -> bool:
         if isinstance(file, DesktopIniFile):
             source_file = file
         else:
@@ -42,23 +42,20 @@ class DesktopFileChecker:
 
 
 class DesktopIniBuilder(FileCrawlerBuilder[DesktopIniFile]):
-
-    app_entry = 'IconManager=1'
+    app_entry = "IconManager=1"
 
     def __init__(self, source: DesktopFileSource) -> None:
         super().__init__()
         self.checker = DesktopFileChecker(source)
 
     def can_build_file(self, file: File, **kwargs) -> bool:
-        return (DesktopIniFile.is_model(file.path)
-                and self.checker.is_app_file(file))
+        return DesktopIniFile.is_model(file.path) and self.checker.is_app_file(file)
 
-    def build_file_model(self, file: File, **kwargs) -> Optional[DesktopIniFile]:
+    def build_file_model(self, file: File, **kwargs) -> DesktopIniFile | None:
         return DesktopIniFile(file.path)
 
 
 class DesktopDeleteAction(DeleteAction):
-
     def __init__(self, entries: Iterable[PathModel], checker: DesktopFileChecker) -> None:
         super().__init__(entries)
         self.checker = checker
@@ -69,18 +66,21 @@ class DesktopDeleteAction(DeleteAction):
 
 
 class DesktopIniController(ContentController[DesktopIniFile]):
-
-    def __init__(self, user_config: UserConfig, builder: DesktopIniBuilder = DesktopIniBuilder(DesktopFileSource())) -> None:
+    def __init__(
+        self,
+        user_config: UserConfig,
+        builder: DesktopIniBuilder = DesktopIniBuilder(DesktopFileSource()),
+    ) -> None:
         super().__init__(user_config, builder)
-        self.desktop_files: List[DesktopIniFile] = []
+        self.desktop_files: list[DesktopIniFile] = []
 
-    @execution(message='Crawle & build DESKTOP.INI-files')
-    def crawle_and_build_result(self, folders: List[Folder], _: Sequence[IconSetting]):
+    @execution(message="Crawle & build DESKTOP.INI-files")
+    def crawle_and_build_result(self, folders: list[Folder], _: Sequence[IconSetting]):
         extensions = [DesktopIniFile.extension(with_point=False)]
         files = files_by_extension(folders, extensions)
         self.desktop_files = self.builder.build_models(files)
 
-    @execution(message='Deleted DESKTOP.INI-files')
+    @execution(message="Deleted DESKTOP.INI-files")
     def delete_content(self):
         checker = DesktopFileChecker(DesktopFileSource())
         action = DesktopDeleteAction(self.desktop_files, checker)
@@ -97,7 +97,6 @@ class DesktopIniController(ContentController[DesktopIniFile]):
 
 
 class ConfigCommand(ABC):
-
     def __init__(self, order: int, copy_icon: bool) -> None:
         super().__init__()
         self.order = order
@@ -120,7 +119,6 @@ def error_message(model: PathModel, message: str) -> str:
 
 
 class RuleFolderCommand(ConfigCommand):
-
     def __init__(self, order: int, copy_icon: bool, rule_folder: MatchedRuleFolder) -> None:
         super().__init__(order, copy_icon)
         self.rule_folder = rule_folder
@@ -135,7 +133,7 @@ class RuleFolderCommand(ConfigCommand):
         try:
             self.rule_folder.icon_folder.create()
         except Exception as ex:
-            message = 'icon folder create [pre command]'
+            message = "icon folder create [pre command]"
             log.exception(error_message(self.rule_folder, message), ex)
 
     def post_command(self):
@@ -144,12 +142,11 @@ class RuleFolderCommand(ConfigCommand):
         try:
             self.rule_folder.set_read_only(is_read_only=True)
         except Exception as ex:
-            message = 'set attribute [post command]'
+            message = "set attribute [post command]"
             log.exception(error_message(self.rule_folder, message), ex)
 
 
 class IconFolderCommand(ConfigCommand):
-
     def __init__(self, order: int, copy_icon: bool, icon_folder: MatchedIconFolder) -> None:
         super().__init__(order, copy_icon)
         self.icon_folder = icon_folder
@@ -160,7 +157,7 @@ class IconFolderCommand(ConfigCommand):
         try:
             self.icon_folder.create()
         except Exception as ex:
-            message = 'create folder [pre command]'
+            message = "create folder [pre command]"
             log.exception(error_message(self.icon_folder, message), ex)
 
     def post_command(self):
@@ -169,14 +166,18 @@ class IconFolderCommand(ConfigCommand):
         try:
             self.icon_folder.set_hidden(is_hidden=True)
         except Exception as ex:
-            message = 'set attribute [post command]'
+            message = "set attribute [post command]"
             log.exception(error_message(self.icon_folder, message), ex)
 
 
 class IconFileCommand(ConfigCommand):
-
-    def __init__(self, order: int, copy_icon: bool, icon: MatchedIconFile,
-                 library: LibraryIconFile) -> None:
+    def __init__(
+        self,
+        order: int,
+        copy_icon: bool,
+        icon: MatchedIconFile,
+        library: LibraryIconFile,
+    ) -> None:
         super().__init__(order, copy_icon)
         self.icon = icon
         self.library = library
@@ -187,7 +188,7 @@ class IconFileCommand(ConfigCommand):
         try:
             self.library.copy_to(self.icon)
         except Exception as ex:
-            log.exception(error_message(self.icon, 'copy library icon'), ex)
+            log.exception(error_message(self.icon, "copy library icon"), ex)
 
     def post_command(self):
         if not self.icon.exists():
@@ -195,11 +196,10 @@ class IconFileCommand(ConfigCommand):
         try:
             self.icon.set_hidden(is_hidden=True)
         except Exception as ex:
-            log.exception(error_message(self.icon, 'icon file attribute'), ex)
+            log.exception(error_message(self.icon, "icon file attribute"), ex)
 
 
 class DesktopIniCommand(ConfigCommand):
-
     def __init__(self, order: int, copy_icon: bool, desktop: DesktopIniFile) -> None:
         super().__init__(order, copy_icon)
         self.desktop = desktop
@@ -210,7 +210,7 @@ class DesktopIniCommand(ConfigCommand):
         try:
             self.desktop.set_writeable_and_visible()
         except Exception as ex:
-            message = 'set attribute [pre command]'
+            message = "set attribute [pre command]"
             log.exception(error_message(self.desktop, message), ex)
 
     def post_command(self):
@@ -219,7 +219,7 @@ class DesktopIniCommand(ConfigCommand):
         try:
             self.desktop.set_protected_and_hidden()
         except Exception as ex:
-            message = 'set attribute [post command]'
+            message = "set attribute [post command]"
             log.exception(error_message(self.desktop, message), ex)
 
 
@@ -229,7 +229,7 @@ class DesktopIniCommand(ConfigCommand):
 # region DESKTOP INI CONTROLLER
 
 
-def get_commands(rule_folder: MatchedRuleFolder, copy_icon: bool) -> List[ConfigCommand]:
+def get_commands(rule_folder: MatchedRuleFolder, copy_icon: bool) -> list[ConfigCommand]:
     icon_folder = rule_folder.icon_folder
     local_icon = rule_folder.local_icon
     library_icon = rule_folder.library_icon
@@ -237,16 +237,15 @@ def get_commands(rule_folder: MatchedRuleFolder, copy_icon: bool) -> List[Config
         RuleFolderCommand(1, copy_icon, rule_folder),
         IconFolderCommand(2, copy_icon, icon_folder),
         IconFileCommand(3, copy_icon, local_icon, library_icon),
-        DesktopIniCommand(4, copy_icon, rule_folder.desktop_ini)
+        DesktopIniCommand(4, copy_icon, rule_folder.desktop_ini),
     ]
 
 
 class DesktopIniCreator:
-
     def __init__(self, source: DesktopFileSource = DesktopFileSource()) -> None:
         self.source = source
         self.checker = DesktopFileChecker(source)
-        self.commands: List[ConfigCommand] = []
+        self.commands: list[ConfigCommand] = []
 
     def can_write(self, file: DesktopIniFile) -> bool:
         if not file.exists():
@@ -255,13 +254,13 @@ class DesktopIniCreator:
 
     def create_content(self, manager: MatchedRuleFolder) -> Iterable[str]:
         return [
-            '[.ShellClassInfo]',
-            f'IconResource={manager.icon_path_for_desktop_ini()},0',
+            "[.ShellClassInfo]",
+            f"IconResource={manager.icon_path_for_desktop_ini()},0",
             DesktopIniBuilder.app_entry,
-            '[ViewState]',
-            'Mode=',
-            'Vid=',
-            'FolderType=Generic'
+            "[ViewState]",
+            "Mode=",
+            "Vid=",
+            "FolderType=Generic",
         ]
 
     def order_commands(self, reverse: bool) -> None:
@@ -275,14 +274,13 @@ class DesktopIniCreator:
     def write(self, folder: MatchedRuleFolder, copy_icon: bool) -> None:
         self.commands = get_commands(folder, copy_icon)
         self.order_commands(reverse=False)
-        self.execute_commands('pre_command')
+        self.execute_commands("pre_command")
         try:
-            self.source.write(folder.desktop_ini,
-                              self.create_content(folder))
+            self.source.write(folder.desktop_ini, self.create_content(folder))
         except Exception as ex:
-            log.exception(error_message(folder, 'Write desktop.ini'), ex)
+            log.exception(error_message(folder, "Write desktop.ini"), ex)
         self.order_commands(reverse=True)
-        self.execute_commands('post_command')
+        self.execute_commands("post_command")
 
 
 # endregion
