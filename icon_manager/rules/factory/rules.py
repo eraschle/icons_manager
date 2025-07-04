@@ -127,7 +127,7 @@ class ARuleBuilder(ABC, ContentFactory[dict[str, Any], TRule]):
         return can_build
 
     @abstractmethod
-    def create(self, rule_config: dict[str, Any], **kwargs) -> TRule: ...
+    def create(self, config: dict[str, Any], **kwargs) -> TRule: ...
 
 
 TFolderRule = TypeVar("TFolderRule", bound=FolderRule)
@@ -200,7 +200,9 @@ class ContainsFileRuleBuilder(ASingleRuleBuilder[ContainsFileRule]):
         #         return False
         #     return True
 
-    def create_rule(self, attribute: RuleAttribute, rule_config: dict[str, Any]) -> ContainsFileRule:
+    def create_rule(
+        self, attribute: RuleAttribute, rule_config: dict[str, Any]
+    ) -> ContainsFileRule:
         rule = self.get_rule(rule_config)
         values = rule_config.get(rule, [])
         operator = get_operator(rule_config)
@@ -234,7 +236,9 @@ def get_single_builders() -> Iterable[ASingleRuleBuilder]:
     return builders
 
 
-def create_single_rule(rules: Iterable[ASingleRuleBuilder], config: dict[str, Any], **kwargs) -> ISingleRule:
+def create_single_rule(
+    rules: Iterable[ASingleRuleBuilder], config: dict[str, Any], **kwargs
+) -> ISingleRule:
     for builder in rules:
         if not builder.can_build(config):
             continue

@@ -33,9 +33,12 @@ class Action(ABC, Generic[TEntry]):
     def __init__(self, entries: Iterable[TEntry], action_log: str) -> None:
         """Initialize action with entries and log message.
 
-        Args:
-            entries: Iterable of path entries to operate on.
-            action_log: Log message to use when reporting action results.
+        Parameters
+        ----------
+        entries : Iterable[TEntry]
+            Iterable of path entries to operate on.
+        action_log : str
+            Log message to use when reporting action results.
         """
         super().__init__()
         self.entries = entries
@@ -62,10 +65,14 @@ class Action(ABC, Generic[TEntry]):
     def can_execute(self, entry: TEntry) -> bool:
         """Check if the action can be executed on the given entry.
 
-        Args:
-            entry: Path entry to check.
+        Parameters
+        ----------
+        entry : TEntry
+            Path entry to check.
 
-        Returns:
+        Returns
+        -------
+        bool
             True if the action can be executed on this entry, False otherwise.
         """
         pass
@@ -74,18 +81,23 @@ class Action(ABC, Generic[TEntry]):
     def execute_action(self, entry: TEntry) -> None:
         """Execute the specific action on the given entry.
 
-        Args:
-            entry: Path entry to execute the action on.
+        Parameters
+        ----------
+        entry : TEntry
+            Path entry to execute the action on.
 
-        Note:
-            This method is called for each entry that passes the can_execute check.
+        Notes
+        -----
+        This method is called for each entry that passes the can_execute check.
         """
         pass
 
     def any_executed(self) -> bool:
         """Check if any actions were executed.
 
-        Returns:
+        Returns
+        -------
+        bool
             True if at least one file or folder was processed, False otherwise.
         """
         return len(self.files) > 0 or len(self.folders) > 0
@@ -105,10 +117,14 @@ class Action(ABC, Generic[TEntry]):
     def get_log_message(self, model: type) -> str:
         """Generate complete log message for the action.
 
-        Args:
-            model: Model class to include in the log message.
+        Parameters
+        ----------
+        model : type
+            Model class to include in the log message.
 
-        Returns:
+        Returns
+        -------
+        str
             Complete formatted log message including action, files, and folders.
         """
         name = self._log_prefix(model)
@@ -128,18 +144,24 @@ class DeleteAction(Action[PathModel]):
     def __init__(self, entries: Iterable[PathModel]) -> None:
         """Initialize delete action with entries to delete.
 
-        Args:
-            entries: Iterable of PathModel entries to delete.
+        Parameters
+        ----------
+        entries : Iterable[PathModel]
+            Iterable of PathModel entries to delete.
         """
         super().__init__(entries, "Deleted")
 
     def can_execute(self, entry: PathModel) -> bool:
         """Check if entry can be deleted.
 
-        Args:
-            entry: Path entry to check.
+        Parameters
+        ----------
+        entry : PathModel
+            Path entry to check.
 
-        Returns:
+        Returns
+        -------
+        bool
             True if the entry exists on the filesystem, False otherwise.
         """
         return entry.exists()
@@ -147,7 +169,9 @@ class DeleteAction(Action[PathModel]):
     def execute_action(self, entry: PathModel) -> None:
         """Delete the specified entry from the filesystem.
 
-        Args:
-            entry: Path entry to delete.
+        Parameters
+        ----------
+        entry : PathModel
+            Path entry to delete.
         """
         entry.remove()

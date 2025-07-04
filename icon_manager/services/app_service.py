@@ -7,13 +7,13 @@ from icon_manager.content.controller.icon_file import IconFileController
 from icon_manager.content.controller.icon_folder import IconFolderController
 from icon_manager.content.controller.rules_apply import RulesApplyController
 from icon_manager.library.controller import IconLibraryController
-from icon_manager.services.base import IConfigService, ServiceProtocol
+from icon_manager.services.base import IConfigService, IServiceProtocol
 from icon_manager.services.config_service import ConfigService
 
 log = logging.getLogger(__name__)
 
 
-class IconsAppService(ServiceProtocol):
+class IconsAppService(IServiceProtocol):
     def __init__(self, config: AppConfig) -> None:
         self.config = config
         self.services: list[IConfigService] = []
@@ -64,7 +64,7 @@ class IconsAppService(ServiceProtocol):
             exclude = self.config.create_exclude_rules()
             service.set_exclude_manager(exclude)
 
-    def find_and_apply_matches(self):
+    def find_and_apply_matches(self, overwrite):
         for service in self.services:
             service.find_and_apply_matches()
 

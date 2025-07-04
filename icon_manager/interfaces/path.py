@@ -27,10 +27,10 @@ def get_name_and_extension(path: str) -> tuple[str, str | None]:
 
 @dataclass
 class Node:
-    parent: Optional["Node"] = field(repr=False, compare=False)
-    name: str = field(repr=True, init=False)
-    path: str = field(compare=True, repr=False)
-    excluded: bool = field(repr=False, init=False)
+    parent: "Node | None"
+    path: str
+    name: str = field(init=False)
+    excluded: bool = field(default=False, init=False)
 
     def __post_init__(self):
         self.excluded = False
@@ -65,9 +65,9 @@ class Node:
 
 @dataclass()
 class File(Node):
-    parent: Optional["Folder"] = field(repr=False)
-    name_wo_ext: str = field(repr=False, init=False)
-    ext: str | None = field(repr=True, init=False)
+    parent: "Folder | None"
+    name_wo_ext: str = field(init=False)
+    ext: str | None = field(init=False)
 
     def __post_init__(self):
         super().__post_init__()
@@ -77,18 +77,18 @@ class File(Node):
 
     @classmethod
     def from_path(cls, path: str, parent: Optional["Folder"]) -> "File":
-        return File(parent=parent, path=path)
+        return File(parent=parent, path=path, excluded=False)
 
 
 @dataclass()
 class Folder(Node):
-    parent: Optional["Folder"] = field(repr=False)
+    parent: "Folder | None"
     folders: list["Folder"] = field(default_factory=list)
     files: list[File] = field(default_factory=list)
 
     @classmethod
     def from_path(cls, path: str, parent: Optional["Folder"]) -> "Folder":
-        return Folder(parent=parent, path=path, files=[], folders=[])
+        return Folder(parent=parent, path=path)
 
     def mark_children(self) -> None:
         for folder in self.folders:
