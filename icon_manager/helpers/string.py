@@ -1,16 +1,16 @@
-from typing import Any, Sequence
-
+from collections.abc import Sequence
+from typing import Any
 
 PREFIX_LENGTH = 15
 
 HUNDRED = 3
 THOUSAND = 4
-FILL_SPACE = ' '
-FILL_HYPHEN = '-'
+FILL_SPACE = " "
+FILL_HYPHEN = "-"
 
-ALIGN_LEFT = '<'
-ALIGN_RIGHT = '>'
-ALIGN_CENTRE = '^'
+ALIGN_LEFT = "<"
+ALIGN_RIGHT = ">"
+ALIGN_CENTRE = "^"
 
 
 def fixed_length(value: str, width: int, fill: str = FILL_SPACE, align: str = ALIGN_LEFT) -> str:

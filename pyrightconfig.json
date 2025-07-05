@@ -1,0 +1,28 @@
+{
+  "include": [
+
+  ],
+
+  "exclude": [
+    "**/node_modules",
+    "**/build/**",
+    "**/dist/**",
+    "**/.venv/**",
+    "**/.ruff_cache/**",
+    "**/__pycache__",
+    "src/typestubs"
+  ],
+
+  "ignore": [
+
+  ],
+
+  "defineConstant": {
+    "DEBUG": true
+  },
+
+  "stubPath": "/home/elyo/workspace/_data_/python/_stubs_/",
+
+  "reportMissingImports": "error",
+  "reportMissingTypeStubs": true
+}

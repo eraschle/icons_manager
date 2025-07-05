@@ -1,5 +1,5 @@
 import logging
-from typing import Iterable, Optional, Sequence
+from collections.abc import Iterable, Sequence
 
 from icon_manager.interfaces.managers import (IAttributeRuleController,
                                               IConfigManager,
@@ -156,7 +156,7 @@ class ExcludeManager(IConfigManager[Folder]):
             checker.setup_rules(before_or_after)
 
     def __str__(self) -> str:
-        return f'Exclude Manager [{len(self.checkers)}]'
+        return f"Exclude Manager [{len(self.checkers)}]"
 
     def __repr__(self) -> str:
         return self.__str__()

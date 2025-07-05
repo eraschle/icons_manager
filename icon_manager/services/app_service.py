@@ -10,7 +10,7 @@ from icon_manager.content.controller.icon_file import IconFileController
 from icon_manager.content.controller.icon_folder import IconFolderController
 from icon_manager.content.controller.rules_apply import RulesApplyController
 from icon_manager.library.controller import IconLibraryController
-from icon_manager.services.base import IConfigService, ServiceProtocol
+from icon_manager.services.base import IConfigService, IServiceProtocol
 from icon_manager.services.config_service import ConfigService
 
 log = logging.getLogger(__name__)
@@ -20,10 +20,10 @@ def thread_count(services: Sequence[IConfigService]) -> int:
     return len(services) + (os.cpu_count() or 5) - 2
 
 
-class IconsAppService(ServiceProtocol):
+class IconsAppService(IServiceProtocol):
     def __init__(self, config: AppConfig) -> None:
         self.config = config
-        self.services: List[IConfigService] = []
+        self.services: list[IConfigService] = []
 
     def _create_service(self, user_config: UserConfig) -> IConfigService:
         library = IconLibraryController(user_config)
@@ -31,8 +31,14 @@ class IconsAppService(ServiceProtocol):
         folders = IconFolderController(user_config)
         files = IconFileController(user_config)
         rules = RulesApplyController(user_config)
-        return ConfigService(user_config, settings=library, desktop=desktop,
-                             icon_folders=folders, icon_files=files, rules=rules)
+        return ConfigService(
+            user_config,
+            settings=library,
+            desktop=desktop,
+            icon_folders=folders,
+            icon_files=files,
+            rules=rules,
+        )
 
     def setup(self):
         for user_config in self.config.user_configs:
@@ -65,7 +71,7 @@ class IconsAppService(ServiceProtocol):
             exclude = self.config.create_exclude_rules()
             service.set_exclude_manager(exclude)
 
-    def find_and_apply_matches(self):
+    def find_and_apply_matches(self, overwrite):
         for service in self.services:
             service.find_and_apply()
 

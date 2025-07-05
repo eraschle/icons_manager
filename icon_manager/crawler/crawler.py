@@ -6,7 +6,7 @@ from icon_manager.config.user import UserConfig
 from icon_manager.crawler.filters import (files_by_extension,
                                           is_file_with_extensions)
 from icon_manager.interfaces.path import (File, Folder, IconSearchFolder,
-                                          SearchFolder)
+                                          SearchFolder,)
 
 
 def crawle_folder(entry: os.DirEntry, parent: Optional[Folder]) -> Folder:
@@ -110,7 +110,7 @@ def _group_by_extension(files: Iterable[File], extensions: Sequence[str]) -> Dic
     return grouped
 
 
-def crawling_icons(root: SearchFolder, extensions: Sequence[str]) -> Dict[str, List[File]]:
+def crawling_icons(root: SearchFolder, extensions: Sequence[str]) -> dict[str, list[File]]:
     folder = _crawling(root)
     files = files_by_extension([folder], extensions)
     return _group_by_extension(files, extensions)

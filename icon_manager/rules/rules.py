@@ -1,13 +1,14 @@
 import logging
 from abc import abstractmethod
-from typing import Any, Collection, Iterable, Sequence, Set
+from collections.abc import Collection, Iterable, Sequence
+from typing import Any
 
 from icon_manager.interfaces.path import Folder
 from icon_manager.rules.base import (AFilterRule, ASingleRule, ISingleRule,
-                                     Operator, RuleAttribute)
+                                     Operator, RuleAttribute,)
 from icon_manager.rules.generate import (AfterGenerator, BeforeGenerator,
                                          BeforeOrAfterGenerator, CaseConverter,
-                                         Generator, GeneratorManager)
+                                         Generator, GeneratorManager,)
 
 log = logging.getLogger(__name__)
 
@@ -45,10 +46,15 @@ class IRuleValuesFilter(ISingleRule):
 
 
 class FolderRule(ASingleRule):
-
-    def __init__(self, attribute: RuleAttribute, operator: Operator,
-                 rule_values: Collection[str], case_sensitive: bool,
-                 before_or_after: bool, before_or_after_values: Collection[str]) -> None:
+    def __init__(
+        self,
+        attribute: RuleAttribute,
+        operator: Operator,
+        rule_values: Collection[str],
+        case_sensitive: bool,
+        before_or_after: bool,
+        before_or_after_values: Collection[str],
+    ) -> None:
         super().__init__(attribute, operator)
         self.original_values = list(rule_values)
         self.generated: Collection[str] = []
@@ -115,7 +121,7 @@ class FolderRule(ASingleRule):
         pass
 
     def __str__(self) -> str:
-        return f'{self.__class__.__name__}: {self.attribute} {self.rule_values}'
+        return f"{self.__class__.__name__}: {self.attribute} {self.rule_values}"
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -128,13 +134,11 @@ class EqualsRule(FolderRule):
 
 
 class NotEqualsRule(EqualsRule):
-
     def is_value_allowed(self, entry: Folder, value: str, rule_value: str) -> bool:
         return not super().is_value_allowed(entry, value, rule_value)
 
 
 class ContainsRule(FolderRule):
-
     def get_generators(self) -> Sequence[Generator]:
         return self.before_and_after_generators()
 
@@ -143,13 +147,11 @@ class ContainsRule(FolderRule):
 
 
 class NotContainsRule(ContainsRule):
-
     def is_value_allowed(self, entry: Folder, value: str, rule_value: str) -> bool:
         return not super().is_value_allowed(entry, value, rule_value)
 
 
 class StartsWithRule(FolderRule):
-
     def get_generators(self) -> Sequence[Generator]:
         return self.before_and_after_generators()
 
@@ -158,7 +160,6 @@ class StartsWithRule(FolderRule):
 
 
 class EndsWithRule(FolderRule):
-
     def get_generators(self) -> Sequence[Generator]:
         return self.before_and_after_generators()
 
@@ -167,7 +168,6 @@ class EndsWithRule(FolderRule):
 
 
 class StartsOrEndsWithRule(FolderRule):
-
     def get_generators(self) -> Sequence[Generator]:
         return self.before_and_after_generators()
 
@@ -213,7 +213,7 @@ class ContainsFileRule(FolderRule, IPathOperationRule):
         super().__init__(attribute, operator, values, case_sensitive,
                          before_or_after, before_or_after_values)
         self.max_level = level
-        self.replace_values = ['*', '.']
+        self.replace_values = ["*", "."]
 
     def get_generators(self) -> Sequence[Generator]:
         return []
@@ -229,7 +229,7 @@ class ContainsFileRule(FolderRule, IPathOperationRule):
         values = [self.get_rule_value(value) for value in values]
         return super().prepare_rule_values(values)
 
-    def get_extensions_of(self, folder: Folder) -> Set[str]:
+    def get_extensions_of(self, folder: Folder) -> set[str]:
         extensions = [file.ext for file in folder.files]
         return set([ext for ext in extensions if ext is not None])
 
@@ -251,23 +251,37 @@ class ContainsFileRule(FolderRule, IPathOperationRule):
 
 
 class NotContainsFileRule(ContainsFileRule):
-
+    @matched_value()
     def is_value_allowed(self, entry: Folder, value: str, rule_value: str) -> bool:
         return not super().is_value_allowed(entry, value, rule_value)
 
 
 class ContainsFolderRule(ContainsFileRule):
-    def __init__(self, attribute: RuleAttribute, operator: Operator, values: Collection[str],
-                 case_sensitive: bool, before_or_after: bool,
-                 before_or_after_values: Collection[str], level: int) -> None:
-        super().__init__(attribute, operator, values, case_sensitive,
-                         before_or_after, before_or_after_values, level)
+    def __init__(
+        self,
+        attribute: RuleAttribute,
+        operator: Operator,
+        values: Collection[str],
+        case_sensitive: bool,
+        before_or_after: bool,
+        before_or_after_values: Collection[str],
+        level: int,
+    ) -> None:
+        super().__init__(
+            attribute,
+            operator,
+            values,
+            case_sensitive,
+            before_or_after,
+            before_or_after_values,
+            level,
+        )
         self.replace_values = []
 
     def get_generators(self) -> Sequence[Generator]:
         return []
 
-    def get_folder_names(self, folder: Folder) -> Set[str]:
+    def get_folder_names(self, folder: Folder) -> set[str]:
         names = [folder.name for folder in folder.folders]
         return set(names)
 
@@ -289,7 +303,7 @@ class ContainsFolderRule(ContainsFileRule):
 
 
 class NotContainsFolderRule(ContainsFolderRule):
-
+    @matched_value()
     def is_value_allowed(self, entry: Folder, value: str, rule_value: str) -> bool:
         return not super().is_value_allowed(entry, value, rule_value)
 
@@ -298,9 +312,7 @@ class NotContainsFolderRule(ContainsFolderRule):
 
 
 class ChainedRule(AFilterRule, ISingleRule):
-
-    def __init__(self, attribute: RuleAttribute, operator: Operator,
-                 rules: Sequence[ISingleRule]) -> None:
+    def __init__(self, attribute: RuleAttribute, operator: Operator, rules: Sequence[ISingleRule]) -> None:
         super().__init__(attribute, operator)
         self.rules = rules
 

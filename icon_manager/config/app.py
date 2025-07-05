@@ -1,6 +1,7 @@
 import copy
 import logging
 import os
+from collections.abc import Collection, Iterable, Sequence
 from enum import Enum
 from typing import Any, Collection, Dict, Iterable, List, Optional, Sequence
 
@@ -10,8 +11,11 @@ from icon_manager.data.json_source import JsonSource
 from icon_manager.helpers.environment import get_converted_env_path
 from icon_manager.helpers.path import get_files
 from icon_manager.helpers.resource import app_config_template_file
-from icon_manager.helpers.user_inputs import (ask_user, ask_user_for_path,
-                                              ask_user_yes_no_question)
+from icon_manager.helpers.user_inputs import (
+    ask_user,
+    ask_user_for_path,
+    ask_user_yes_no_question,
+)
 from icon_manager.interfaces.factory import FileFactory
 from icon_manager.interfaces.path import ConfigFile, JsonFile
 from icon_manager.rules.factory.manager import ExcludeManagerFactory
@@ -25,10 +29,12 @@ def get_paths(path: str, names: Iterable[str]) -> List[str]:
 
 
 class AppConfig(Config):
-
-    def __init__(self, user_configs: Iterable[UserConfig],
-                 exclude_rules: ExcludeManager,
-                 before_or_after: Iterable[str]) -> None:
+    def __init__(
+        self,
+        user_configs: Iterable[UserConfig],
+        exclude_rules: ExcludeManager,
+        before_or_after: Iterable[str],
+    ) -> None:
         super().__init__()
         self._exclude_rules = exclude_rules
         self.user_configs = user_configs
@@ -44,24 +50,23 @@ class AppConfig(Config):
 
 
 class AppConfigs(str, Enum):
-    USER_CONFIGS = 'user_configs'
-    BEFORE_OR_AFTER = 'before_or_after'
+    USER_CONFIGS = "user_configs"
+    BEFORE_OR_AFTER = "before_or_after"
 
 
 class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
-
-    APP_CONFIG_NAME = 'app_config.config'
-    EXCLUDE_NAME = 'excluded_rules.config'
+    APP_CONFIG_NAME = "app_config.config"
+    EXCLUDE_NAME = "excluded_rules.config"
 
     @classmethod
-    def app_config_path(cls, folder_path: str = '%APPDATA%/Icon-Manager') -> str:
+    def app_config_path(cls, folder_path: str = "%APPDATA%/Icon-Manager") -> str:
         folder_path = get_converted_env_path(folder_path)
         if not os.path.isdir(folder_path):
             os.makedirs(folder_path)
         return os.path.join(folder_path, cls.APP_CONFIG_NAME)
 
     @classmethod
-    def app_config_file(cls, folder_path: str = '%APPDATA%/Icon-Manager') -> ConfigFile:
+    def app_config_file(cls, folder_path: str = "%APPDATA%/Icon-Manager") -> ConfigFile:
         file_path = cls.app_config_path(folder_path)
         config_file = ConfigFile(file_path)
         return config_file
@@ -77,7 +82,7 @@ class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
         return get_paths(folder_path, names)
 
     @classmethod
-    def get_exclude_config(cls, folder_path: str) -> Optional[str]:
+    def get_exclude_config(cls, folder_path: str) -> str | None:
         names = get_files(folder_path, ConfigFile.extension())
         names = list(filter(lambda name: cls.EXCLUDE_NAME == name, names))
         if len(names) != 1:
@@ -92,7 +97,7 @@ class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
     def _get_user_config_paths(self, config_folder: str) -> Collection[str]:
         return self.__class__.get_user_config_paths(config_folder)
 
-    def _get_exclude_config_path(self, config_folder: str) -> Optional[str]:
+    def _get_exclude_config_path(self, config_folder: str) -> str | None:
         return self.__class__.get_exclude_config(config_folder)
 
     def is_user_config_path_empty(self, config_folder: str) -> bool:
@@ -105,7 +110,7 @@ class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
         config_files = self._get_user_config_paths(config_folder)
         return len(config_files) > 0
 
-    def ask_user_for_config_path(self, information: Optional[str]) -> str:
+    def ask_user_for_config_path(self, information: str | None) -> str:
         message = "Please enter path for all user configurations: "
         config_path = ask_user_for_path(message, information)
         return get_converted_env_path(config_path)
@@ -144,7 +149,7 @@ class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
             return
         self.excluded_factory.create_template(config)
 
-    def create_user_configs(self, content: Dict[str, Any]) -> Sequence[UserConfig]:
+    def create_user_configs(self, content: dict[str, Any]) -> Sequence[UserConfig]:
         config_folder_path = content[AppConfigs.USER_CONFIGS]
         user_configs = []
         for config_file_path in self._get_user_config_paths(config_folder_path):
@@ -158,7 +163,7 @@ class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
             user_configs.append(user_config)
         return user_configs
 
-    def create_exclude_config(self, content: Dict[str, Any]) -> ExcludeManager:
+    def create_exclude_config(self, content: dict[str, Any]) -> ExcludeManager:
         config_folder = content[AppConfigs.USER_CONFIGS]
         config_path = self._get_exclude_config_path(config_folder)
         if config_path is None:
@@ -170,9 +175,9 @@ class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
             template_file = app_config_template_file()
             template_file.copy_to(file)
         content = self.source.read(file, **kwargs)
-        config_folder_path = content.get(AppConfigs.USER_CONFIGS, '')
+        config_folder_path = content.get(AppConfigs.USER_CONFIGS, "")
         if self.is_user_config_path_empty(config_folder_path):
-            information = 'No path for the user configuration exists'
+            information = "No path for the user configuration exists"
             config_folder_path = self.ask_user_for_config_path(information)
         elif not self.does_user_config_path_exists(config_folder_path):
             information = f'The saved path does NOT exists\n"{config_folder_path}"'
@@ -183,7 +188,7 @@ class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
         self.source.write(file, content)
         user_configs = self.create_user_configs(content)
         if len(user_configs) == 0:
-            raise ValueError('No valid user configuration exists')
+            raise ValueError("No valid user configuration exists")
         exclude_rules = self.create_exclude_config(content)
         before_or_after = content.get(AppConfigs.BEFORE_OR_AFTER, [])
         return AppConfig(user_configs, exclude_rules, before_or_after)

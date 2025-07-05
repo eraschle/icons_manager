@@ -13,13 +13,15 @@ def execution(message, start_message=None):
     def actual_decorator(func):
         def execution_time(self, *args, **kwargs):
             start_time = datetime.now()
-            config = getattr(self, 'user_config', None)
+            config = getattr(self, "user_config", None)
             if start_message is not None:
                 log.info(log_begin(config, start_message, start_time))
             result = func(self, *args, **kwargs)
             log.info(log_end(config, message, start_time))
             return result
+
         return execution_time
+
     return actual_decorator
 
 
@@ -37,7 +39,7 @@ def execution_action(message, start_message=None):
     def actual_decorator(func):
         def execution_time(self, *args, **kwargs):
             start_time = datetime.now()
-            config = getattr(self, 'user_config', None)
+            config = getattr(self, "user_config", None)
             if start_message is not None:
                 log.info(log_begin(config, start_message, start_time))
             result = func(self, *args, **kwargs)
@@ -49,5 +51,7 @@ def execution_action(message, start_message=None):
                     log_msg = log_folders(result.folders, log_msg)
             log.info(log_end(config, log_msg, start_time))
             return result
+
         return execution_time
+
     return actual_decorator
