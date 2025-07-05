@@ -44,7 +44,7 @@ class Action(ABC, Generic[TEntry]):
                 try:
                     future.result()
                 except Exception as exc:
-                    print('%r Exception: %s' % (setting, exc))
+                    log.exception("%r Exception: %s" % (setting, exc))
 
     def action_execute(self, entry: TEntry) -> None:
         if not self.can_execute(entry):

@@ -1,5 +1,6 @@
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import os
 from typing import List, Sequence
 
 from icon_manager.config.app import AppConfig
@@ -16,11 +17,10 @@ log = logging.getLogger(__name__)
 
 
 def thread_count(services: Sequence[IConfigService]) -> int:
-    return len(services) * 10
+    return len(services) + (os.cpu_count() or 5) - 2
 
 
 class IconsAppService(ServiceProtocol):
-
     def __init__(self, config: AppConfig) -> None:
         self.config = config
         self.services: List[IConfigService] = []
@@ -78,7 +78,7 @@ class IconsAppService(ServiceProtocol):
                 try:
                     future.result()
                 except Exception as exc:
-                    print('%r Exception: %s' % (user_service.user_config, exc))
+                    log.error("%r Exception: %s" % (user_service.user_config, exc))
 
     def find_existing_content(self):
         for service in self.services:
@@ -93,7 +93,7 @@ class IconsAppService(ServiceProtocol):
                 try:
                     future.result()
                 except Exception as exc:
-                    print('%r Exception: %s' % (user_service.user_config, exc))
+                    log.error("%r Exception: %s" % (user_service.user_config, exc))
 
     def re_apply_matched_icons(self):
         for service in self.services:
@@ -112,4 +112,4 @@ class IconsAppService(ServiceProtocol):
                 try:
                     future.result()
                 except Exception as exc:
-                    print('%r Exception: %s' % (user_service.user_config, exc))
+                    log.error("%r Exception: %s" % (user_service.user_config, exc))
