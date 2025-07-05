@@ -1,115 +1,102 @@
 import logging
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import os
-from typing import List, Sequence
 
 from icon_manager.config.app import AppConfig
-from icon_manager.config.user import UserConfig
-from icon_manager.content.controller.desktop import DesktopIniController
-from icon_manager.content.controller.icon_file import IconFileController
-from icon_manager.content.controller.icon_folder import IconFolderController
-from icon_manager.content.controller.rules_apply import RulesApplyController
-from icon_manager.library.controller import IconLibraryController
-from icon_manager.services.base import IConfigService, ServiceProtocol
-from icon_manager.services.config_service import ConfigService
+from icon_manager.services.base import IServiceProtocol
+from icon_manager.services.configuration_service import ConfigurationService
+from icon_manager.services.content_processing_service import ContentProcessingService
+from icon_manager.services.library_management_service import LibraryManagementService
 
 log = logging.getLogger(__name__)
 
 
-def thread_count(services: Sequence[IConfigService]) -> int:
-    return len(services) + (os.cpu_count() or 5) - 2
+class IconsAppService(IServiceProtocol):
+    """Orchestrator service that coordinates focused services for icon management.
 
+    This service acts as a facade, delegating work to specialized services:
+    - ConfigurationService: Service setup and configuration
+    - LibraryManagementService: Library configuration management
+    - ContentProcessingService: Content processing and icon application
+    """
 
-class IconsAppService(ServiceProtocol):
     def __init__(self, config: AppConfig) -> None:
         self.config = config
-        self.services: List[IConfigService] = []
 
-    def _create_service(self, user_config: UserConfig) -> IConfigService:
-        library = IconLibraryController(user_config)
-        desktop = DesktopIniController(user_config)
-        folders = IconFolderController(user_config)
-        files = IconFileController(user_config)
-        rules = RulesApplyController(user_config)
-        return ConfigService(user_config, settings=library, desktop=desktop,
-                             icon_folders=folders, icon_files=files, rules=rules)
+        # Initialize focused services
+        self.configuration_service = ConfigurationService(config)
+        self._library_service: LibraryManagementService | None = None
+        self._content_service: ContentProcessingService | None = None
 
     def setup(self):
-        for user_config in self.config.user_configs:
-            controller = self._create_service(user_config)
-            self.services.append(controller)
+        """Setup all services and initialize service dependencies."""
+        self.configuration_service.setup_services()
+        services = self.configuration_service.get_services()
+
+        # Initialize dependent services
+        self._library_service = LibraryManagementService(services)
+        self._content_service = ContentProcessingService(services)
+
+    @property
+    def library_service(self) -> LibraryManagementService:
+        """Get the library management service."""
+        if self._library_service is None:
+            raise ValueError("LibraryManagementService has not been initialized.")
+        return self._library_service
+
+    @property
+    def content_service(self) -> ContentProcessingService:
+        """Get the content processing service."""
+        if self._content_service is None:
+            raise ValueError("ContentProcessingService has not been initialized.")
+        return self._content_service
 
     def create_settings(self):
-        for service in self.services:
-            service.create_icon_settings()
+        """Create icon settings for all services."""
+        self.configuration_service.create_settings()
 
     def create_library_configs(self):
-        for service in self.services:
-            service.create_icon_configs()
+        """Create library configurations."""
+        self.library_service.create_configs()
 
     def update_library_configs(self):
-        for service in self.services:
-            service.update_icon_configs()
+        """Update existing library configurations."""
+        self.library_service.update_configs()
 
     def delete_library_configs(self):
-        for service in self.services:
-            service.delete_icon_configs()
+        """Delete library configurations."""
+        self.library_service.delete_configs()
 
     def archive_icons_and_configs(self):
-        for service in self.services:
-            service.archive_library()
+        """Archive unused library configurations."""
+        self.library_service.archive_configs()
 
     def setup_and_merge_user_service(self):
-        for service in self.services:
-            service.update_before_and_after(self.config.before_or_after)
-            exclude = self.config.create_exclude_rules()
-            service.set_exclude_manager(exclude)
+        """Setup and merge user service configurations."""
+        self.configuration_service.setup_and_merge_user_service()
 
     def find_and_apply_matches(self):
-        for service in self.services:
-            service.find_and_apply()
+        """Find and apply icon matches."""
+        self.content_service.find_and_apply_matches()
 
     def async_find_and_apply_matches(self):
-        with ThreadPoolExecutor(thread_name_prefix='find_and_apply_matches',
-                                max_workers=thread_count(self.services)) as executor:
-            task = {executor.submit(service.find_and_apply): service for service in self.services}
-            for future in as_completed(task):
-                user_service = task[future]
-                try:
-                    future.result()
-                except Exception as exc:
-                    log.error("%r Exception: %s" % (user_service.user_config, exc))
+        """Find and apply icon matches asynchronously."""
+        self.content_service.async_find_and_apply_matches()
 
     def find_existing_content(self):
-        for service in self.services:
-            service.find_existing()
+        """Find existing content."""
+        self.content_service.find_existing_content()
 
     def async_find_existing_content(self):
-        with ThreadPoolExecutor(thread_name_prefix='find_existing_content',
-                                max_workers=thread_count(self.services)) as executor:
-            task = {executor.submit(service.find_existing): service for service in self.services}
-            for future in as_completed(task):
-                user_service = task[future]
-                try:
-                    future.result()
-                except Exception as exc:
-                    log.error("%r Exception: %s" % (user_service.user_config, exc))
+        """Find existing content asynchronously."""
+        self.content_service.async_find_existing_content()
 
     def re_apply_matched_icons(self):
-        for service in self.services:
-            service.re_apply_icons()
+        """Re-apply previously matched icons."""
+        self.content_service.re_apply_matched_icons()
 
     def delete_icon_settings(self):
-        for config_service in self.services:
-            config_service.delete_setting()
+        """Delete icon settings."""
+        self.content_service.delete_icon_settings()
 
     def async_delete_icon_settings(self):
-        with ThreadPoolExecutor(thread_name_prefix='delete_icon_settings',
-                                max_workers=thread_count(self.services)) as executor:
-            task = {executor.submit(service.delete_setting): service for service in self.services}
-            for future in as_completed(task):
-                user_service = task[future]
-                try:
-                    future.result()
-                except Exception as exc:
-                    log.error("%r Exception: %s" % (user_service.user_config, exc))
+        """Delete icon settings asynchronously."""
+        self.content_service.async_delete_icon_settings()
