@@ -9,9 +9,18 @@ class IConfigService(IConfigHandler):
     user_config: UserConfig
 
     def create_icon_settings(self):
+        """
+        Create and initialize icon-related settings for the configuration service.
+        """
         ...
 
     def create_icon_configs(self):
+        """
+        Create new icon configuration entries.
+        
+        Returns:
+            The created icon configuration objects or data structure.
+        """
         ...
 
     def update_icon_configs(self):
@@ -27,18 +36,39 @@ class IConfigService(IConfigHandler):
         ...
 
     def set_exclude_manager(self, exclude: ExcludeManager):
+        """
+        Assigns an ExcludeManager to control which items are excluded from icon configuration operations.
+        
+        Parameters:
+            exclude (ExcludeManager): The manager responsible for handling exclusion logic.
+        """
         ...
 
     def find_and_apply(self):
+        """
+        Finds relevant icon configurations and applies them as needed.
+        """
         ...
 
     def find_existing(self):
+        """
+        Locate and return existing icon-related configurations or settings.
+        
+        Returns:
+            The existing icon configurations or settings found, or None if none are present.
+        """
         ...
 
     def re_apply_icons(self):
+        """
+        Reapplies icon configurations or settings, typically to refresh or update their application state.
+        """
         ...
 
     def delete_setting(self):
+        """
+        Delete the current icon-related setting or configuration from the service.
+        """
         ...
 
 

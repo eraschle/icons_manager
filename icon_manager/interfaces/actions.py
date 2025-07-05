@@ -19,6 +19,14 @@ TEntry = TypeVar('TEntry', bound=PathModel)
 class Action(ABC, Generic[TEntry]):
 
     def __init__(self, config: Optional[UserConfig], entries: Sequence[TEntry], action_log: str) -> None:
+        """
+        Initializes the Action with an optional user configuration, a sequence of entries to process, and a log message describing the action.
+        
+        Parameters:
+            config (Optional[UserConfig]): Optional user configuration for the action.
+            entries (Sequence[TEntry]): The sequence of path entries to operate on.
+            action_log (str): Description of the action for logging purposes.
+        """
         super().__init__()
         self.config = config
         self.entries = entries
@@ -28,10 +36,18 @@ class Action(ABC, Generic[TEntry]):
         self._lock = Lock()
 
     def execute(self) -> None:
+        """
+        Synchronously performs the defined action on each entry in the sequence.
+        """
         for entry in self.entries:
             self.action_execute(entry)
 
     def async_execute(self) -> None:
+        """
+        Executes the action concurrently on all entries using a thread pool.
+        
+        Each entry is processed in a separate thread by calling `action_execute`. Exceptions raised during execution are caught and printed along with the associated entry.
+        """
         prefix = 'execute action'
         if self.config is not None:
             prefix = f'execute action {self.config.name}'
@@ -47,6 +63,11 @@ class Action(ABC, Generic[TEntry]):
                     print('%r Exception: %s' % (setting, exc))
 
     def action_execute(self, entry: TEntry) -> None:
+        """
+        Executes the action on a single entry if permitted, categorizing it as a file or folder.
+        
+        If `can_execute` returns True for the entry, the entry is added to the files or folders list as appropriate, and `execute_action` is called to perform the action.
+        """
         if not self.can_execute(entry):
             return
         if entry.is_file():
@@ -57,6 +78,12 @@ class Action(ABC, Generic[TEntry]):
 
     @abstractmethod
     def can_execute(self, entry: TEntry) -> bool:
+        """
+        Determine whether the action can be performed on the given entry.
+        
+        Returns:
+            bool: True if the action is permitted for the entry; otherwise, False.
+        """
         pass
 
     @abstractmethod
@@ -89,9 +116,22 @@ class Action(ABC, Generic[TEntry]):
 class DeleteAction(Action[PathModel]):
 
     def __init__(self, config: Optional[UserConfig], entries: Sequence[PathModel]) -> None:
+        """
+        Initialize a DeleteAction to remove the specified filesystem entries.
+        
+        Parameters:
+            config (Optional[UserConfig]): Optional user configuration for the action.
+            entries (Sequence[PathModel]): Filesystem entries to be deleted.
+        """
         super().__init__(config, entries, 'Deleted')
 
     def can_execute(self, entry: PathModel) -> bool:
+        """
+        Determine whether the specified path entry exists and can be deleted.
+        
+        Returns:
+            True if the entry exists in the filesystem; otherwise, False.
+        """
         return entry.exists()
 
     def execute_action(self, entry: PathModel) -> None:

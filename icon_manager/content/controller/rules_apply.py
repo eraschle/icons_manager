@@ -22,10 +22,19 @@ log = logging.getLogger(__name__)
 class RulesApplyBuilder(FolderCrawlerBuilder[MatchedRuleFolder]):
 
     def __init__(self) -> None:
+        """
+        Initialize the RulesApplyBuilder with an empty sequence of icon settings.
+        """
         super().__init__()
         self.settings: Sequence[IconSetting] = []
 
     def setup(self, **kwargs) -> None:
+        """
+        Initializes the builder with a sequence of icon settings from keyword arguments.
+        
+        Parameters:
+        	settings (Sequence[IconSetting], optional): The icon settings to use for matching folders. Defaults to an empty list if not provided.
+        """
         self.settings = kwargs.get('settings', [])
 
     def icon_setting_for(self, model: Folder) -> Optional[IconSetting]:
@@ -79,11 +88,25 @@ class RulesApplyController:
 
     @ execution(message='Searched for matches', start_message='Searching for matches')
     def search_and_find_matches(self, folders: List[Folder], settings: Iterable[IconSetting]):
+        """
+        Finds and stores folders that match the provided icon settings.
+        
+        This method configures the builder with the given icon settings, processes the list of folders, and updates the controller's `folders` attribute with matched folder models.
+        """
         self.builder.setup(settings=settings)
         self.folders = self.builder.build_models(folders)
 
     @ execution_action(message='Created matched icons', start_message='Creating matched icons')
     def creating_found_matches(self, exclude: ExcludeManager) -> Action:
+        """
+        Initiates asynchronous creation of icons for matched folders using the provided exclusion rules.
+        
+        Parameters:
+            exclude (ExcludeManager): Exclusion rules to apply during icon creation.
+        
+        Returns:
+            Action: The action object representing the icon creation process.
+        """
         action = CreateIconAction(self.folders, self.user_config)
         action.async_execute()
         if not action.any_executed():
@@ -91,6 +114,11 @@ class RulesApplyController:
         return action
 
     def re_apply_matches(self, controller: ReApplyController):
+        """
+        Re-applies icon creation actions using a provided controller and user configuration.
+        
+        If any icons are re-created during execution, logs an informational message about the operation.
+        """
         action = ReCreateIconAction(controller, self.user_config)
         action.execute()
         if not action.any_executed():

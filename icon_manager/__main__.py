@@ -86,6 +86,11 @@ def get_service() -> IconsAppService:
 
 
 def main():
+    """
+    Executes the command-line utility for managing icon configurations and applying icons to folders.
+    
+    Parses command-line arguments, configures logging, initializes the icon management service, and performs operations on the icon library or content based on user input. Logs the total execution time upon completion.
+    """
     config_logger(logging.INFO)
     namespace = get_namespace_from_args()
     start_time = datetime.now()

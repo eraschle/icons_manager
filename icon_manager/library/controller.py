@@ -82,29 +82,69 @@ class IconLibraryController(IConfigHandler, ISettingsHandler):
     ]
 
     def __init__(self, user_config: UserConfig, builder: IconSettingBuilder = IconSettingBuilder()) -> None:
+        """
+        Initialize the IconLibraryController with user configuration and an optional icon setting builder.
+        
+        Parameters:
+            user_config (UserConfig): The user configuration containing relevant paths and settings.
+            builder (IconSettingBuilder, optional): The builder used to construct icon settings. Defaults to a new IconSettingBuilder instance.
+        """
         self.builder = builder
         self.user_config = user_config
         self.library_icons: Iterable[LibraryIconFile] = []
         self._settings: List[IconSetting] = []
 
     def settings(self, clean_empty: bool = True) -> Sequence[IconSetting]:
+        """
+        Return the current list of icon settings, optionally excluding empty settings.
+        
+        Parameters:
+        	clean_empty (bool): If True, filters out settings that are empty.
+        
+        Returns:
+        	Sequence[IconSetting]: The list of icon settings, filtered if requested.
+        """
         if clean_empty:
             return list(filter(lambda ico: not ico.is_empty(), self._settings))
         return self._settings
 
     def updated_settings(self, before_or_after: Iterable[str]) -> Sequence[IconSetting]:
         # settings = copy.deepcopy(self.settings(clean_empty=True))
+        """
+        Return icon settings with their "before or after" state updated.
+        
+        Parameters:
+            before_or_after (Iterable[str]): Values to set the "before or after" state for each icon setting.
+        
+        Returns:
+            Sequence[IconSetting]: List of icon settings with updated "before or after" state.
+        """
         settings = self.settings(clean_empty=True)
         for setting in settings:
             setting.set_before_or_after(before_or_after)
         return settings
 
     def remove_archived_files(self, files: Iterable[File]) -> List[File]:
+        """
+        Return a list of files excluding those located in the archive folder.
+        
+        Parameters:
+        	files (Iterable[File]): Files to be filtered.
+        
+        Returns:
+        	List[File]: Files not present in the archive folder.
+        """
         library_path = self.user_config.icons_path
         archive = ArchiveFolder.get_archive_folder(library_path)
         return list(filter(lambda file: not archive.is_archive(file.path), files))
 
     def create_icon_settings(self, content: Dict[str, List[File]]):
+        """
+        Processes and updates icon settings by filtering out archived files, updating rule configurations, building icon models, and sorting the resulting settings.
+        
+        Parameters:
+            content (Dict[str, List[File]]): A mapping of file type extensions to lists of files to be processed.
+        """
         rules = content.get(JsonFile.extension(with_point=False), [])
         rules = self.remove_archived_files(rules)
         self.builder.update_rules(rules=rules)
@@ -134,6 +174,11 @@ class IconLibraryController(IConfigHandler, ISettingsHandler):
             self.builder.update_config(setting, template)
 
     def delete_icon_configs(self):
+        """
+        Deletes all icon configuration files associated with the current settings.
+        
+        Removes the configuration files for each icon setting and logs the action if any files were deleted.
+        """
         configs = [setting.manager.config for setting in self._settings]
         action = DeleteAction(None, configs)
         action.execute()
@@ -151,12 +196,21 @@ class IconLibraryController(IConfigHandler, ISettingsHandler):
             log.info(f'Archive {len(archive_files)} of {setting.name}')
 
     def archive_file(self, file: FileModel):
+        """
+        Moves a file to its designated archive folder by copying it and then deleting the original.
+        """
         folder = self.get_archive_folder(file)
         archive = folder.get_archive_file(file)
         file.copy_to(archive)
         file.remove()
 
     def get_archive_folder(self, icon: FileModel):
+        """
+        Retrieve the archive folder for a given file model, creating it if it does not exist.
+        
+        Returns:
+            ArchiveFolder: The archive folder associated with the provided file model.
+        """
         folder = ArchiveFolder.get_archive_folder(icon)
         if not folder.exists():
             folder.create()

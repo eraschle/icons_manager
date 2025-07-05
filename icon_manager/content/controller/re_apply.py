@@ -19,6 +19,15 @@ class ReApplyController:
         self.icon_folders = icon_folders
 
     def get_setting_of(self, folder: MatchedIconFolder) -> Optional[IconSetting]:
+        """
+        Return the first icon setting found for any icon in the given folder.
+        
+        Parameters:
+            folder (MatchedIconFolder): The folder whose icons are checked for associated settings.
+        
+        Returns:
+            Optional[IconSetting]: The first found icon setting, or None if no setting exists for any icon in the folder.
+        """
         for icon in folder.get_icons():
             setting = self.settings.setting_by_icon(icon)
             if setting is None:
@@ -27,6 +36,12 @@ class ReApplyController:
         return None
 
     def get_rule_folders(self) -> Sequence[MatchedRuleFolder]:
+        """
+        Return a sequence of matched rule folders, each representing a parent folder with an associated icon setting.
+        
+        Returns:
+            Sequence[MatchedRuleFolder]: A list of rule folders where each folder's parent path is paired with its icon setting.
+        """
         rule_folders = []
         for folder in self.icon_folders.folders_with_icon():
             setting = self.get_setting_of(folder)

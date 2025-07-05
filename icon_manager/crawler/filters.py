@@ -7,6 +7,9 @@ EXCLUDED_FOLDERS: Iterable[str] = []
 
 
 def _is_excluded(folder: Folder, options: FilterOptions) -> bool:
+    """
+    Return True if exclusion cleaning is enabled and the folder's parent name is in the excluded folders list.
+    """
     return options.clean_excluded and folder.parent_name in EXCLUDED_FOLDERS
 
 

@@ -41,6 +41,13 @@ class IconFileController(ContentController[MatchedIconFile]):
 
     @execution(message='Crawle & build icons (__icon__ folder)')
     def crawle_and_build_result(self, folders: List[Folder], settings: Sequence[IconSetting]):
+        """
+        Crawls the specified folders for icon files matching the given settings and builds a list of matched icon file models.
+        
+        Parameters:
+            folders (List[Folder]): Folders to search for icon files.
+            settings (Sequence[IconSetting]): Icon settings used to filter and match files.
+        """
         extensions = [MatchedIconFile.extension(with_point=False)]
         files = files_by_extension(folders, extensions)
         self.builder.setup(settings=settings)
@@ -48,6 +55,12 @@ class IconFileController(ContentController[MatchedIconFile]):
 
     @execution_action(message='Crawle & build icons (__icon__ folder)')
     def delete_content(self) -> Action:
+        """
+        Delete all matched icon files and return the corresponding action object.
+        
+        Returns:
+            Action: The action object representing the deletion operation, regardless of whether any files were actually deleted.
+        """
         action = DeleteAction(self. user_config, self.files)
         action.execute()
         if not action.any_executed():

@@ -21,6 +21,9 @@ log = logging.getLogger(__name__)
 class AttributeCheckerFactory(ContentFactory[Dict[str, Any], AttributeRuleHandler]):
 
     def __init__(self) -> None:
+        """
+        Initialize the factory with a list of rule builders for attribute-based rule creation.
+        """
         super().__init__()
         self.builders = get_builders()
 
@@ -32,6 +35,12 @@ class AttributeCheckerFactory(ContentFactory[Dict[str, Any], AttributeRuleHandle
         raise RuntimeError(f'No Folder builder could be created')
 
     def create_rules(self, config: Dict[str, Any], **kwargs) -> Sequence[ISingleRule]:
+        """
+        Create a sequence of rule instances from the list of rule configurations in the provided config dictionary.
+        
+        Returns:
+            Sequence[ISingleRule]: A list of rule objects created from the configurations under the RULES key.
+        """
         rules = []
         for config in config.get(ConfigKeys.RULES, []):
             rule = self.create_rule(config, **kwargs)
@@ -39,6 +48,15 @@ class AttributeCheckerFactory(ContentFactory[Dict[str, Any], AttributeRuleHandle
         return rules
 
     def create(self, config: Dict[str, Any], **kwargs) -> AttributeRuleHandler:
+        """
+        Creates an AttributeRuleHandler using the specified attribute, operator, and rules from the configuration.
+        
+        Parameters:
+        	config (Dict[str, Any]): The configuration dictionary containing rule definitions.
+        
+        Returns:
+        	AttributeRuleHandler: An instance configured with the extracted attribute, operator, and rules.
+        """
         attribute = kwargs.get(ConfigKeys.ATTRIBUTE, RuleAttribute.UNKNOWN)
         operator = pop_operator(config, Operator.ANY)
         rules = self.create_rules(config, **kwargs)
@@ -46,6 +64,12 @@ class AttributeCheckerFactory(ContentFactory[Dict[str, Any], AttributeRuleHandle
 
 
 def get_rule_attribute(value) -> RuleAttribute:
+    """
+    Converts a string value to the corresponding RuleAttribute enum member.
+    
+    Returns:
+        RuleAttribute: The matching RuleAttribute if found; otherwise, RuleAttribute.UNKNOWN.
+    """
     if not isinstance(value, str):
         return RuleAttribute.UNKNOWN
     for attr in RuleAttribute:
@@ -58,10 +82,24 @@ def get_rule_attribute(value) -> RuleAttribute:
 class SourceCheckerBuilder(ContentFactory[Dict[str, Any], ConfigRuleController]):
 
     def __init__(self, source: Source = JsonSource()) -> None:
+        """
+        Initialize the SourceCheckerBuilder with a data source and an attribute checker factory.
+        
+        Parameters:
+            source (Source, optional): The data source to use for configuration. Defaults to JsonSource().
+        """
         self.source = source
         self.factory = AttributeCheckerFactory()
 
     def get_attribute_checkers(self, config: Dict[str, Any]) -> Sequence[AttributeRuleHandler]:
+        """
+        Create a list of attribute rule handlers for each attribute defined in the configuration.
+        
+        Each key in the config is interpreted as an attribute name, which is converted to a `RuleAttribute`. The corresponding value is passed to the factory to create an `AttributeRuleHandler` for that attribute.
+        
+        Returns:
+            Sequence[AttributeRuleHandler]: A list of rule handlers, one for each attribute in the configuration.
+        """
         managers = []
         for attribute, rules_configs in config.items():
             rule_attr = get_rule_attribute(attribute)
@@ -70,6 +108,12 @@ class SourceCheckerBuilder(ContentFactory[Dict[str, Any], ConfigRuleController])
         return managers
 
     def create(self, config: Dict[str, Any], **kwargs) -> ConfigRuleController:
+        """
+        Creates a ConfigRuleController using attribute rule handlers and an operator extracted from the configuration.
+        
+        Returns:
+        	ConfigRuleController: An instance configured with the specified attribute rule handlers and logical operator.
+        """
         operator = pop_operator(config, Operator.ALL)
         managers = self.get_attribute_checkers(config)
         return ConfigRuleController(managers, operator)

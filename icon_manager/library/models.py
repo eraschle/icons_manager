@@ -105,20 +105,58 @@ class ArchiveFolder(FolderModel):
 
     @ classmethod
     def get_archive_folder(cls, entry: PathModel) -> 'ArchiveFolder':
+        """
+        Return an ArchiveFolder instance representing the archive folder associated with the given entry.
+        
+        If the entry is a directory, the archive folder is created inside that directory. Otherwise, it is created inside the parent directory of the entry.
+        
+        Parameters:
+            entry (PathModel): The file or directory for which to determine the archive folder location.
+        
+        Returns:
+            ArchiveFolder: An instance representing the resolved archive folder path.
+        """
         if entry.is_dir():
             return ArchiveFolder(os.path.join(entry.path, cls.folder_name))
         return ArchiveFolder(os.path.join(entry.parent_path, cls.folder_name))
 
     @ classmethod
     def is_model(cls, path: str) -> bool:
+        """
+        Return True if the given path ends with the archive folder name.
+        
+        Parameters:
+            path (str): The file system path to check.
+        
+        Returns:
+            bool: True if the path ends with the archive folder name, otherwise False.
+        """
         return path.endswith(cls.folder_name)
 
     def get_archive_path(self, model: FileModel) -> str:
         return os.path.join(self.path, model.name)
 
     def get_archive_file(self, file: FileModel) -> ArchiveFile:
+        """
+        Return an ArchiveFile instance representing the given file's path within the archive folder.
+        
+        Parameters:
+        	file (FileModel): The file to be archived.
+        
+        Returns:
+        	ArchiveFile: The archive file corresponding to the input file within the archive folder.
+        """
         archive_path = self.get_archive_path(file)
         return ArchiveFile(archive_path)
 
     def is_archive(self, path: str) -> bool:
+        """
+        Return True if the given path is within this archive folder.
+        
+        Parameters:
+            path (str): The path to check.
+        
+        Returns:
+            bool: True if the path starts with the archive folder's path, otherwise False.
+        """
         return path.startswith(self.path)

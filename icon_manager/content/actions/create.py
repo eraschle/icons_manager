@@ -14,7 +14,16 @@ class CreateIconAction(Action[MatchedRuleFolder]):
 
     def __init__(self, entries: Sequence[MatchedRuleFolder], user_config: UserConfig,
                  action_log: str = 'Added Icons to Folders', controller: DesktopIniCreator = DesktopIniCreator()) -> None:
-        super().__init__(user_config, entries, action_log)
+        """
+                 Initialize a CreateIconAction to manage icon configuration for a sequence of matched rule folders.
+                 
+                 Parameters:
+                     entries (Sequence[MatchedRuleFolder]): The folders to which icon configurations will be applied.
+                     user_config (UserConfig): The user configuration settings for icon management.
+                     action_log (str, optional): Description for the action log entry. Defaults to 'Added Icons to Folders'.
+                     controller (DesktopIniCreator, optional): Controller for writing desktop.ini files. Defaults to a new DesktopIniCreator instance.
+                 """
+                 super().__init__(user_config, entries, action_log)
         self.user_config = user_config
         self.controller = controller
 

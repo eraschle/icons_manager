@@ -33,6 +33,12 @@ class ConfigService(IConfigService):
 
     @property
     def exclude(self) -> ExcludeManager:
+        """
+        Return the current ExcludeManager instance.
+        
+        Raises:
+            ValueError: If the ExcludeManager has not been set.
+        """
         if self.__exclude is None:
             message = f'{type(ExcludeManager)} has not been set or is None'
             raise ValueError(message)
@@ -40,11 +46,17 @@ class ConfigService(IConfigService):
 
     @execution(message='Created icon settings')
     def create_icon_settings(self):
+        """
+        Crawls the user's icon directory for supported icon files and creates icon settings in the library controller based on the discovered content.
+        """
         extensions = IconLibraryController.icons_extensions
         content = crawling_icons(self.user_config.icons_path, extensions)
         self.settings.create_icon_settings(content)
 
     def create_icon_configs(self):
+        """
+        Create icon configuration files using the current settings.
+        """
         self.settings.create_icon_configs()
 
     def update_icon_configs(self):
@@ -61,12 +73,22 @@ class ConfigService(IConfigService):
         self._before_or_after.update(self.user_config.before_or_after)
 
     def set_exclude_manager(self, exclude: ExcludeManager):
+        """
+        Assigns and configures the ExcludeManager with current before/after rules.
+        
+        Sets up exclusion rules based on the internal `_before_or_after` set, removes empty rules, and assigns the configured ExcludeManager to the service.
+        """
         exclude.setup_rules(self._before_or_after)
         exclude.clean_empty()
         self.__exclude = exclude
 
     @execution(message='Found & applied icons', start_message='Start find & apply icons')
     def find_and_apply(self):
+        """
+        Finds and applies icon matching rules to search folders based on current settings and exclusion rules.
+        
+        This method retrieves updated icon settings filtered by the current "before or after" state, crawls and processes search folders, applies rule-based matching to the entries, and creates matches while considering exclusions.
+        """
         settings = self.settings.updated_settings(self._before_or_after)
         entries = self.crawling_search_folders()
         entries = self.rules.crawle_and_build_result(entries, self.exclude)
@@ -75,11 +97,20 @@ class ConfigService(IConfigService):
 
     @execution(message='Crawled through folders (No filtering)', start_message='Crawling search folders')
     def crawling_search_folders(self) -> List[Folder]:
+        """
+        Asynchronously crawls and returns a list of search folders defined in the user configuration.
+        
+        Returns:
+            List[Folder]: A list of Folder objects representing the crawled search folders.
+        """
         folders = self.user_config.search_folders
         return async_crawling_folders(self.user_config, folders)
 
     @execution(message='Crawled through content')
     def find_existing(self):
+        """
+        Crawls configured search folders and updates results for desktop, icon folders, and icon files based on current settings.
+        """
         entries = self.crawling_search_folders()
         settings = self.settings.settings(clean_empty=True)
         self.desktop.crawle_and_build_result(entries, settings)
@@ -88,11 +119,17 @@ class ConfigService(IConfigService):
 
     @ execution(message='RE-Applied icons')
     def re_apply_icons(self):
+        """
+        Re-applies icon matching rules to update icon assignments based on current settings and icon folders.
+        """
         controller = ReApplyController(self.settings, self.icon_folders)
         self.rules.re_apply_matches(controller)
 
     @ execution(message='Deleted content', start_message='Start delete content')
     def delete_setting(self):
+        """
+        Delete all icon-related settings and content from the desktop, icon folders, and icon files controllers.
+        """
         self.desktop.delete_content()
         self.icon_folders.delete_content()
         self.icon_files.delete_content()

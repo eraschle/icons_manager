@@ -170,9 +170,24 @@ class ContainsFileRuleBuilder(ASingleRuleBuilder[ContainsFileRule]):
                 Rule.CONTAINS_FOLDER, Rule.NOT_CONTAINS_FOLDER]
 
     def __init__(self, **kwargs) -> None:
+        """
+        Initialize the ContainsFileRuleBuilder with the specified keyword arguments.
+        """
         super().__init__(rule_type=ContainsFileRule, **kwargs)
 
     def create_rule(self, attribute: RuleAttribute, rule_config: Dict[str, Any]) -> ContainsFileRule:
+        """
+        Create a ContainsFileRule instance using the provided attribute and rule configuration.
+        
+        Extracts the rule type, operator, values, case sensitivity, before/after flags, before/after values, and search level from the configuration to construct the appropriate ContainsFileRule subclass.
+        
+        Parameters:
+            attribute (RuleAttribute): The attribute to which the rule applies.
+            rule_config (Dict[str, Any]): The configuration dictionary specifying rule details.
+        
+        Returns:
+            ContainsFileRule: An instance of the appropriate ContainsFileRule subclass based on the configuration.
+        """
         rule = self.get_rule(rule_config)
         values = rule_config.get(rule, [])
         operator = get_operator(rule_config)
@@ -218,10 +233,25 @@ class ChainedRuleBuilder(ARuleBuilder[ChainedRule]):
         self.single_builders = get_single_builders()
 
     def get_rule_configs(self, rule_config: Dict[str, Any]) -> Collection[Dict[str, Any]]:
+        """
+        Extracts and returns the collection of sub-rule configurations from a chained rule configuration.
+        
+        Returns:
+            A collection of dictionaries, each representing a sub-rule configuration. Returns an empty collection if no sub-rules are found.
+        """
         rule = self.get_rule(rule_config)
         return rule_config.get(rule, [])
 
     def get_single_rules(self, rule_config: Dict[str, Any], **kwargs) -> Sequence[FolderRule]:
+        """
+        Create a sequence of single rule instances from the provided chained rule configuration.
+        
+        Parameters:
+            rule_config (Dict[str, Any]): The configuration dictionary for the chained rule.
+        
+        Returns:
+            Sequence[FolderRule]: A list of single rule objects constructed from each sub-rule configuration.
+        """
         rules = []
         for config in self.get_rule_configs(rule_config):
             rule = create_single_rule(self.single_builders, config, **kwargs)

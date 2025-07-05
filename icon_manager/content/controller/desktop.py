@@ -60,10 +60,19 @@ class DesktopIniBuilder(FileCrawlerBuilder[DesktopIniFile]):
 class DesktopDeleteAction(DeleteAction):
 
     def __init__(self, config: Optional[UserConfig], entries: Sequence[PathModel], checker: DesktopFileChecker) -> None:
+        """
+        Initialize a DesktopDeleteAction with optional user configuration, a sequence of path entries, and a DesktopFileChecker for identifying app-specific desktop.ini files.
+        """
         super().__init__(config, entries)
         self.checker = checker
 
     def can_execute(self, entry: PathModel) -> bool:
+        """
+        Determine if the delete action can be executed on the given entry, requiring both base class permission and that the entry is an app-specific desktop.ini file.
+        
+        Returns:
+            bool: True if the action can be executed on the entry; otherwise, False.
+        """
         can_execute = super().can_execute(entry)
         return can_execute and self.checker.is_app_file(entry)
 
@@ -76,12 +85,24 @@ class DesktopIniController(ContentController[DesktopIniFile]):
 
     @execution(message='Crawle & build DESKTOP.INI-files')
     def crawle_and_build_result(self, folders: List[Folder], _: Sequence[IconSetting]):
+        """
+        Scans the specified folders for desktop.ini files and builds their corresponding file models.
+        
+        Parameters:
+            folders (List[Folder]): List of folders to search for desktop.ini files.
+        """
         extensions = [DesktopIniFile.extension(with_point=False)]
         files = files_by_extension(folders, extensions)
         self.desktop_files = self.builder.build_models(files)
 
     @execution_action(message='Deleted DESKTOP.INI-files')
     def delete_content(self) -> Action:
+        """
+        Deletes all tracked desktop.ini files if they are recognized as application files.
+        
+        Returns:
+            Action: The action object representing the deletion operation, regardless of whether any files were deleted.
+        """
         checker = DesktopFileChecker(DesktopFileSource())
         action = DesktopDeleteAction(self.user_config, self.desktop_files,
                                      checker)
@@ -103,6 +124,13 @@ lock = threading.Lock()
 class ConfigCommand(ABC):
 
     def __init__(self, order: int, copy_icon: bool) -> None:
+        """
+        Initialize a configuration command with a specified execution order and icon copy flag.
+        
+        Parameters:
+            order (int): The execution order for the command.
+            copy_icon (bool): Whether icon resources should be copied during command execution.
+        """
         super().__init__()
         self.order = order
         self.copy_icon = copy_icon
@@ -126,10 +154,24 @@ def error_message(model: PathModel, message: str) -> str:
 class RuleFolderCommand(ConfigCommand):
 
     def __init__(self, order: int, copy_icon: bool, rule_folder: MatchedRuleFolder) -> None:
+        """
+        Initialize a RuleFolderCommand with the specified execution order, icon copy flag, and matched rule folder.
+        
+        Parameters:
+            order (int): The execution order for this command.
+            copy_icon (bool): Whether to copy the icon during command execution.
+            rule_folder (MatchedRuleFolder): The matched rule folder associated with this command.
+        """
         super().__init__(order, copy_icon)
         self.rule_folder = rule_folder
 
     def can_change_attribute(self) -> bool:
+        """
+        Determine whether file or folder attributes can be changed for the associated rule folder.
+        
+        Returns:
+            bool: True if attribute changes are allowed based on Git status, copy_icon flag, and icon folder existence; otherwise, False.
+        """
         if Git.is_model(self.rule_folder.path):
             return False
         if not self.copy_icon:
@@ -137,6 +179,11 @@ class RuleFolderCommand(ConfigCommand):
         return self.rule_folder.icon_folder.exists()
 
     def pre_command(self):
+        """
+        Attempts to create the icon folder for the rule folder if icon copying is enabled and attribute changes are allowed.
+        
+        If an exception occurs during folder creation, logs the error with contextual information.
+        """
         if not self.copy_icon or not self.can_change_attribute():
             return
         try:
@@ -189,6 +236,11 @@ class IconFileCommand(ConfigCommand):
         self.library = library
 
     def pre_command(self):
+        """
+        Copies the library icon file to the target icon file if copying is enabled and the icon file does not already exist.
+        
+        Attempts the copy operation within a thread lock to ensure thread safety. Logs any exceptions encountered during the copy process.
+        """
         if not self.copy_icon or self.icon.exists():
             return
         try:
@@ -252,15 +304,35 @@ def get_commands(rule_folder: MatchedRuleFolder, copy_icon: bool) -> List[Config
 class DesktopIniCreator:
 
     def __init__(self, source: DesktopFileSource = DesktopFileSource()) -> None:
+        """
+        Initialize a DesktopIniCreator with an optional DesktopFileSource.
+        
+        Creates an associated DesktopFileChecker using the provided source.
+        """
         self.source = source
         self.checker = DesktopFileChecker(source)
 
     def can_write(self, file: DesktopIniFile) -> bool:
+        """
+        Determine if the specified desktop.ini file can be written to, allowing writing if the file does not exist or if it is recognized as an app file.
+         
+        Returns:
+            bool: True if the file can be written to; otherwise, False.
+        """
         if not file.exists():
             return True
         return self.checker.is_app_file(file)
 
     def create_content(self, manager: MatchedRuleFolder) -> Iterable[str]:
+        """
+        Generate the content lines for a desktop.ini file based on the provided rule folder.
+        
+        Parameters:
+            manager (MatchedRuleFolder): The rule folder containing icon path information.
+        
+        Returns:
+            Iterable[str]: Lines to be written to the desktop.ini file, including icon resource and required sections.
+        """
         return [
             '[.ShellClassInfo]',
             f'IconResource={manager.icon_path_for_desktop_ini()},0',
@@ -272,14 +344,33 @@ class DesktopIniCreator:
         ]
 
     def order_commands(self, commands: List[ConfigCommand], reverse: bool) -> None:
+        """
+        Sorts a list of configuration commands in place by their execution order.
+        
+        Parameters:
+            commands (List[ConfigCommand]): The list of commands to be sorted.
+            reverse (bool): If True, sorts in descending order; otherwise, ascending.
+        """
         commands.sort(key=lambda cmd: cmd.order, reverse=reverse)
 
     def execute_commands(self, commands: List[ConfigCommand], func_name: str) -> None:
+        """
+        Executes a specified method on each command in the provided list.
+        
+        Parameters:
+            commands (List[ConfigCommand]): The list of command objects to operate on.
+            func_name (str): The name of the method to invoke on each command.
+        """
         for command in commands:
             function = getattr(command, func_name)
             function()
 
     def write(self, folder: MatchedRuleFolder, copy_icon: bool) -> None:
+        """
+        Writes a desktop.ini file for the specified folder, managing associated icon resources and file attributes in a thread-safe manner.
+        
+        Executes a sequence of pre- and post-commands to prepare and finalize the folder and its resources, ensuring proper file system state before and after writing the desktop.ini content. All file operations are synchronized to prevent concurrent access issues.
+        """
         commands = get_commands(folder, copy_icon)
         self.order_commands(commands, reverse=False)
         self.execute_commands(commands, 'pre_command')

@@ -32,11 +32,22 @@ class IconFolderController(ContentController[MatchedIconFolder]):
 
     @execution(message='Crawle & build __icon__ folder')
     def crawle_and_build_result(self, folders: List[Folder], _: Sequence[IconSetting]):
+        """
+        Filters the provided folders for those named '__icon__' and builds models for them.
+        
+        The resulting list of matched icon folder models is stored in the controller's `self.folders` attribute.
+        """
         folders = folders_by_name(folders, [MatchedIconFolder.folder_name])
         self.folders = self.builder.build_models(folders)
 
     @execution_action(message='Deleted existing __icon__ folder')
     def delete_content(self) -> Action:
+        """
+        Deletes all matched icon folders and returns the corresponding action.
+        
+        Returns:
+            Action: The action object representing the deletion operation, regardless of whether any folders were actually deleted.
+        """
         action = DeleteAction(self.user_config, self.folders)
         action.execute()
         if not action.any_executed():
@@ -44,4 +55,10 @@ class IconFolderController(ContentController[MatchedIconFolder]):
         return action
 
     def folders_with_icon(self) -> Iterable[MatchedIconFolder]:
+        """
+        Return an iterable of matched icon folders that contain at least one icon.
+        
+        Returns:
+            Iterable[MatchedIconFolder]: Folders from the current list that have one or more icons.
+        """
         return [folder for folder in self.folders if len(folder.get_icons()) > 0]

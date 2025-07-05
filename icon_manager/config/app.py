@@ -21,6 +21,16 @@ log = logging.getLogger(__name__)
 
 
 def get_paths(path: str, names: Iterable[str]) -> List[str]:
+    """
+    Return a list of full file paths by joining a base directory path with each name in the provided iterable.
+    
+    Parameters:
+        path (str): The base directory path.
+        names (Iterable[str]): An iterable of file or directory names.
+    
+    Returns:
+        List[str]: A list of full paths constructed by joining the base path with each name.
+    """
     return [os.path.join(path, name) for name in names]
 
 
@@ -29,7 +39,15 @@ class AppConfig(Config):
     def __init__(self, user_configs: Iterable[UserConfig],
                  exclude_rules: ExcludeManager,
                  before_or_after: Iterable[str]) -> None:
-        super().__init__()
+        """
+                 Initialize the AppConfig with user configurations, exclusion rules, and ordering information.
+                 
+                 Parameters:
+                     user_configs: Iterable of UserConfig instances to be managed.
+                     exclude_rules: ExcludeManager instance containing exclusion rules.
+                     before_or_after: Iterable of strings specifying ordering or sequencing.
+                 """
+                 super().__init__()
         self._exclude_rules = exclude_rules
         self.user_configs = user_configs
         self.before_or_after = before_or_after
@@ -78,6 +96,15 @@ class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
 
     @classmethod
     def get_exclude_config(cls, folder_path: str) -> Optional[str]:
+        """
+        Return the path to the exclusion rules config file in the specified folder if exactly one exists; otherwise, return None.
+        
+        Parameters:
+            folder_path (str): The directory to search for the exclusion rules config file.
+        
+        Returns:
+            Optional[str]: The full path to the exclusion rules config file, or None if not found or if multiple exist.
+        """
         names = get_files(folder_path, ConfigFile.extension())
         names = list(filter(lambda name: cls.EXCLUDE_NAME == name, names))
         if len(names) != 1:
@@ -85,6 +112,13 @@ class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
         return os.path.join(folder_path, names[0])
 
     def __init__(self, source: JsonSource, factory: ExcludeManagerFactory) -> None:
+        """
+        Initialize the AppConfigFactory with a JSON source and an exclusion manager factory.
+        
+        Parameters:
+            source (JsonSource): The source for reading and writing JSON configuration files.
+            factory (ExcludeManagerFactory): Factory for creating exclusion rule managers.
+        """
         self.source = source
         self.user_factory = UserConfigFactory(source)
         self.excluded_factory = factory
@@ -128,16 +162,33 @@ class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
             self.create_excluded_rules_template(folder_path)
 
     def create_user_template_config(self, folder_path: str) -> None:
+        """
+        Prompts the user for a new user configuration file name and creates a template user config file in the specified folder.
+        
+        Parameters:
+            folder_path (str): The directory where the new user config file will be created.
+        """
         file_name = self.ask_user_for_config_file_name()
         file_path = os.path.join(folder_path, file_name)
         user_config = ConfigFile(file_path)
         self.user_factory.create_template(user_config)
 
     def does_excluded_rules_template_exists(self, config_folder: str) -> bool:
+        """
+        Check if an exclusion rules template file exists in the specified configuration folder.
+        
+        Returns:
+            bool: True if the exclusion rules config file exists, False otherwise.
+        """
         config_file = self._get_exclude_config_path(config_folder)
         return config_file is not None
 
     def create_excluded_rules_template(self, path: str) -> None:
+        """
+        Create an exclusion rules template file at the specified path if it does not already exist.
+        
+        If the exclusion rules config file is missing, this method generates a template using the associated factory.
+        """
         file_path = os.path.join(path, self.__class__.EXCLUDE_NAME)
         config = ConfigFile(file_path)
         if config.exists():

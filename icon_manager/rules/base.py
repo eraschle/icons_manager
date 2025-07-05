@@ -27,9 +27,21 @@ class RuleProtocol(Protocol, Generic[TEntry]):
 
     @property
     def name(self) -> str:
+        """
+        Returns the name of the rule as a string identifier.
+        """
         ...
 
     def is_allowed(self, entry: TEntry) -> bool:
+        """
+        Determines whether the given entry satisfies the rule's conditions.
+        
+        Parameters:
+            entry (TEntry): The entry to evaluate against the rule.
+        
+        Returns:
+            bool: True if the entry is allowed by the rule, False otherwise.
+        """
         ...
 
 
@@ -67,6 +79,13 @@ class Rule(str, Enum):
 class AFilterRule(ABC, IFilterRule):
 
     def __init__(self, attribute: RuleAttribute, operator: Operator) -> None:
+        """
+        Initialize a filter rule with the specified attribute and operator.
+        
+        Parameters:
+            attribute (RuleAttribute): The folder attribute this rule will evaluate.
+            operator (Operator): The logical operator used for rule evaluation.
+        """
         super().__init__()
         self.attribute = attribute
         self.operator = operator
@@ -98,9 +117,21 @@ class ISingleRule(IFilterRule):
 
     @property
     def name(self) -> str:
+        """
+        Returns the name of the rule as a string identifier.
+        """
         ...
 
     def is_allowed(self, entry: Folder) -> bool:
+        """
+        Determines whether the given folder entry satisfies the rule's conditions.
+        
+        Parameters:
+            entry (Folder): The folder entry to evaluate.
+        
+        Returns:
+            bool: True if the folder entry is allowed by the rule, False otherwise.
+        """
         ...
 
     def is_empty(self) -> bool:
