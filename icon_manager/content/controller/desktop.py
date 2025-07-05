@@ -1,4 +1,5 @@
 import logging
+import threading
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
 
@@ -12,8 +13,8 @@ from icon_manager.content.models.matched import (
 )
 from icon_manager.crawler.filters import files_by_extension
 from icon_manager.data.ini_source import DesktopFileSource
-from icon_manager.helpers.decorator import execution
-from icon_manager.interfaces.actions import DeleteAction
+from icon_manager.helpers.decorator import execution, execution_action
+from icon_manager.interfaces.actions import Action, DeleteAction
 from icon_manager.interfaces.builder import FileCrawlerBuilder
 from icon_manager.interfaces.path import File, Folder, PathModel
 from icon_manager.library.models import IconSetting, LibraryIconFile
@@ -56,8 +57,9 @@ class DesktopIniBuilder(FileCrawlerBuilder[DesktopIniFile]):
 
 
 class DesktopDeleteAction(DeleteAction):
-    def __init__(self, entries: Iterable[PathModel], checker: DesktopFileChecker) -> None:
-        super().__init__(entries)
+
+    def __init__(self, config: Optional[UserConfig], entries: Sequence[PathModel], checker: DesktopFileChecker) -> None:
+        super().__init__(config, entries)
         self.checker = checker
 
     def can_execute(self, entry: PathModel) -> bool:
@@ -80,20 +82,24 @@ class DesktopIniController(ContentController[DesktopIniFile]):
         files = files_by_extension(folders, extensions)
         self.desktop_files = self.builder.build_models(files)
 
-    @execution(message="Deleted DESKTOP.INI-files")
-    def delete_content(self):
+    @execution_action(message='Deleted DESKTOP.INI-files')
+    def delete_content(self) -> Action:
         checker = DesktopFileChecker(DesktopFileSource())
-        action = DesktopDeleteAction(self.desktop_files, checker)
+        action = DesktopDeleteAction(self.user_config, self.desktop_files,
+                                     checker)
         action.execute()
         if not action.any_executed():
-            return
-        log.info(action.get_log_message(DesktopIniFile))
+            return action
+        return action
 
 
 # endregion
 
 
 # region COMMANDS
+
+
+lock = threading.Lock()
 
 
 class ConfigCommand(ABC):
@@ -124,8 +130,11 @@ class RuleFolderCommand(ConfigCommand):
         self.rule_folder = rule_folder
 
     def can_change_attribute(self) -> bool:
-        folder = self.rule_folder.icon_folder
-        return folder.exists() and not Git.is_model(self.rule_folder.path)
+        if Git.is_model(self.rule_folder.path):
+            return False
+        if not self.copy_icon:
+            return True
+        return self.rule_folder.icon_folder.exists()
 
     def pre_command(self):
         if not self.copy_icon or not self.can_change_attribute():
@@ -186,7 +195,8 @@ class IconFileCommand(ConfigCommand):
         if not self.copy_icon or self.icon.exists():
             return
         try:
-            self.library.copy_to(self.icon)
+            with lock:
+                self.library.copy_to(self.icon)
         except Exception as ex:
             log.exception(error_message(self.icon, "copy library icon"), ex)
 
@@ -263,24 +273,25 @@ class DesktopIniCreator:
             "FolderType=Generic",
         ]
 
-    def order_commands(self, reverse: bool) -> None:
-        self.commands.sort(key=lambda cmd: cmd.order, reverse=reverse)
+    def order_commands(self, commands: List[ConfigCommand], reverse: bool) -> None:
+        commands.sort(key=lambda cmd: cmd.order, reverse=reverse)
 
-    def execute_commands(self, func_name: str) -> None:
-        for command in self.commands:
+    def execute_commands(self, commands: List[ConfigCommand], func_name: str) -> None:
+        for command in commands:
             function = getattr(command, func_name)
             function()
 
     def write(self, folder: MatchedRuleFolder, copy_icon: bool) -> None:
-        self.commands = get_commands(folder, copy_icon)
-        self.order_commands(reverse=False)
-        self.execute_commands("pre_command")
+        commands = get_commands(folder, copy_icon)
+        self.order_commands(commands, reverse=False)
+        self.execute_commands(commands, 'pre_command')
         try:
-            self.source.write(folder.desktop_ini, self.create_content(folder))
+            with lock:
+                self.source.write(folder.desktop_ini,
+                                  self.create_content(folder))
         except Exception as ex:
-            log.exception(error_message(folder, "Write desktop.ini"), ex)
-        self.order_commands(reverse=True)
-        self.execute_commands("post_command")
-
+            log.exception(error_message(folder, 'Write desktop.ini'), ex)
+        self.order_commands(commands, reverse=True)
+        self.execute_commands(commands, 'post_command')
 
 # endregion

@@ -1,18 +1,21 @@
 import logging
 from collections.abc import Iterable
 from datetime import datetime
+from typing import Optional
 
 from icon_manager.config.user import UserConfig
-from icon_manager.helpers.path import total_count
 from icon_manager.helpers.string import ALIGN_LEFT, ALIGN_RIGHT, fixed_length
-from icon_manager.interfaces.path import Folder
 
 log = logging.getLogger(__name__)
 
 
+def get_time_log(message: str, width: int = 12) -> str:
+    return fixed_length(message, width=width, align=ALIGN_RIGHT)
+
+
 def get_time_msg(start: datetime) -> str:
     diff = (datetime.now() - start).total_seconds()
-    return fixed_length(f"{diff: .2f} sec", width=10, align=ALIGN_RIGHT)
+    return get_time_log(f'{diff: .2f} sec')
 
 
 def log_time(message: str, start: datetime) -> str:
@@ -34,7 +37,8 @@ def _config_message(
 
 def log_begin(config: UserConfig | None, message: str, start_time: datetime):
     message = _config_message(config, message)
-    return f"{message} at {start_time.strftime('%H:%M:%S')}"
+    start_value = start_time.strftime("%H:%M:%S")
+    return f'{message} at {get_time_log(start_value)}'
 
 
 def log_end(config: UserConfig | None, message: str, start_time: datetime):

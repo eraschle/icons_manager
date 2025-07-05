@@ -1,4 +1,5 @@
 import os
+from typing import List, Optional
 from collections.abc import Iterable, Sequence
 
 from icon_manager.interfaces.path import File, Folder

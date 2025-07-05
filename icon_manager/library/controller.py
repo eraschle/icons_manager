@@ -1,13 +1,15 @@
 import logging
 from collections.abc import Iterable, Sequence
 
+from icon_manager.config.user import UserConfig
 from icon_manager.content.models.matched import IconSetting
 from icon_manager.helpers.resource import icon_setting_template
 from icon_manager.interfaces.actions import DeleteAction
 from icon_manager.interfaces.builder import FileCrawlerBuilder, ModelBuilder
 from icon_manager.interfaces.controller import IConfigHandler, ISettingsHandler
 from icon_manager.interfaces.path import File, FileModel, JsonFile, PathModel
-from icon_manager.library.models import ArchiveFolder, IconFile, LibraryIconFile
+from icon_manager.library.models import (ArchiveFolder, IconFile,
+                                         LibraryIconFile)
 from icon_manager.rules.factory.manager import RuleManagerFactory
 from icon_manager.rules.manager import RuleManager
 
@@ -180,13 +182,9 @@ class IconLibraryController(IConfigHandler, ISettingsHandler):
         JsonFile.extension(with_point=False),
     ]
 
-    def __init__(self, builder: IconSettingBuilder = IconSettingBuilder()) -> None:
-        """Initialize IconLibraryController with a builder.
-
-        Args:
-            builder: Builder for creating IconSetting instances.
-        """
+    def __init__(self, user_config: UserConfig, builder: IconSettingBuilder = IconSettingBuilder()) -> None:
         self.builder = builder
+        self.user_config = user_config
         self.library_icons: Iterable[LibraryIconFile] = []
         self._settings: list[IconSetting] = []
 
@@ -218,6 +216,11 @@ class IconLibraryController(IConfigHandler, ISettingsHandler):
             setting.set_before_or_after(before_or_after)
         return settings
 
+    def remove_archived_files(self, files: Iterable[File]) -> List[File]:
+        library_path = self.user_config.icons_path
+        archive = ArchiveFolder.get_archive_folder(library_path)
+        return list(filter(lambda file: not archive.is_archive(file.path), files))
+
     def create_settings(self, content: dict[str, list[File]]):
         """Create settings from content dictionary.
 
@@ -225,8 +228,10 @@ class IconLibraryController(IConfigHandler, ISettingsHandler):
             content: Dictionary mapping file extensions to file lists.
         """
         rules = content.get(JsonFile.extension(with_point=False), [])
+        rules = self.remove_archived_files(rules)
         self.builder.update_rules(rules=rules)
         icons = content.get(LibraryIconFile.extension(with_point=False), [])
+        icons = self.remove_archived_files(icons)
         self.library_icons = self.builder.build_icons(icons)
         self._settings = self.builder.build_models(self.library_icons)
         self.clean_empty_rules()
@@ -256,7 +261,7 @@ class IconLibraryController(IConfigHandler, ISettingsHandler):
     def delete_icon_configs(self):
         """Delete all icon configuration files."""
         configs = [setting.manager.config for setting in self._settings]
-        action = DeleteAction(configs)
+        action = DeleteAction(None, configs)
         action.execute()
         if not action.any_executed():
             return

@@ -1,10 +1,12 @@
 import argparse
 import logging
 import os
+from datetime import datetime
 from logging.handlers import RotatingFileHandler
 
 from icon_manager.config.app import AppConfig, AppConfigFactory
 from icon_manager.data.json_source import JsonSource
+from icon_manager.helpers.logs import log_time
 from icon_manager.helpers.resource import app_config_template_file
 from icon_manager.interfaces.path import ConfigFile
 from icon_manager.rules.factory.manager import ExcludeManagerFactory
@@ -112,6 +114,7 @@ def get_service() -> IconsAppService:
 def main():
     config_logger(logging.INFO)
     namespace = get_namespace_from_args()
+    start_time = datetime.now()
     service = get_service()
     service.setup()
 
@@ -127,15 +130,15 @@ def main():
             service.archive_icons_and_configs()
     elif namespace.content:
         service.setup_and_merge_user_service()
-        find_matches = namespace.content and not namespace.delete
         if namespace.delete or namespace.re_create:
-            service.find_existing_content()
+            service.async_find_existing_content()
         if namespace.delete:
-            service.delete_icon_settings()
+            service.async_delete_icon_settings()
         if namespace.re_create:
             service.re_apply_matched_icons()
         if namespace.create:
-            service.find_and_apply_matches()
+            service.async_find_and_apply_matches()
+    log.info(log_time("Execution-Time".upper(), start_time))
 
 
 if __name__ == "__main__":

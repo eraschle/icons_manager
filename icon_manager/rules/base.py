@@ -20,29 +20,18 @@ class RuleAttribute(str, Enum):
     PARENT_PATH = "parent_path"
 
 
-def get_rule_attribute(value) -> RuleAttribute:
-    if not isinstance(value, str):
-        return RuleAttribute.UNKNOWN
-    for attr in RuleAttribute:
-        if value.lower() != attr.value:
-            continue
-        return attr
-    return RuleAttribute.UNKNOWN
-
-
-TEntry = TypeVar("TEntry", bound=object, contravariant=True)
-
-
-class IRuleValidator:
-    def is_valid(self) -> bool: ...
-
-    def message(self) -> bool: ...
+TEntry = TypeVar('TEntry', bound=object, contravariant=True)
 
 
 class RuleProtocol(Protocol, Generic[TEntry]):
     operator: Operator
 
-    def is_allowed(self, entry: TEntry) -> bool: ...
+    @property
+    def name(self) -> str:
+        ...
+
+    def is_allowed(self, entry: TEntry) -> bool:
+        ...
 
 
 class IFilterRule(RuleProtocol[Folder]):
@@ -71,16 +60,6 @@ class Rule(str, Enum):
     NOT_CONTAINS_FILE = "not_contains_file"
     CONTAINS_FOLDER = "contains_folder"
     NOT_CONTAINS_FOLDER = "not_contains_folder"
-
-
-def get_rule(value) -> Rule:
-    if not isinstance(value, str):
-        return Rule.UNKNOWN
-    for rule in Rule:
-        if value.lower() != rule.value:
-            continue
-        return rule
-    return Rule.UNKNOWN
 
 
 class AFilterRule(ABC, IFilterRule):
@@ -117,10 +96,8 @@ class ISingleRule(IFilterRule):
     @property
     def name(self) -> str: ...
 
-    @property
-    def validator(self) -> IRuleValidator: ...
-
-    def is_allowed(self, entry: Folder) -> bool: ...
+    def is_allowed(self, entry: Folder) -> bool:
+        ...
 
     def is_empty(self) -> bool: ...
 

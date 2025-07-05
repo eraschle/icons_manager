@@ -43,11 +43,11 @@ class ConfigService(IConfigService):
             raise ValueError(message)
         return self.__exclude
 
-    @execution(message="Created icon settings")
-    def create_settings(self, content: dict[str, list[File]]):
+    @execution(message='Created icon settings')
+    def create_icon_settings(self):
         extensions = IconLibraryController.icons_extensions
         content = crawling_icons(self.user_config.icons_path, extensions)
-        self.settings.create_settings(content)
+        self.settings.create_icon_settings(content)
 
     def create_icon_configs(self):
         self.settings.create_icon_configs()
@@ -70,12 +70,9 @@ class ConfigService(IConfigService):
         exclude.clean_empty()
         self.__exclude = exclude
 
-    @execution(
-        message="Found & applied icons",
-        start_message="Start find & apply icons",
-    )
-    def find_and_apply_matches(self):
-        settings = self.settings.create_icon_settings(self._before_or_after)
+    @execution(message='Found & applied icons', start_message='Start find & apply icons')
+    def find_and_apply(self):
+        settings = self.settings.updated_settings(self._before_or_after)
         entries = self.crawling_search_folders()
         entries = self.rules.crawle_and_build_result(entries, self.exclude)
         self.rules.search_and_find_matches(entries, settings)
@@ -87,10 +84,10 @@ class ConfigService(IConfigService):
     )
     def crawling_search_folders(self) -> list[Folder]:
         folders = self.user_config.search_folders
-        return async_crawling_folders(folders)
+        return async_crawling_folders(self.user_config, folders)
 
-    @execution(message="Crawled through content")
-    def find_existing_content(self):
+    @execution(message='Crawled through content')
+    def find_existing(self):
         entries = self.crawling_search_folders()
         settings = self.settings.settings(clean_empty=True)
         self.desktop.crawle_and_build_result(entries, settings)
@@ -102,8 +99,8 @@ class ConfigService(IConfigService):
         controller = ReApplyController(self.settings, self.icon_folders)
         self.rules.re_apply_matches(controller)
 
-    @execution(message="Deleted content", start_message="Start delete content")
-    def delete_content(self):
+    @ execution(message='Deleted content', start_message='Start delete content')
+    def delete_setting(self):
         self.desktop.delete_content()
         self.icon_folders.delete_content()
         self.icon_files.delete_content()

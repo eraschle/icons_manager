@@ -5,8 +5,9 @@ from icon_manager.config.user import UserConfig
 from icon_manager.content.controller.base import ContentController
 from icon_manager.content.models.matched import MatchedIconFile
 from icon_manager.crawler.filters import files_by_extension
-from icon_manager.helpers.decorator import execution
-from icon_manager.interfaces.actions import DeleteAction
+from icon_manager.helpers.decorator import execution, execution_action
+from icon_manager.interfaces.path import File, Folder
+from icon_manager.interfaces.actions import Action, DeleteAction
 from icon_manager.interfaces.builder import FileCrawlerBuilder
 from icon_manager.interfaces.path import File, Folder
 from icon_manager.library.models import IconSetting
@@ -43,10 +44,10 @@ class IconFileController(ContentController[MatchedIconFile]):
         self.builder.setup(settings=settings)
         self.files = self.builder.build_models(files)
 
-    @execution(message="Crawle & build icons (__icon__ folder)")
-    def delete_content(self) -> None:
-        action = DeleteAction(self.files)
+    @execution_action(message='Crawle & build icons (__icon__ folder)')
+    def delete_content(self) -> Action:
+        action = DeleteAction(self. user_config, self.files)
         action.execute()
         if not action.any_executed():
-            return
-        log.info(action.get_log_message(MatchedIconFile))
+            return action
+        return action

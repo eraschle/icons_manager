@@ -21,7 +21,8 @@
 		"editor.formatOnSave": true,
 		"editor.formatOnPaste": true,
 		"python.linting.mypyEnabled": true,
-		"editor.formatOnType": true
+		"editor.formatOnType": true,
+		"python.analysis.diagnosticMode": "workspace"
 	},
 	"launch": {
 		"version": "0.2.0",

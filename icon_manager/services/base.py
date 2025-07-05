@@ -1,8 +1,10 @@
 from collections.abc import Iterable
 from typing import Protocol
 
+from icon_manager.config.user import UserConfig
 from icon_manager.interfaces.controller import IConfigHandler
 from icon_manager.rules.manager import ExcludeManager
+
 
 
 class IConfigService(IConfigHandler, Protocol):
@@ -16,6 +18,7 @@ class IConfigService(IConfigHandler, Protocol):
     The service acts as the main orchestrator for icon management tasks,
     coordinating between different controllers and managers.
     """
+    user_config: UserConfig
 
     def update_before_and_after(self, before_and_after: Iterable[str]) -> None:
         """Update before/after configuration values.

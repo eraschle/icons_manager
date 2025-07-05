@@ -1,5 +1,5 @@
 import logging
-from collections.abc import Iterable
+from typing import Optional, Sequence
 
 from icon_manager.content.controller.icon_folder import IconFolderController
 from icon_manager.content.models.matched import MatchedIconFolder, MatchedRuleFolder
@@ -24,7 +24,7 @@ class ReApplyController:
             return setting
         return None
 
-    def get_rule_folders(self) -> Iterable[MatchedRuleFolder]:
+    def get_rule_folders(self) -> Sequence[MatchedRuleFolder]:
         rule_folders = []
         for folder in self.icon_folders.folders_with_icon():
             setting = self.get_setting_of(folder)
