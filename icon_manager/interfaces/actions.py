@@ -4,7 +4,6 @@ from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Lock
 
-from icon_manager.config.user import UserConfig
 from icon_manager.helpers.string import (
     ALIGN_LEFT,
     ALIGN_RIGHT,
@@ -29,9 +28,9 @@ class Action[TEntry: PathModel](ABC):
         TEntry: Type of path entries this action operates on, must be bound to PathModel.
     """
 
-    def __init__(self, config: UserConfig | None, entries: Sequence[TEntry], action_log: str) -> None:
+    def __init__(self, config_name: str | None, entries: Sequence[TEntry], action_log: str) -> None:
         super().__init__()
-        self.config = config
+        self.config_name = config_name
         self.entries = entries
         self.files: list[PathModel] = []
         self.folders: list[PathModel] = []
@@ -58,8 +57,8 @@ class Action[TEntry: PathModel](ABC):
             self.execute()
             return
         prefix = "execute action"
-        if self.config is not None:
-            prefix = f"execute action {self.config.name}"
+        if self.config_name is not None:
+            prefix = f"execute action {self.config_name}"
         workers = min(len(self.entries), 32)
         with ThreadPoolExecutor(thread_name_prefix=prefix, max_workers=workers) as executor:
             task = {executor.submit(self.action_execute, entry): entry for entry in self.entries}
@@ -110,6 +109,15 @@ class Action[TEntry: PathModel](ABC):
         """
         pass
 
+    def execution_summary(self) -> tuple[Sequence[PathModel], Sequence[PathModel]]:
+        """The files and folders this action touched.
+
+        Read by the @execution_action decorator, which asks for this through
+        a protocol of its own rather than importing Action - a logging
+        helper must not depend on the layer it decorates.
+        """
+        return self.files, self.folders
+
     def any_executed(self) -> bool:
         """Check if any actions were executed.
 
@@ -159,8 +167,8 @@ class DeleteAction(Action[PathModel]):
     on entries that exist on the filesystem.
     """
 
-    def __init__(self, config: UserConfig | None, entries: Sequence[PathModel]) -> None:
-        super().__init__(config, entries, "Deleted")
+    def __init__(self, config_name: str | None, entries: Sequence[PathModel]) -> None:
+        super().__init__(config_name, entries, "Deleted")
 
     def can_execute(self, entry: PathModel) -> bool:
         """Check if entry can be deleted.

@@ -103,6 +103,22 @@ class Folder(Node):
         self.files.clear()
 
 
+def is_file(path: str, name: str, extension: str | None = None) -> bool:
+    """Whether ``name`` in ``path`` is a file, optionally of ``extension``."""
+    if not os.path.isfile(os.path.join(path, name)):
+        return False
+    if extension is None:
+        return True
+    if not extension.startswith("."):
+        extension = f".{extension}"
+    return name.endswith(extension)
+
+
+def get_files(path: str, extension: str | None = None) -> list[str]:
+    """The file names directly in ``path``, optionally filtered by extension."""
+    return [name for name in os.listdir(path) if is_file(path, name, extension)]
+
+
 def get_attr_bit_dict(attributes: Iterable[str], is_enable: bool) -> dict[str, str]:
     attr_dict = {}
     for attribute in attributes:

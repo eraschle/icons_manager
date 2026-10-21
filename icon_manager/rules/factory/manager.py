@@ -5,7 +5,7 @@ from typing import Any, Generic, TypeVar
 
 from icon_manager.data.base import Source
 from icon_manager.data.json_source import JsonSource
-from icon_manager.helpers.resource import excluded_rules_template_file
+from icon_manager.helpers.resource import exclude_rules_template_path
 from icon_manager.interfaces.factory import ContentFactory, FileFactory
 from icon_manager.interfaces.path import ConfigFile, JsonFile
 from icon_manager.rules.base import FolderMatcher, Operator, RuleAttribute
@@ -137,7 +137,7 @@ class ExcludeManagerFactory(AManagerFactory[ExcludeManager, Iterable[dict[str, A
         return ExcludeManager(checkers)
 
     def copy_template(self, config: ConfigFile) -> None:
-        template = excluded_rules_template_file()
+        template = ConfigFile(exclude_rules_template_path())
         template.copy_to(config)
 
     def prepare_template(self, config: ConfigFile) -> None:

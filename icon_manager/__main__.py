@@ -7,7 +7,7 @@ from logging.handlers import RotatingFileHandler
 from icon_manager.config.app import AppConfig, AppConfigFactory
 from icon_manager.data.json_source import JsonSource
 from icon_manager.helpers.logs import log_time
-from icon_manager.helpers.resource import app_config_template_file
+from icon_manager.helpers.resource import app_config_template_path
 from icon_manager.interfaces.path import ConfigFile
 from icon_manager.rules.factory.manager import ExcludeManagerFactory
 from icon_manager.services.app_service import IconsAppService
@@ -108,7 +108,7 @@ def get_app_config(config_file: ConfigFile) -> AppConfig:
 def get_service() -> IconsAppService:
     app_config = AppConfigFactory.app_config_file()
     if not app_config.exists():
-        app_template = app_config_template_file()
+        app_template = ConfigFile(app_config_template_path())
         app_template.copy_to(app_config)
     app_config = get_app_config(app_config)
     service = IconsAppService(app_config)

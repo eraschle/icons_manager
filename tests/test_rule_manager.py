@@ -201,7 +201,7 @@ class TestRuleManager:
 
         assert manager.config == mock_json_file
         assert manager.checker == mock_rule_checker
-        assert manager.weight == 10
+        assert manager.order == 10
         assert manager.copy_icon is True
 
     def test_name_returns_config_name(self, rule_manager):
@@ -271,30 +271,28 @@ class TestExcludeManager:
 
         assert manager.checkers == [checker2]
 
-    def test_is_allowed_returns_true_when_empty(self):
-        manager = ExcludeManager([])
-        folder = Mock(spec=Folder)
-
-        assert manager.is_allowed(folder) is True
-
-    def test_is_allowed_returns_true_when_any_checker_allows(self):
-        checker1 = Mock(spec=FolderMatcher)
-        checker1.is_allowed.return_value = False
-        checker2 = Mock(spec=FolderMatcher)
-        checker2.is_allowed.return_value = True
-
-        manager = ExcludeManager([checker1, checker2])
-        folder = Mock(spec=Folder)
-
-        assert manager.is_allowed(folder) is True
-
     def test_is_excluded_returns_false_when_empty(self):
         manager = ExcludeManager([])
         folder = Mock(spec=Folder)
 
         assert manager.is_excluded(folder) is False
 
-    def test_is_excluded_returns_same_as_is_allowed(self, exclude_manager):
+    def test_is_excluded_when_any_checker_matches(self):
+        # is_empty() must be stubbed: a bare Mock returns a truthy Mock, which
+        # made the manager look empty and short-circuit before any checker ran
+        checker1 = Mock(spec=FolderMatcher)
+        checker1.is_empty.return_value = False
+        checker1.is_allowed.return_value = False
+        checker2 = Mock(spec=FolderMatcher)
+        checker2.is_empty.return_value = False
+        checker2.is_allowed.return_value = True
+
+        manager = ExcludeManager([checker1, checker2])
+        folder = Mock(spec=Folder)
+
+        assert manager.is_excluded(folder) is True
+
+    def test_is_excluded_asks_its_checkers(self, exclude_manager):
         folder = Mock(spec=Folder)
         exclude_manager.checkers[0].is_allowed.return_value = True
 

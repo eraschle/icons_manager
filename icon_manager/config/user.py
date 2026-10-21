@@ -7,7 +7,7 @@ from uuid import uuid4
 from icon_manager.config.base import Config
 from icon_manager.data.json_source import JsonSource
 from icon_manager.helpers.environment import get_converted_env_path
-from icon_manager.helpers.resource import user_config_template_file
+from icon_manager.helpers.resource import user_config_template_path
 from icon_manager.interfaces.factory import FileFactory
 from icon_manager.interfaces.path import (
     ConfigFile,
@@ -139,7 +139,7 @@ class UserConfigFactory(FileFactory[ConfigFile, UserConfig]):
         )
 
     def copy_user_config_template(self, user_config: ConfigFile) -> None:
-        template_config = user_config_template_file()
+        template_config = ConfigFile(user_config_template_path())
         template_config.copy_to(user_config)
 
     def prepare_template(self, user_config: ConfigFile) -> None:

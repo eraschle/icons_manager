@@ -22,7 +22,7 @@ from icon_manager.content.controller.desktop import (
 from icon_manager.content.models.desktop import DesktopIniFile, Git
 from icon_manager.content.models.matched import MatchedIconFolder, MatchedRuleFolder
 from icon_manager.crawler.crawler import crawling_icons
-from icon_manager.data.ini_source import DesktopFileSource
+from icon_manager.data.ini_source import TextLineSource
 from icon_manager.interfaces.path import FolderModel
 from icon_manager.library.controller import IconLibraryController
 from icon_manager.library.models import IconSetting, LibraryIconFile
@@ -54,7 +54,7 @@ class TestTheWrittenContent:
         assert "[ViewState]" in lines
 
     def test_writing_it_produces_a_file_the_checker_recognises(self, rule_folder: MatchedRuleFolder):
-        source = DesktopFileSource()
+        source = TextLineSource()
         source.write(rule_folder.desktop_ini, DesktopIniCreator().create_content(rule_folder))
 
         assert DesktopFileChecker(source).is_app_file(rule_folder.desktop_ini)
@@ -75,7 +75,7 @@ class TestWhoMayWrite:
 
     def test_our_own_desktop_ini_may_be_overwritten(self, rule_folder: MatchedRuleFolder):
         creator = DesktopIniCreator()
-        DesktopFileSource().write(rule_folder.desktop_ini, creator.create_content(rule_folder))
+        TextLineSource().write(rule_folder.desktop_ini, creator.create_content(rule_folder))
 
         assert creator.can_write(rule_folder.desktop_ini)
 
@@ -89,7 +89,7 @@ class TestWhoMayWrite:
         empty = workspace / "desktop.ini"
         empty.touch()
 
-        assert not DesktopFileChecker(DesktopFileSource()).is_app_file(DesktopIniFile(str(empty)))
+        assert not DesktopFileChecker(TextLineSource()).is_app_file(DesktopIniFile(str(empty)))
 
 
 class TestRecognisingPaths:

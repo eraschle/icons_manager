@@ -12,7 +12,7 @@ from icon_manager.content.models.matched import (
     MatchedRuleFolder,
 )
 from icon_manager.crawler.filters import files_by_extension
-from icon_manager.data.ini_source import DesktopFileSource
+from icon_manager.data.ini_source import TextLineSource
 from icon_manager.helpers.decorator import execution, execution_action
 from icon_manager.interfaces.actions import Action, DeleteAction
 from icon_manager.interfaces.builder import FileCrawlerBuilder
@@ -26,7 +26,7 @@ log = logging.getLogger(__name__)
 
 
 class DesktopFileChecker:
-    def __init__(self, source: DesktopFileSource) -> None:
+    def __init__(self, source: TextLineSource) -> None:
         self.source = source
 
     def is_app_file(self, file: File | PathModel) -> bool:
@@ -45,7 +45,7 @@ class DesktopFileChecker:
 class DesktopIniBuilder(FileCrawlerBuilder[DesktopIniFile]):
     app_entry = "IconManager=1"
 
-    def __init__(self, source: DesktopFileSource) -> None:
+    def __init__(self, source: TextLineSource) -> None:
         super().__init__()
         self.checker = DesktopFileChecker(source)
 
@@ -57,8 +57,8 @@ class DesktopIniBuilder(FileCrawlerBuilder[DesktopIniFile]):
 
 
 class DesktopDeleteAction(DeleteAction):
-    def __init__(self, config: UserConfig | None, entries: Sequence[PathModel], checker: DesktopFileChecker) -> None:
-        super().__init__(config, entries)
+    def __init__(self, config_name: str | None, entries: Sequence[PathModel], checker: DesktopFileChecker) -> None:
+        super().__init__(config_name, entries)
         self.checker = checker
 
     def can_execute(self, entry: PathModel) -> bool:
@@ -72,7 +72,7 @@ class DesktopIniController(ContentController[DesktopIniFile]):
         user_config: UserConfig,
         builder: DesktopIniBuilder | None = None,
     ) -> None:
-        super().__init__(user_config, builder or DesktopIniBuilder(DesktopFileSource()))
+        super().__init__(user_config, builder or DesktopIniBuilder(TextLineSource()))
         self.desktop_files: list[DesktopIniFile] = []
 
     @execution(message="Crawle & build DESKTOP.INI-files")
@@ -83,8 +83,8 @@ class DesktopIniController(ContentController[DesktopIniFile]):
 
     @execution_action(message="Deleted DESKTOP.INI-files")
     def delete_content(self) -> Action:
-        checker = DesktopFileChecker(DesktopFileSource())
-        action = DesktopDeleteAction(self.user_config, self.desktop_files, checker)
+        checker = DesktopFileChecker(TextLineSource())
+        action = DesktopDeleteAction(self.user_config.name, self.desktop_files, checker)
         action.execute()
         return action
 
@@ -248,8 +248,8 @@ def get_commands(rule_folder: MatchedRuleFolder, copy_icon: bool) -> list[Config
 
 
 class DesktopIniCreator:
-    def __init__(self, source: DesktopFileSource | None = None) -> None:
-        source = source or DesktopFileSource()
+    def __init__(self, source: TextLineSource | None = None) -> None:
+        source = source or TextLineSource()
         self.source = source
         self.checker = DesktopFileChecker(source)
 

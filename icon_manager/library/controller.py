@@ -2,7 +2,7 @@ import logging
 from collections.abc import Iterable, Sequence
 
 from icon_manager.config.user import UserConfig
-from icon_manager.helpers.resource import icon_setting_template
+from icon_manager.helpers.resource import icon_setting_template_path
 from icon_manager.interfaces.actions import DeleteAction
 from icon_manager.interfaces.builder import FileCrawlerBuilder, ModelBuilder
 from icon_manager.interfaces.path import File, FileModel, JsonFile, PathModel
@@ -244,7 +244,7 @@ class IconLibraryController:
 
     def create_icon_configs(self):
         """Create configuration files for icons that don't have them."""
-        template = icon_setting_template()
+        template = JsonFile(icon_setting_template_path())
         for icon_file in self.library_icons:
             icon_config = icon_file.get_config()
             if icon_config.exists():
@@ -254,7 +254,7 @@ class IconLibraryController:
 
     def update_icon_configs(self):
         """Update all icon configuration files with template data."""
-        template = icon_setting_template()
+        template = JsonFile(icon_setting_template_path())
         for setting in self._settings:
             self.builder.update_config(setting, template)
 

@@ -89,10 +89,10 @@ class ConfigRuleController:
 
 
 class RuleManager:
-    def __init__(self, config: JsonFile, checker: FolderMatcher, weight: int, copy_icon: bool | None) -> None:
+    def __init__(self, config: JsonFile, checker: FolderMatcher, order: int, copy_icon: bool | None) -> None:
         self.config = config
         self.checker = checker
-        self.weight = weight
+        self.order = order
         self.copy_icon = copy_icon
 
     @property
@@ -139,15 +139,17 @@ class ExcludeManager:
             checkers.append(checker)
         self.checkers = checkers
 
-    def is_allowed(self, entry: Folder) -> bool:
-        if self.is_empty():
-            return True
-        return any(manager.is_allowed(entry) for manager in self.checkers)
-
     def is_excluded(self, entry: Folder) -> bool:
+        """Whether ``entry`` matches any of the exclude configurations.
+
+        The only question this class answers. It also had an is_allowed()
+        that no caller used and that returned True for an empty manager,
+        i.e. the opposite of is_excluded() in exactly the case where the two
+        differed.
+        """
         if self.is_empty():
             return False
-        return self.is_allowed(entry)
+        return any(checker.is_allowed(entry) for checker in self.checkers)
 
     def setup_rules(self, before_or_after: Iterable[str]) -> None:
         for checker in self.checkers:

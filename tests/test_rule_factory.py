@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
@@ -238,7 +240,7 @@ class TestRuleManagerFactory:
         assert isinstance(result, RuleManager)
         assert result.config == mock_file
         assert result.checker == mock_rule_checker
-        assert result.weight == 10
+        assert result.order == 10
         assert result.copy_icon is True
 
     def test_create_with_content_uses_defaults_for_missing_values(self, factory):
@@ -250,7 +252,7 @@ class TestRuleManagerFactory:
 
         result = factory.create_with_content(config, file=mock_file)
 
-        assert result.weight == 5  # default order
+        assert result.order == 5  # default order
         assert result.copy_icon is None  # default copy_icon
 
     def test_create_with_content_raises_error_when_no_file(self, factory):
@@ -310,15 +312,13 @@ class TestExcludeManagerFactory:
         assert isinstance(result, ExcludeManager)
         assert result.checkers == []
 
-    @patch("icon_manager.rules.factory.manager.excluded_rules_template_file")
-    def test_copy_template_copies_template_file(self, mock_template_func, factory):
-        mock_config = Mock(spec=ConfigFile)
-        mock_template = Mock()
-        mock_template_func.return_value = mock_template
+    def test_copy_template_copies_the_bundled_template(self, factory, tmp_path):
+        target = ConfigFile(str(tmp_path / "excluded_rules.config"))
 
-        factory.copy_template(mock_config)
+        factory.copy_template(target)
 
-        mock_template.copy_to.assert_called_once_with(mock_config)
+        assert target.exists()
+        assert "config" in json.loads(Path(target.path).read_text(encoding="utf-8"))
 
     def test_prepare_template_reads_and_writes_content(self, factory):
         mock_config = Mock(spec=ConfigFile)

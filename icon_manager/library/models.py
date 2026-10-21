@@ -1,6 +1,7 @@
 import logging
 import os
 from collections.abc import Iterable, Sequence
+from typing import Protocol
 
 from icon_manager.interfaces.path import FileModel, Folder, FolderModel, JsonFile, PathModel
 from icon_manager.rules.manager import RuleManager
@@ -57,9 +58,14 @@ class IconSetting:
         return self.icon.name_wo_extension
 
     @property
-    def order_key(self) -> tuple[str, str]:
-        weight = f"{self.manager.weight:02d}"
-        return (weight, self.manager.name)
+    def order_key(self) -> tuple[int, str]:
+        """Sort key: lower order wins, ties broken by config name.
+
+        The order used to be formatted as a zero-padded two-digit string and
+        sorted as text, so "100" sorted before "20" and an order above 99
+        silently got the wrong priority.
+        """
+        return (self.manager.order, self.manager.name)
 
     @property
     def copy_icon(self) -> bool | None:
@@ -121,3 +127,18 @@ class ArchiveFolder(FolderModel):
 
     def is_archive(self, path: str) -> bool:
         return path.startswith(self.path)
+
+
+class IconSettingLookup(Protocol):
+    """Finds the icon setting an already applied icon file belongs to.
+
+    Narrow on purpose: it is the only thing
+    :class:`~icon_manager.content.controller.re_apply.ReApplyController`
+    needs from the icon library, so re-applying icons can be tested without
+    a library controller. It lives here rather than in ``interfaces`` so that
+    ``interfaces`` does not have to import the library it sits below.
+    """
+
+    def setting_by_icon(self, icon: IconFile) -> IconSetting | None:
+        """The setting whose icon has the same file name as ``icon``."""
+        ...

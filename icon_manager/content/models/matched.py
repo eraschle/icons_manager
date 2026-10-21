@@ -3,8 +3,7 @@ import os
 from collections.abc import Sequence
 
 from icon_manager.content.models.desktop import DesktopIniFile
-from icon_manager.helpers.path import get_files
-from icon_manager.interfaces.path import FolderModel
+from icon_manager.interfaces.path import FolderModel, get_files
 from icon_manager.library.models import IconFile, IconSetting, LibraryIconFile
 
 log = logging.getLogger(__name__)

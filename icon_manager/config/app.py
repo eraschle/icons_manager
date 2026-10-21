@@ -9,15 +9,14 @@ from icon_manager.config.base import Config
 from icon_manager.config.user import UserConfig, UserConfigFactory
 from icon_manager.data.json_source import JsonSource
 from icon_manager.helpers.environment import get_converted_env_path
-from icon_manager.helpers.path import get_files
-from icon_manager.helpers.resource import app_config_template_file
+from icon_manager.helpers.resource import app_config_template_path
 from icon_manager.helpers.user_inputs import (
     ask_user,
     ask_user_for_path,
     ask_user_yes_no_question,
 )
 from icon_manager.interfaces.factory import FileFactory
-from icon_manager.interfaces.path import ConfigFile, JsonFile
+from icon_manager.interfaces.path import ConfigFile, JsonFile, get_files
 from icon_manager.rules.factory.manager import ExcludeManagerFactory
 from icon_manager.rules.manager import ExcludeManager
 
@@ -172,7 +171,7 @@ class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
 
     def create(self, file: ConfigFile, **kwargs) -> AppConfig:
         if not file.exists():
-            template_file = app_config_template_file()
+            template_file = ConfigFile(app_config_template_path())
             template_file.copy_to(file)
         content = self.source.read(file, **kwargs)
         config_folder_path = content.get(AppConfigs.USER_CONFIGS, "")

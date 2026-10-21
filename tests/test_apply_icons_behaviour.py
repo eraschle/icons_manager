@@ -102,6 +102,19 @@ class TestApplyingIcons:
 
         assert icon_resource(workspace / "docs") == f"{library / 'specific.ico'},0"
 
+    def test_an_order_above_99_still_sorts_as_a_number(self, user_config: UserConfig, library: Path, workspace: Path):
+        # the order was sorted as a zero-padded two-digit string, so "100"
+        # sorted before "20" and the wrong icon won
+        for name, order in (("first", 20), ("second", 100)):
+            add_icon(library, name, name={"rules": [{"equals": ["docs"]}]})
+            config = library / f"{name}.json"
+            config.write_text(config.read_text().replace('"order": 5', f'"order": {order}'), encoding="utf-8")
+        make_tree(workspace, ["docs/"])
+
+        build_service(user_config).find_and_apply_matches()
+
+        assert icon_resource(workspace / "docs") == f"{library / 'first.ico'},0"
+
 
 class TestCopyingTheIcon:
     def test_the_icon_is_copied_into_a_hidden_icon_folder_when_asked(self, library: Path, workspace: Path):

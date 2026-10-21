@@ -4,6 +4,7 @@ The config format is the other half of the user-facing contract, so these
 tests write real .config files and read them back through the factories.
 """
 
+import json
 import os
 from pathlib import Path
 
@@ -12,6 +13,7 @@ import pytest
 from icon_manager.config.app import AppConfigFactory
 from icon_manager.config.user import UserConfigFactory
 from icon_manager.data.json_source import JsonSource
+from icon_manager.helpers import resource
 from icon_manager.helpers.environment import get_converted_env_path
 from icon_manager.interfaces.path import ConfigFile
 from icon_manager.rules.factory.manager import ExcludeManagerFactory
@@ -167,3 +169,28 @@ class TestReadingTheAppConfig:
         # the interactive fallback asks the user; without a terminal it fails
         with pytest.raises((ValueError, OSError, EOFError)):
             factory.create(ConfigFile(str(app_file)))
+
+
+class TestBundledResources:
+    """Every template the tool copies must actually ship with it.
+
+    The exclude-rules constant named a .config file while the resource is a
+    .json, so creating that template raised FileNotFoundError. The mocked
+    test for it patched the locator away and never touched the filesystem.
+    """
+
+    @pytest.mark.parametrize(
+        "locator",
+        [
+            resource.icon_setting_template_path,
+            resource.exclude_rules_template_path,
+            resource.user_config_template_path,
+            resource.app_config_template_path,
+        ],
+        ids=lambda fn: fn.__name__,
+    )
+    def test_the_template_exists_and_is_valid_json(self, locator):
+        path = Path(locator())
+
+        assert path.is_file(), f"missing resource: {path}"
+        assert json.loads(path.read_text(encoding="utf-8"))

@@ -18,7 +18,7 @@ class CreateIconAction(Action[MatchedRuleFolder]):
         action_log: str = "Added Icons to Folders",
         controller: DesktopIniCreator | None = None,
     ) -> None:
-        super().__init__(user_config, entries, action_log)
+        super().__init__(user_config.name, entries, action_log)
         self.user_config = user_config
         self.controller = controller or DesktopIniCreator()
 

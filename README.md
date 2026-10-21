@@ -130,20 +130,39 @@ is skipped together with everything below it.
 
 ## Architecture
 
+The packages form a layered DAG — every arrow points down, and nothing
+imports a package above it:
+
 ```
-icon_manager/
-  __main__.py        CLI: parse options, dispatch to the service
   services/          ConfigService (one user config), IconsAppService (fan-out)
-  config/            reading app_config and the user configs
-  library/           the icon library: icons paired with their rules
-  crawler/           walking folders into a Folder tree, and filtering it
-  rules/             the rule engine; factory/ builds it from config dicts
+      │
   content/           what lands on disk: desktop.ini, __icon__, icon files
-  interfaces/        the shared abstractions (paths, actions, builders)
-  data/              reading and writing JSON and INI files
+      │
+  library/           the icon library: icons paired with their rules
+      │
+  crawler/  config/  walking and filtering folders / reading the config files
+      │
+  rules/             the rule engine; factory/ builds it from config dicts
+      │
+  data/              reading and writing JSON and line-based text files
+      │
+  interfaces/        the shared abstractions: paths, actions, builders
+      │
+  helpers/           no project imports at all: strings, logging, env, resources
+
+  __main__.py        CLI: parse options, dispatch to the service
 ```
 
-Two ideas carry most of the design:
+Keeping that direction is a constraint worth checking when adding code. It
+was broken in both directions before: `interfaces` imported `library` and
+`config`, `data` imported `content`, and `helpers` imported `config` —
+always because a lower layer took a whole domain object when it needed one
+field off it. An `Action` takes the config's name, not the `UserConfig`; the
+line-based source is typed to `FileModel`, not to `DesktopIniFile`; the
+resource locator answers where a template is, and the caller decides which
+path model to wrap it in.
+
+Three ideas carry most of the design:
 
 **One matcher abstraction.** `rules.base.FolderMatcher` has `is_allowed`,
 `is_empty`, `clean_empty` and `setup_rules`. A single rule, a group of rules
@@ -157,16 +176,16 @@ match against them. `PathModel`/`FileModel`/`FolderModel` wrap a single path
 with the operations that touch the disk. The crawler produces the first, the
 content controllers act through the second.
 
-Per-configuration state stays per configuration: builders are constructed in
-`__init__` rather than as default arguments, and the excluded/project folder
-names travel in `FilterOptions`. Both were shared before, which made one
-user config's rules apply to another.
+**Per-configuration state stays per configuration.** Builders are
+constructed in `__init__` rather than as default argument values, and the
+excluded/project folder names travel in `FilterOptions`. Both were shared
+before, which made one user config's rules apply to another's folders.
 
 ## Development
 
 ```bash
 uv sync --all-groups
-uv run pytest                      # 176 tests
+uv run pytest                      # 177 tests
 uv run pytest --cov=icon_manager   # ~89% coverage
 uv run ruff check icon_manager tests
 uv run ruff format icon_manager tests

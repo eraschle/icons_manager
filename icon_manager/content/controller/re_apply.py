@@ -3,9 +3,8 @@ from collections.abc import Sequence
 
 from icon_manager.content.controller.icon_folder import IconFolderController
 from icon_manager.content.models.matched import MatchedIconFolder, MatchedRuleFolder
-from icon_manager.interfaces.controller import IconSettingLookup
 from icon_manager.interfaces.path import FolderModel
-from icon_manager.library.models import IconSetting
+from icon_manager.library.models import IconSetting, IconSettingLookup
 
 log = logging.getLogger(__name__)
 
