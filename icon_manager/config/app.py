@@ -3,7 +3,7 @@ import logging
 import os
 from collections.abc import Collection, Iterable, Sequence
 from enum import Enum
-from typing import Any, Collection, Dict, Iterable, List, Optional, Sequence
+from typing import Any
 
 from icon_manager.config.base import Config
 from icon_manager.config.user import UserConfig, UserConfigFactory
@@ -24,7 +24,7 @@ from icon_manager.rules.manager import ExcludeManager
 log = logging.getLogger(__name__)
 
 
-def get_paths(path: str, names: Iterable[str]) -> List[str]:
+def get_paths(path: str, names: Iterable[str]) -> list[str]:
     return [os.path.join(path, name) for name in names]
 
 

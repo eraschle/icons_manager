@@ -4,11 +4,21 @@ from collections.abc import Collection, Iterable, Sequence
 from typing import Any
 
 from icon_manager.interfaces.path import Folder
-from icon_manager.rules.base import (AFilterRule, ASingleRule, ISingleRule,
-                                     Operator, RuleAttribute,)
-from icon_manager.rules.generate import (AfterGenerator, BeforeGenerator,
-                                         BeforeOrAfterGenerator, CaseConverter,
-                                         Generator, GeneratorManager,)
+from icon_manager.rules.base import (
+    AAttributeRule,
+    AFolderRule,
+    FolderMatcher,
+    Operator,
+    RuleAttribute,
+)
+from icon_manager.rules.generate import (
+    AfterGenerator,
+    BeforeGenerator,
+    BeforeOrAfterGenerator,
+    CaseConverter,
+    Generator,
+    GeneratorManager,
+)
 
 log = logging.getLogger(__name__)
 
@@ -16,36 +26,7 @@ log = logging.getLogger(__name__)
 # region FOLDER RULES
 
 
-class IRuleValuesFilter(ISingleRule):
-    operator: Operator
-    attribute: RuleAttribute
-    rule_values: Collection[str]
-    is_case_sensitive: bool
-
-    @property
-    def name(self) -> str:
-        ...
-
-    def is_allowed(self, entry: Folder) -> bool:
-        ...
-
-    def is_empty(self) -> bool:
-        ...
-
-    def set_before_or_after(self, values: Iterable[str]) -> None:
-        ...
-
-    def setup_filter_rule(self) -> None:
-        ...
-
-    def prepare_rule_values(self, values: Collection[str]) -> Collection[str]:
-        ...
-
-    def prepare_element_value(self, value: str) -> str:
-        ...
-
-
-class FolderRule(ASingleRule):
+class FolderRule(AAttributeRule):
     def __init__(
         self,
         attribute: RuleAttribute,
@@ -74,21 +55,17 @@ class FolderRule(ASingleRule):
     def before_and_after_generators(self) -> Sequence[Generator]:
         return [BeforeGenerator(), AfterGenerator()]
 
-    def set_before_or_after(self, before_or_after: Iterable[str]) -> None:
-        if not self.add_before_or_after_values:
-            return
-        self.generator.generators = self.get_generators()
-        self.generator.set_generator_values(before_or_after)
+    def setup_rules(self, before_or_after: Iterable[str]) -> None:
+        if self.add_before_or_after_values:
+            self.generator.generators = self.get_generators()
+            self.generator.set_generator_values(before_or_after)
+        self.rule_values = self.prepare_rule_values(self.original_values)
+        self.generated = self._generated_values(self.rule_values)
 
-    def _before_or_after(self, values: Collection[str]) -> Collection[str]:
+    def _generated_values(self, values: Collection[str]) -> Collection[str]:
         if not self.add_before_or_after_values:
             return []
-        include_value = False
-        return self.generator.generates_unique(values, include_value)
-
-    def setup_filter_rule(self) -> None:
-        self.rule_values = self.prepare_rule_values(self.original_values)
-        self.generated = self._before_or_after(self.rule_values)
+        return self.generator.generates_unique(values, include_value=False)
 
     def prepare_rule_values(self, values: Collection[str]) -> Collection[str]:
         return self.generator.converts(values)
@@ -175,37 +152,7 @@ class StartsOrEndsWithRule(FolderRule):
         return value.startswith(rule_value) or value.endswith(rule_value)
 
 
-class IPathOperationRule(IRuleValuesFilter):
-    operator: Operator
-    attribute: RuleAttribute
-    rule_values: Collection[str]
-    is_case_sensitive: bool
-    max_level: int
-
-    @property
-    def name(self) -> str:
-        ...
-
-    def is_allowed(self, entry: Folder) -> bool:
-        ...
-
-    def is_empty(self) -> bool:
-        ...
-
-    def set_before_or_after(self, values: Iterable[str]) -> None:
-        ...
-
-    def setup_filter_rule(self) -> None:
-        ...
-
-    def prepare_rule_values(self, values: Collection[str]) -> Collection[str]:
-        ...
-
-    def prepare_element_value(self, value: str) -> str:
-        ...
-
-
-class ContainsFileRule(FolderRule, IPathOperationRule):
+class ContainsFileRule(FolderRule):
 
     def __init__(self, attribute: RuleAttribute, operator: Operator, values: Collection[str],
                  case_sensitive: bool, before_or_after: bool,
@@ -309,8 +256,8 @@ class NotContainsFolderRule(ContainsFolderRule):
 # endregion
 
 
-class ChainedRule(AFilterRule, ISingleRule):
-    def __init__(self, attribute: RuleAttribute, operator: Operator, rules: Sequence[ISingleRule]) -> None:
+class ChainedRule(AFolderRule):
+    def __init__(self, attribute: RuleAttribute, operator: Operator, rules: Sequence[FolderMatcher]) -> None:
         super().__init__(attribute, operator)
         self.rules = rules
 
@@ -324,10 +271,6 @@ class ChainedRule(AFilterRule, ISingleRule):
             return all(rule.is_allowed(entry) for rule in self.rules)
         return any(rule.is_allowed(entry) for rule in self.rules)
 
-    def set_before_or_after(self, before_or_after: Iterable[str]) -> None:
+    def setup_rules(self, before_or_after: Iterable[str]) -> None:
         for rule in self.rules:
-            rule.set_before_or_after(before_or_after)
-
-    def setup_filter_rule(self) -> None:
-        for rule in self.rules:
-            rule.setup_filter_rule()
+            rule.setup_rules(before_or_after)

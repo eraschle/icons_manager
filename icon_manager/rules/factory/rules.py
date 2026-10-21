@@ -8,13 +8,7 @@ from typing import (
 )
 
 from icon_manager.interfaces.factory import ContentFactory
-from icon_manager.rules.base import (
-    IFilterRule,
-    ISingleRule,
-    Operator,
-    Rule,
-    RuleAttribute,
-)
+from icon_manager.rules.base import FolderMatcher, Operator, Rule, RuleAttribute
 from icon_manager.rules.mapping import rule_mapping
 from icon_manager.rules.rules import (
     ChainedRule,
@@ -73,14 +67,14 @@ def get_rule_name(rule_config: dict[str, Any]) -> Rule:
     return Rule.UNKNOWN
 
 
-def get_rule_type(rule_config: dict[str, Any]) -> type[IFilterRule] | None:
+def get_rule_type(rule_config: dict[str, Any]) -> type[FolderMatcher] | None:
     rule = get_rule_name(rule_config)
     if rule == Rule.UNKNOWN:
         return None
     return RULE_MAPPING[rule]
 
 
-TRule = TypeVar("TRule", bound=IFilterRule)
+TRule = TypeVar("TRule", bound=FolderMatcher)
 
 
 class ARuleBuilder(ABC, ContentFactory[dict[str, Any], TRule]):
@@ -133,7 +127,7 @@ class ARuleBuilder(ABC, ContentFactory[dict[str, Any], TRule]):
 TFolderRule = TypeVar("TFolderRule", bound=FolderRule)
 
 
-class ASingleRuleBuilder(ARuleBuilder[TFolderRule]):
+class AAttributeRuleBuilder(ARuleBuilder[TFolderRule]):
     def get_before_or_after_values(self, config: dict[str, Any]) -> Collection[str]:
         return config.get(ConfigValues.BEFORE_OR_AFTER, [])
 
@@ -148,7 +142,7 @@ class ASingleRuleBuilder(ARuleBuilder[TFolderRule]):
     def create_rule(self, attribute: RuleAttribute, config: dict[str, Any]) -> TFolderRule: ...
 
 
-class FolderRuleBuilder(ASingleRuleBuilder[FolderRule]):
+class FolderRuleBuilder(AAttributeRuleBuilder[FolderRule]):
     @classmethod
     def builder_for_rules(cls) -> Iterable[Rule]:
         return [
@@ -182,7 +176,7 @@ class FolderRuleBuilder(ASingleRuleBuilder[FolderRule]):
         )
 
 
-class ContainsFileRuleBuilder(ASingleRuleBuilder[ContainsFileRule]):
+class ContainsFileRuleBuilder(AAttributeRuleBuilder[ContainsFileRule]):
     @classmethod
     def builder_for_rules(cls) -> Iterable[str]:
         return [
@@ -215,13 +209,13 @@ class ContainsFileRuleBuilder(ASingleRuleBuilder[ContainsFileRule]):
         )
 
 
-SINGLE_BUILDER_TYPES: Iterable[type[ASingleRuleBuilder]] = [
+SINGLE_BUILDER_TYPES: Iterable[type[AAttributeRuleBuilder]] = [
     FolderRuleBuilder,
     ContainsFileRuleBuilder,
 ]
 
 
-def get_single_builders() -> Iterable[ASingleRuleBuilder]:
+def get_single_builders() -> Iterable[AAttributeRuleBuilder]:
     builders = []
     for builder_type in SINGLE_BUILDER_TYPES:
         builder = builder_type()
@@ -230,8 +224,8 @@ def get_single_builders() -> Iterable[ASingleRuleBuilder]:
 
 
 def create_single_rule(
-    rules: Iterable[ASingleRuleBuilder], config: dict[str, Any], **kwargs
-) -> ISingleRule:
+    rules: Iterable[AAttributeRuleBuilder], config: dict[str, Any], **kwargs
+) -> FolderMatcher:
     for builder in rules:
         if not builder.can_build(config):
             continue

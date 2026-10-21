@@ -374,7 +374,6 @@ class TestDesktopIniCreator:
 
         assert creator.source == mock_source
         assert isinstance(creator.checker, DesktopFileChecker)
-        assert creator.commands == []
 
     def test_can_write_returns_true_for_non_existing_file(self, creator):
         mock_file = Mock(spec=DesktopIniFile)

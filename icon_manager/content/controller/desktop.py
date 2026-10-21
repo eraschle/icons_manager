@@ -255,7 +255,6 @@ class DesktopIniCreator:
     def __init__(self, source: DesktopFileSource = DesktopFileSource()) -> None:
         self.source = source
         self.checker = DesktopFileChecker(source)
-        self.commands: list[ConfigCommand] = []
 
     def can_write(self, file: DesktopIniFile) -> bool:
         if not file.exists():

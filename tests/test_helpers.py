@@ -7,7 +7,6 @@ from icon_manager.helpers.path import (
     get_path,
     get_paths,
     is_file,
-    is_file_extensions,
     total_count,
 )
 from icon_manager.helpers.string import (
@@ -20,7 +19,7 @@ from icon_manager.helpers.string import (
     list_value,
     prefix_value,
 )
-from icon_manager.interfaces.path import File, Folder
+from icon_manager.interfaces.path import Folder
 
 
 class TestPathHelpers:
@@ -78,30 +77,6 @@ class TestPathHelpers:
             result = is_file("/test/path", "file.txt", "txt")
 
             assert result is True
-
-    def test_is_file_extensions_returns_true_for_matching_extension(self):
-        file = Mock(spec=File)
-        file.ext = ".txt"
-
-        result = is_file_extensions(file, [".txt", ".pdf"])
-
-        assert result is True
-
-    def test_is_file_extensions_returns_false_for_non_matching_extension(self):
-        file = Mock(spec=File)
-        file.ext = ".jpg"
-
-        result = is_file_extensions(file, [".txt", ".pdf"])
-
-        assert result is False
-
-    def test_is_file_extensions_returns_false_for_none_extension(self):
-        file = Mock(spec=File)
-        file.ext = None
-
-        result = is_file_extensions(file, [".txt", ".pdf"])
-
-        assert result is False
 
     def test_get_files_returns_files_with_extension(self):
         with patch("os.listdir") as mock_listdir:

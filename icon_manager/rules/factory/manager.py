@@ -1,44 +1,50 @@
 import logging
 from abc import abstractmethod
-from typing import Any, Dict, Generic, Iterable, Optional, Sequence, TypeVar
 from collections.abc import Iterable, Sequence
+from typing import Any, Generic, TypeVar
 
 from icon_manager.data.base import Source
 from icon_manager.data.json_source import JsonSource
 from icon_manager.helpers.resource import excluded_rules_template_file
 from icon_manager.interfaces.factory import ContentFactory, FileFactory
 from icon_manager.interfaces.path import ConfigFile, JsonFile
-from icon_manager.rules.base import (IFilterRule, ISingleRule, Operator,
-                                     RuleAttribute)
-from icon_manager.rules.factory.rules import (ConfigKeys, get_builders,
-                                              pop_operator,)
-from icon_manager.rules.manager import (AttributeRuleHandler,
-                                        ConfigRuleController, ExcludeManager,
-                                        RuleManager,)
+from icon_manager.rules.base import FolderMatcher, Operator, RuleAttribute
+from icon_manager.rules.factory.rules import (
+    ConfigKeys,
+    get_builders,
+    pop_operator,
+)
+from icon_manager.rules.manager import (
+    AttributeRuleHandler,
+    ConfigRuleController,
+    ExcludeManager,
+    RuleManager,
+)
+
 log = logging.getLogger(__name__)
 
 
-class AttributeCheckerFactory(ContentFactory[Dict[str, Any], AttributeRuleHandler]):
+class AttributeCheckerFactory(ContentFactory[dict[str, Any], AttributeRuleHandler]):
 
     def __init__(self) -> None:
         super().__init__()
         self.builders = get_builders()
 
-    def create_rule(self, rule_config: dict[str, Any], **kwargs) -> IFilterRule:
+    def create_rule(self, rule_config: dict[str, Any], **kwargs) -> FolderMatcher:
         for builder in self.builders:
             if not builder.can_build(rule_config):
                 continue
             return builder.create(rule_config, **kwargs)
         raise RuntimeError("No Folder builder could be created")
 
-    def create_rules(self, config: dict[str, Any], **kwargs) -> Sequence[ISingleRule]:
+    def create_rules(self, config: dict[str, Any], **kwargs) -> Sequence[FolderMatcher]:
         rules = []
         for config in config.get(ConfigKeys.RULES, []):
             rule = self.create_rule(config, **kwargs)
             rules.append(rule)
         return rules
 
-    def create(self, config: Dict[str, Any], **kwargs) -> AttributeRuleHandler:
+    def create(self, config: dict[str, Any], **kwargs) -> AttributeRuleHandler:
         attribute = kwargs.get(ConfigKeys.ATTRIBUTE, RuleAttribute.UNKNOWN)
         operator = pop_operator(config, Operator.ANY)
         rules = self.create_rules(config, **kwargs)
@@ -55,13 +61,13 @@ def get_rule_attribute(value) -> RuleAttribute:
     return RuleAttribute.UNKNOWN
 
 
-class SourceCheckerBuilder(ContentFactory[Dict[str, Any], ConfigRuleController]):
+class SourceCheckerBuilder(ContentFactory[dict[str, Any], ConfigRuleController]):
 
     def __init__(self, source: Source = JsonSource()) -> None:
         self.source = source
         self.factory = AttributeCheckerFactory()
 
-    def get_attribute_checkers(self, config: Dict[str, Any]) -> Sequence[AttributeRuleHandler]:
+    def get_attribute_checkers(self, config: dict[str, Any]) -> Sequence[AttributeRuleHandler]:
         managers = []
         for attribute, rules_configs in config.items():
             rule_attr = get_rule_attribute(attribute)
@@ -69,7 +75,7 @@ class SourceCheckerBuilder(ContentFactory[Dict[str, Any], ConfigRuleController])
             managers.append(manager)
         return managers
 
-    def create(self, config: Dict[str, Any], **kwargs) -> ConfigRuleController:
+    def create(self, config: dict[str, Any], **kwargs) -> ConfigRuleController:
         operator = pop_operator(config, Operator.ALL)
         managers = self.get_attribute_checkers(config)
         return ConfigRuleController(managers, operator)

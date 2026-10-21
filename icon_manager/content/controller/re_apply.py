@@ -1,17 +1,17 @@
 import logging
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 from icon_manager.content.controller.icon_folder import IconFolderController
 from icon_manager.content.models.matched import MatchedIconFolder, MatchedRuleFolder
+from icon_manager.interfaces.controller import IconSettingLookup
 from icon_manager.interfaces.path import FolderModel
-from icon_manager.library.controller import ISettingsHandler
 from icon_manager.library.models import IconSetting
 
 log = logging.getLogger(__name__)
 
 
 class ReApplyController:
-    def __init__(self, settings: ISettingsHandler, icon_folders: IconFolderController) -> None:
+    def __init__(self, settings: IconSettingLookup, icon_folders: IconFolderController) -> None:
         super().__init__()
         self.settings = settings
         self.icon_folders = icon_folders

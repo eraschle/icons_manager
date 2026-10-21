@@ -1,13 +1,19 @@
 import logging
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Lock
-from typing import Generic, List, Optional, Sequence, TypeVar
+from typing import Generic, TypeVar
 
 from icon_manager.config.user import UserConfig
-from icon_manager.helpers.string import (ALIGN_LEFT, ALIGN_RIGHT, THOUSAND,
-                                         fixed_length, list_value,
-                                         prefix_value,)
+from icon_manager.helpers.string import (
+    ALIGN_LEFT,
+    ALIGN_RIGHT,
+    THOUSAND,
+    fixed_length,
+    list_value,
+    prefix_value,
+)
 from icon_manager.interfaces.path import PathModel
 
 log = logging.getLogger(__name__)
@@ -27,7 +33,7 @@ class Action(ABC, Generic[TEntry]):
         TEntry: Type of path entries this action operates on, must be bound to PathModel.
     """
 
-    def __init__(self, config: Optional[UserConfig], entries: Sequence[TEntry], action_log: str) -> None:
+    def __init__(self, config: UserConfig | None, entries: Sequence[TEntry], action_log: str) -> None:
         super().__init__()
         self.config = config
         self.entries = entries
@@ -149,7 +155,7 @@ class DeleteAction(Action[PathModel]):
     on entries that exist on the filesystem.
     """
 
-    def __init__(self, config: Optional[UserConfig], entries: Sequence[PathModel]) -> None:
+    def __init__(self, config: UserConfig | None, entries: Sequence[PathModel]) -> None:
         super().__init__(config, entries, 'Deleted')
 
     def can_execute(self, entry: PathModel) -> bool:

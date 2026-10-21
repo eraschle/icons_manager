@@ -1,6 +1,5 @@
 import logging
-from typing import Sequence
-from collections.abc import Iterable
+from collections.abc import Sequence
 
 from icon_manager.config.user import UserConfig
 from icon_manager.content.controller.desktop import DesktopIniCreator

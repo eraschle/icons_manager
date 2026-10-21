@@ -1,19 +1,16 @@
 import logging
 from collections.abc import Iterable, Sequence
 
-from icon_manager.interfaces.managers import (IAttributeRuleController,
-                                              IConfigManager,
-                                              IConfigRuleController)
 from icon_manager.interfaces.path import Folder, JsonFile
-from icon_manager.rules.base import ISingleRule, Operator, RuleAttribute
+from icon_manager.rules.base import FolderMatcher, Operator, RuleAttribute
 
 log = logging.getLogger(__name__)
 
 
-class AttributeRuleHandler(IAttributeRuleController[Folder]):
+class AttributeRuleHandler:
 
     def __init__(self, attribute: RuleAttribute, operator: Operator,
-                 rules: Sequence[ISingleRule]) -> None:
+                 rules: Sequence[FolderMatcher]) -> None:
         self.attribute = attribute
         self.operator = operator
         self.rules = rules
@@ -40,8 +37,7 @@ class AttributeRuleHandler(IAttributeRuleController[Folder]):
 
     def setup_rules(self, before_or_after: Iterable[str]) -> None:
         for rule in self.rules:
-            rule.set_before_or_after(before_or_after)
-            rule.setup_filter_rule()
+            rule.setup_rules(before_or_after)
 
     def __str__(self) -> str:
         return self.name
@@ -50,11 +46,11 @@ class AttributeRuleHandler(IAttributeRuleController[Folder]):
         return self.__str__()
 
 
-class ConfigRuleController(IConfigRuleController[Folder]):
+class ConfigRuleController:
 
-    def __init__(self, checkers: Sequence[AttributeRuleHandler],
+    def __init__(self, controllers: Sequence[FolderMatcher],
                  operator: Operator) -> None:
-        self.controllers = checkers
+        self.controllers = controllers
         self.operator = operator
 
     @property
@@ -78,7 +74,7 @@ class ConfigRuleController(IConfigRuleController[Folder]):
     def is_allowed(self, entry: Folder) -> bool:
         if self.operator == Operator.ALL:
             return all(checker.is_allowed(entry) for checker in self.controllers)
-        return any(rule.is_allowed(entry) for rule in self.controllers)
+        return any(checker.is_allowed(entry) for checker in self.controllers)
 
     def setup_rules(self, before_or_after: Iterable[str]) -> None:
         for checker in self.controllers:
@@ -91,9 +87,9 @@ class ConfigRuleController(IConfigRuleController[Folder]):
         return self.__str__()
 
 
-class RuleManager(IConfigManager[Folder]):
+class RuleManager:
 
-    def __init__(self, config: JsonFile, checker: IConfigRuleController,
+    def __init__(self, config: JsonFile, checker: FolderMatcher,
                  weight: int, copy_icon: bool | None) -> None:
         self.config = config
         self.checker = checker
@@ -124,10 +120,14 @@ class RuleManager(IConfigManager[Folder]):
         return self.__str__()
 
 
-class ExcludeManager(IConfigManager[Folder]):
+class ExcludeManager:
 
-    def __init__(self, checkers: Sequence[IConfigRuleController[Folder]]) -> None:
+    def __init__(self, checkers: Sequence[FolderMatcher]) -> None:
         self.checkers = checkers
+
+    @property
+    def name(self) -> str:
+        return f"Exclude Manager [{len(self.checkers)}]"
 
     def is_empty(self) -> bool:
         return all(checker.is_empty() for checker in self.checkers)
@@ -156,7 +156,7 @@ class ExcludeManager(IConfigManager[Folder]):
             checker.setup_rules(before_or_after)
 
     def __str__(self) -> str:
-        return f"Exclude Manager [{len(self.checkers)}]"
+        return self.name
 
     def __repr__(self) -> str:
         return self.__str__()

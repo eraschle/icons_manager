@@ -5,7 +5,7 @@ import pytest
 from icon_manager.data.base import Source
 from icon_manager.data.json_source import JsonSource
 from icon_manager.interfaces.path import ConfigFile, JsonFile
-from icon_manager.rules.base import IFilterRule, ISingleRule, Operator, RuleAttribute
+from icon_manager.rules.base import FolderMatcher, Operator, RuleAttribute
 from icon_manager.rules.factory.manager import (
     AManagerFactory,
     AttributeCheckerFactory,
@@ -16,8 +16,8 @@ from icon_manager.rules.factory.manager import (
 from icon_manager.rules.factory.rules import ConfigKeys
 from icon_manager.rules.manager import (
     AttributeRuleHandler,
-    ExcludeManager,
     ConfigRuleController,
+    ExcludeManager,
     RuleManager,
 )
 
@@ -39,7 +39,7 @@ class TestAttributeCheckerFactory:
         mock_builder1.can_build.return_value = False
         mock_builder2 = Mock()
         mock_builder2.can_build.return_value = True
-        mock_rule = Mock(spec=IFilterRule)
+        mock_rule = Mock(spec=FolderMatcher)
         mock_builder2.create.return_value = mock_rule
 
         mock_get_builders.return_value = [mock_builder1, mock_builder2]
@@ -70,8 +70,8 @@ class TestAttributeCheckerFactory:
             ]
         }
 
-        mock_rule1 = Mock(spec=IFilterRule)
-        mock_rule2 = Mock(spec=IFilterRule)
+        mock_rule1 = Mock(spec=FolderMatcher)
+        mock_rule2 = Mock(spec=FolderMatcher)
 
         with patch.object(factory, "create_rule") as mock_create_rule:
             mock_create_rule.side_effect = [mock_rule1, mock_rule2]
@@ -94,7 +94,7 @@ class TestAttributeCheckerFactory:
         mock_pop_operator.return_value = Operator.ANY
 
         with patch.object(factory, "create_rules") as mock_create_rules:
-            mock_rules = [Mock(spec=ISingleRule)]
+            mock_rules = [Mock(spec=FolderMatcher)]
             mock_create_rules.return_value = mock_rules
 
             result = factory.create(config, attribute=RuleAttribute.PATH)

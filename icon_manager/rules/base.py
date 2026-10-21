@@ -1,53 +1,27 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from enum import Enum
-from typing import Generic, Protocol, TypeVar
+from typing import Protocol, runtime_checkable
 
 from icon_manager.interfaces.path import Folder
 
 
 class Operator(str, Enum):
-    UNKNOWN = ("unknown",)
-    ANY = ("any",)
+    UNKNOWN = "unknown"
+    ANY = "any"
     ALL = "all"
 
 
 class RuleAttribute(str, Enum):
-    UNKNOWN = ("unknown",)
+    UNKNOWN = "unknown"
     NAME = "name"
     PATH = "path"
     PARENT_NAME = "parent_name"
     PARENT_PATH = "parent_path"
 
 
-TEntry = TypeVar('TEntry', bound=object, contravariant=True)
-
-
-class RuleProtocol(Protocol, Generic[TEntry]):
-    operator: Operator
-
-    @property
-    def name(self) -> str:
-        ...
-
-    def is_allowed(self, entry: TEntry) -> bool:
-        ...
-
-
-class IFilterRule(RuleProtocol[Folder]):
-    operator: Operator
-    attribute: RuleAttribute
-
-    @property
-    def name(self) -> str: ...
-
-    def is_allowed(self, entry: Folder) -> bool: ...
-
-    def is_empty(self) -> bool: ...
-
-
 class Rule(str, Enum):
-    UNKNOWN = ("unknown",)
+    UNKNOWN = "unknown"
     EQUALS = "equals"
     NOT_EQUALS = "not_equals"
     STARTS_WITH = "starts_with"
@@ -62,7 +36,51 @@ class Rule(str, Enum):
     NOT_CONTAINS_FOLDER = "not_contains_folder"
 
 
-class AFilterRule(ABC, IFilterRule):
+@runtime_checkable
+class FolderMatcher(Protocol):
+    """Decides whether a folder matches a rule configuration.
+
+    Every level of the rule tree satisfies this one protocol: a single rule
+    on a folder attribute, a group of rules for the same attribute, the rule
+    set of one icon configuration, and the exclude manager that combines
+    several of those. Composing them is therefore a plain Composite -- a
+    caller only ever needs ``is_allowed``.
+    """
+
+    @property
+    def name(self) -> str:
+        """Human readable name, used for logging and validation messages."""
+        ...
+
+    def is_allowed(self, entry: Folder) -> bool:
+        """Whether ``entry`` satisfies this matcher."""
+        ...
+
+    def is_empty(self) -> bool:
+        """Whether this matcher has no values to match against.
+
+        An empty matcher can never produce a meaningful decision and is
+        dropped by :meth:`clean_empty` of its parent.
+        """
+        ...
+
+    def clean_empty(self) -> None:
+        """Drop empty children. A leaf matcher has nothing to do here."""
+        ...
+
+    def setup_rules(self, before_or_after: Iterable[str]) -> None:
+        """Prepare for matching, expanding rule values by ``before_or_after``.
+
+        Must be called before the first :meth:`is_allowed`; the values are
+        affixes (``_``, ``-``) that a folder name may carry around a rule
+        value.
+        """
+        ...
+
+
+class AFolderRule(ABC):
+    """Base for a single rule on one folder attribute."""
+
     def __init__(self, attribute: RuleAttribute, operator: Operator) -> None:
         super().__init__()
         self.attribute = attribute
@@ -70,67 +88,44 @@ class AFilterRule(ABC, IFilterRule):
 
     @property
     def name(self) -> str:
-        name = self.__class__.__name__.replace("Rule", "")
-        return f"{name} Rule {self.attribute.name} [{self.operator.name}] "
+        return f"Rule {self.attribute.name} [{self.operator.name}]"
+
+    def clean_empty(self) -> None:
+        """A single rule has no children to clean."""
 
     @abstractmethod
-    def is_empty(self) -> bool:
-        raise NotImplementedError
+    def is_empty(self) -> bool: ...
 
     @abstractmethod
-    def is_allowed(self, entry: Folder) -> bool:
-        raise NotImplementedError
+    def is_allowed(self, entry: Folder) -> bool: ...
+
+    @abstractmethod
+    def setup_rules(self, before_or_after: Iterable[str]) -> None: ...
 
     def __str__(self) -> str:
         return self.name
 
     def __repr__(self) -> str:
-        name = self.__class__.__name__
-        return f"{name} {self.attribute} [{self.operator.name}]"
+        return f"{self.__class__.__name__} {self.attribute} [{self.operator.name}]"
 
 
-class ISingleRule(IFilterRule):
-    operator: Operator
-    attribute: RuleAttribute
-
-    @property
-    def name(self) -> str: ...
-
-    def is_allowed(self, entry: Folder) -> bool:
-        ...
-
-    def is_empty(self) -> bool: ...
-
-    def set_before_or_after(self, values: Iterable[str]) -> None: ...
-
-    def setup_filter_rule(self) -> None: ...
-
-
-class ASingleRule(AFilterRule, ISingleRule):
-    @property
-    def name(self) -> str:
-        return f"Rule {self.attribute.name} [{self.operator.name}] "
+class AAttributeRule(AFolderRule):
+    """A single rule that compares one folder attribute against its values."""
 
     def is_allowed(self, entry: Folder) -> bool:
         value = getattr(entry, self.attribute.value, None)
         if value is None or self.operator == Operator.UNKNOWN:
             return False
         value = self.prepare_element_value(value)
-        return self.is_allowed_with_operator(entry, value)
-
-    def is_allowed_with_operator(self, entry: Folder, value: str) -> bool:
         if self.operator == Operator.ALL:
             return self.are_all_allowed(entry, value)
         return self.are_any_allowed(entry, value)
 
     @abstractmethod
-    def prepare_element_value(self, value: str) -> str:
-        pass
+    def prepare_element_value(self, value: str) -> str: ...
 
     @abstractmethod
-    def are_any_allowed(self, entry: Folder, value: str) -> bool:
-        pass
+    def are_any_allowed(self, entry: Folder, value: str) -> bool: ...
 
     @abstractmethod
-    def are_all_allowed(self, entry: Folder, value: str) -> bool:
-        pass
+    def are_all_allowed(self, entry: Folder, value: str) -> bool: ...

@@ -1,29 +1,40 @@
-import logging
+from icon_manager.rules.base import FolderMatcher, Rule
+from icon_manager.rules.rules import (
+    ChainedRule,
+    ContainsFileRule,
+    ContainsFolderRule,
+    ContainsRule,
+    EndsWithRule,
+    EqualsRule,
+    NotContainsFileRule,
+    NotContainsFolderRule,
+    NotContainsRule,
+    NotEqualsRule,
+    StartsOrEndsWithRule,
+    StartsWithRule,
+)
 
-from icon_manager.rules.base import ISingleRule, Rule
-from icon_manager.rules.rules import *
+RULES: dict[Rule, type[FolderMatcher]] = {
+    Rule.EQUALS: EqualsRule,
+    Rule.NOT_EQUALS: NotEqualsRule,
+    Rule.STARTS_WITH: StartsWithRule,
+    Rule.ENDS_WITH: EndsWithRule,
+    Rule.STARTS_OR_ENDS_WITH: StartsOrEndsWithRule,
+    Rule.CONTAINS: ContainsRule,
+    Rule.NOT_CONTAINS: NotContainsRule,
+    Rule.CHAINED: ChainedRule,
+    Rule.CONTAINS_FILE: ContainsFileRule,
+    Rule.NOT_CONTAINS_FILE: NotContainsFileRule,
+    Rule.CONTAINS_FOLDER: ContainsFolderRule,
+    Rule.NOT_CONTAINS_FOLDER: NotContainsFolderRule,
+}
 
-log = logging.getLogger(__name__)
 
+def rule_mapping() -> dict[Rule, type[FolderMatcher]]:
+    """The rule name used in a config file to the class implementing it.
 
-def is_rule(rule_class) -> bool:
-    return rule_class is not None and rule_class.__name__ != "NoneType"
-
-
-def _rule_class_name(rule: Rule) -> str:
-    splitted_name = rule.name.split("_")
-    splitted_name.append("Rule")
-    return "".join([name.capitalize() for name in splitted_name])
-
-
-def rule_mapping() -> dict[Rule, type[ISingleRule]]:
-    rules = {}
-    for rule in Rule:
-        if rule == Rule.UNKNOWN:
-            continue
-        rule_class = globals().get(_rule_class_name(rule))
-        if rule_class is None or not is_rule(rule_class):
-            log.warning("No rule for >> %s <<" % rule)
-            continue
-        rules[rule] = rule_class
-    return rules
+    Every member of :class:`Rule` except ``UNKNOWN`` has an entry, which is
+    asserted by ``test_rules.py``; a missing one used to only log a warning
+    and then silently ignore that rule in every config file.
+    """
+    return dict(RULES)

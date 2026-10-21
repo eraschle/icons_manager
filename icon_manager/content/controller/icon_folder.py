@@ -6,7 +6,6 @@ from icon_manager.content.controller.base import ContentController
 from icon_manager.content.models.matched import MatchedIconFolder
 from icon_manager.crawler.filters import folders_by_name
 from icon_manager.helpers.decorator import execution, execution_action
-from icon_manager.interfaces.path import Folder
 from icon_manager.interfaces.actions import Action, DeleteAction
 from icon_manager.interfaces.builder import FolderCrawlerBuilder
 from icon_manager.interfaces.path import Folder

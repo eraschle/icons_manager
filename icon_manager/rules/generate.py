@@ -103,12 +103,6 @@ class GeneratorManager(ValueGenerator, Converter, Generator):
             generated_values.extend(generator.generate(value))
         return generated_values
 
-    def generates(self, values: Collection[str], include_value: bool = True) -> Collection[str]:
-        generated_values: list[str] = []
-        for value in values:
-            generated_values.extend(self.generate(value, include_value))
-        return generated_values
-
     def generate_unique(self, value: str, include_value: bool = True) -> Collection[str]:
         generated_values: set[str] = set()
         if include_value:

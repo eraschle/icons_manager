@@ -2,13 +2,12 @@ from unittest.mock import Mock
 
 import pytest
 
-from icon_manager.interfaces.managers import IRuleController
 from icon_manager.interfaces.path import Folder, JsonFile
-from icon_manager.rules.base import ISingleRule, Operator, RuleAttribute
+from icon_manager.rules.base import FolderMatcher, Operator, RuleAttribute
 from icon_manager.rules.manager import (
     AttributeRuleHandler,
-    ExcludeManager,
     ConfigRuleController,
+    ExcludeManager,
     RuleManager,
 )
 
@@ -16,7 +15,7 @@ from icon_manager.rules.manager import (
 class TestAttributeChecker:
     @pytest.fixture
     def mock_rule(self):
-        rule = Mock(spec=ISingleRule)
+        rule = Mock(spec=FolderMatcher)
         rule.is_empty.return_value = False
         rule.is_allowed.return_value = True
         return rule
@@ -36,9 +35,9 @@ class TestAttributeChecker:
         assert checker.name == '"PATH" Checker'
 
     def test_is_empty_returns_true_when_all_rules_empty(self):
-        rule1 = Mock(spec=ISingleRule)
+        rule1 = Mock(spec=FolderMatcher)
         rule1.is_empty.return_value = True
-        rule2 = Mock(spec=ISingleRule)
+        rule2 = Mock(spec=FolderMatcher)
         rule2.is_empty.return_value = True
 
         checker = AttributeRuleHandler(RuleAttribute.PATH, Operator.ANY, [rule1, rule2])
@@ -46,9 +45,9 @@ class TestAttributeChecker:
         assert checker.is_empty() is True
 
     def test_is_empty_returns_false_when_any_rule_not_empty(self):
-        rule1 = Mock(spec=ISingleRule)
+        rule1 = Mock(spec=FolderMatcher)
         rule1.is_empty.return_value = True
-        rule2 = Mock(spec=ISingleRule)
+        rule2 = Mock(spec=FolderMatcher)
         rule2.is_empty.return_value = False
 
         checker = AttributeRuleHandler(RuleAttribute.PATH, Operator.ANY, [rule1, rule2])
@@ -56,9 +55,9 @@ class TestAttributeChecker:
         assert checker.is_empty() is False
 
     def test_clean_empty_removes_empty_rules(self):
-        rule1 = Mock(spec=ISingleRule)
+        rule1 = Mock(spec=FolderMatcher)
         rule1.is_empty.return_value = True
-        rule2 = Mock(spec=ISingleRule)
+        rule2 = Mock(spec=FolderMatcher)
         rule2.is_empty.return_value = False
 
         checker = AttributeRuleHandler(RuleAttribute.PATH, Operator.ANY, [rule1, rule2])
@@ -67,9 +66,9 @@ class TestAttributeChecker:
         assert checker.rules == [rule2]
 
     def test_is_allowed_with_all_operator_returns_true_when_all_rules_allow(self):
-        rule1 = Mock(spec=ISingleRule)
+        rule1 = Mock(spec=FolderMatcher)
         rule1.is_allowed.return_value = True
-        rule2 = Mock(spec=ISingleRule)
+        rule2 = Mock(spec=FolderMatcher)
         rule2.is_allowed.return_value = True
 
         checker = AttributeRuleHandler(RuleAttribute.PATH, Operator.ALL, [rule1, rule2])
@@ -78,9 +77,9 @@ class TestAttributeChecker:
         assert checker.is_allowed(folder) is True
 
     def test_is_allowed_with_all_operator_returns_false_when_any_rule_denies(self):
-        rule1 = Mock(spec=ISingleRule)
+        rule1 = Mock(spec=FolderMatcher)
         rule1.is_allowed.return_value = True
-        rule2 = Mock(spec=ISingleRule)
+        rule2 = Mock(spec=FolderMatcher)
         rule2.is_allowed.return_value = False
 
         checker = AttributeRuleHandler(RuleAttribute.PATH, Operator.ALL, [rule1, rule2])
@@ -89,9 +88,9 @@ class TestAttributeChecker:
         assert checker.is_allowed(folder) is False
 
     def test_is_allowed_with_any_operator_returns_true_when_any_rule_allows(self):
-        rule1 = Mock(spec=ISingleRule)
+        rule1 = Mock(spec=FolderMatcher)
         rule1.is_allowed.return_value = False
-        rule2 = Mock(spec=ISingleRule)
+        rule2 = Mock(spec=FolderMatcher)
         rule2.is_allowed.return_value = True
 
         checker = AttributeRuleHandler(RuleAttribute.PATH, Operator.ANY, [rule1, rule2])
@@ -100,17 +99,15 @@ class TestAttributeChecker:
         assert checker.is_allowed(folder) is True
 
     def test_setup_rules_calls_setup_on_all_rules(self, checker):
-        rule1 = Mock(spec=ISingleRule)
-        rule2 = Mock(spec=ISingleRule)
+        rule1 = Mock(spec=FolderMatcher)
+        rule2 = Mock(spec=FolderMatcher)
         checker.rules = [rule1, rule2]
 
         before_or_after = ["before", "after"]
         checker.setup_rules(before_or_after)
 
-        rule1.set_before_or_after.assert_called_once_with(before_or_after)
-        rule1.setup_filter_rule.assert_called_once()
-        rule2.set_before_or_after.assert_called_once_with(before_or_after)
-        rule2.setup_filter_rule.assert_called_once()
+        rule1.setup_rules.assert_called_once_with(before_or_after)
+        rule2.setup_rules.assert_called_once_with(before_or_after)
 
 
 class TestRuleChecker:
@@ -239,7 +236,7 @@ class TestRuleManager:
 class TestExcludeManager:
     @pytest.fixture
     def mock_rule_checker(self):
-        checker = Mock(spec=IRuleController)
+        checker = Mock(spec=FolderMatcher)
         checker.is_empty.return_value = False
         checker.is_allowed.return_value = True
         return checker
@@ -254,9 +251,9 @@ class TestExcludeManager:
         assert manager.checkers == [mock_rule_checker]
 
     def test_is_empty_returns_true_when_all_checkers_empty(self):
-        checker1 = Mock(spec=IRuleController)
+        checker1 = Mock(spec=FolderMatcher)
         checker1.is_empty.return_value = True
-        checker2 = Mock(spec=IRuleController)
+        checker2 = Mock(spec=FolderMatcher)
         checker2.is_empty.return_value = True
 
         manager = ExcludeManager([checker1, checker2])
@@ -264,9 +261,9 @@ class TestExcludeManager:
         assert manager.is_empty() is True
 
     def test_clean_empty_removes_empty_checkers(self):
-        checker1 = Mock(spec=IRuleController)
+        checker1 = Mock(spec=FolderMatcher)
         checker1.is_empty.return_value = True
-        checker2 = Mock(spec=IRuleController)
+        checker2 = Mock(spec=FolderMatcher)
         checker2.is_empty.return_value = False
 
         manager = ExcludeManager([checker1, checker2])
@@ -281,9 +278,9 @@ class TestExcludeManager:
         assert manager.is_allowed(folder) is True
 
     def test_is_allowed_returns_true_when_any_checker_allows(self):
-        checker1 = Mock(spec=IRuleController)
+        checker1 = Mock(spec=FolderMatcher)
         checker1.is_allowed.return_value = False
-        checker2 = Mock(spec=IRuleController)
+        checker2 = Mock(spec=FolderMatcher)
         checker2.is_allowed.return_value = True
 
         manager = ExcludeManager([checker1, checker2])
@@ -304,8 +301,8 @@ class TestExcludeManager:
         assert exclude_manager.is_excluded(folder) is True
 
     def test_setup_rules_calls_setup_on_all_checkers(self, exclude_manager):
-        checker1 = Mock(spec=IRuleController)
-        checker2 = Mock(spec=IRuleController)
+        checker1 = Mock(spec=FolderMatcher)
+        checker2 = Mock(spec=FolderMatcher)
         exclude_manager.checkers = [checker1, checker2]
 
         before_or_after = ["before", "after"]

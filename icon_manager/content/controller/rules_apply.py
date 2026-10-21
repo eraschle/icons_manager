@@ -1,5 +1,5 @@
 import logging
-from typing import Iterable, List, Optional, Sequence
+from collections.abc import Iterable, Sequence
 
 from icon_manager.config.user import UserConfig
 from icon_manager.content.actions.create import CreateIconAction, ReCreateIconAction
@@ -73,9 +73,7 @@ class RulesApplyController:
 
     @execution(message="Crawle and filter result")
     def crawle_and_build_result(self, folders: list[Folder], exclude: ExcludeManager) -> list[Folder]:
-        folders = filter_folders(folders, RulesApplyOptions(exclude))
-        # folders = clean_excluded_folders(folders)
-        return folders
+        return filter_folders(folders, RulesApplyOptions(exclude))
 
     @execution(message="Searched for matches", start_message="Searching for matches")
     def search_and_find_matches(self, folders: list[Folder], settings: Iterable[IconSetting]):
@@ -96,6 +94,3 @@ class RulesApplyController:
         if not action.any_executed():
             return
         log.info(action.get_log_message(MatchedRuleFolder))
-
-    def delete_content(self):
-        pass

@@ -2,14 +2,11 @@ import logging
 from collections.abc import Iterable, Sequence
 
 from icon_manager.config.user import UserConfig
-
 from icon_manager.helpers.resource import icon_setting_template
 from icon_manager.interfaces.actions import DeleteAction
 from icon_manager.interfaces.builder import FileCrawlerBuilder, ModelBuilder
-from icon_manager.interfaces.controller import IConfigHandler, ISettingsHandler
 from icon_manager.interfaces.path import File, FileModel, JsonFile, PathModel
-from icon_manager.library.models import (ArchiveFolder, IconFile, IconSetting,
-                                         LibraryIconFile)
+from icon_manager.library.models import ArchiveFolder, IconFile, IconSetting, LibraryIconFile
 from icon_manager.rules.factory.manager import RuleManagerFactory
 from icon_manager.rules.manager import RuleManager
 
@@ -170,7 +167,7 @@ class IconSettingBuilder(ModelBuilder[IconSetting]):
         self.config_builder.factory.update(config, template_file)
 
 
-class IconLibraryController(IConfigHandler, ISettingsHandler):
+class IconLibraryController:
     """Controller for managing icon library operations.
 
     This controller handles the creation, management, and archiving of icon settings,
@@ -213,7 +210,7 @@ class IconLibraryController(IConfigHandler, ISettingsHandler):
         # settings = copy.deepcopy(self.settings(clean_empty=True))
         settings = self.settings(clean_empty=True)
         for setting in settings:
-            setting.set_before_or_after(before_or_after)
+            setting.setup_rules(before_or_after)
         return settings
 
     def remove_archived_files(self, files: Iterable[File]) -> list[File]:

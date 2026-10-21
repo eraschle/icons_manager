@@ -273,12 +273,6 @@ class TestRulesApplyController:
         mock_action.execute.assert_called_once()
         mock_action.get_log_message.assert_not_called()
 
-    def test_delete_content_is_empty_implementation(self, controller):
-        # This test verifies that delete_content exists and doesn't raise an error
-        # The current implementation is empty (pass statement)
-        controller.delete_content()
-        # If we reach here, the method executed without error
-
     def test_integration_workflow(self, controller):
         # Test the typical workflow integration
         mock_folders = [Mock(spec=Folder)]

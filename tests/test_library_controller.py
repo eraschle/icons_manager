@@ -2,8 +2,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from icon_manager.content.models.matched import IconSetting
 from icon_manager.config.user import UserConfig
+from icon_manager.content.models.matched import IconSetting
 from icon_manager.interfaces.path import File, FileModel, JsonFile, SearchFolder
 from icon_manager.library.controller import (
     IconLibraryController,
@@ -315,8 +315,8 @@ class TestIconLibraryController:
 
         result = controller.create_icon_settings(before_or_after)
 
-        mock_setting1.set_before_or_after.assert_called_once_with(before_or_after)
-        mock_setting2.set_before_or_after.assert_called_once_with(before_or_after)
+        mock_setting1.setup_rules.assert_called_once_with(before_or_after)
+        mock_setting2.setup_rules.assert_called_once_with(before_or_after)
         assert len(result) == 2
 
     def test_create_settings_builds_complete_settings(self, controller):

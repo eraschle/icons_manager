@@ -1,15 +1,21 @@
 import concurrent.futures
+import logging
 import os
-from typing import Dict, Iterable, List, Optional, Sequence
+from collections.abc import Iterable, Sequence
 
 from icon_manager.config.user import UserConfig
-from icon_manager.crawler.filters import (files_by_extension,
-                                          is_file_with_extensions)
-from icon_manager.interfaces.path import (File, Folder, IconSearchFolder,
-                                          SearchFolder,)
+from icon_manager.crawler.filters import files_by_extension, is_file_with_extensions
+from icon_manager.interfaces.path import (
+    File,
+    Folder,
+    IconSearchFolder,
+    SearchFolder,
+)
+
+log = logging.getLogger(__name__)
 
 
-def crawle_folder(entry: os.DirEntry, parent: Optional[Folder]) -> Folder:
+def crawle_folder(entry: os.DirEntry, parent: Folder | None) -> Folder:
     current = Folder.from_path(entry.path, parent)
     for elem in os.scandir(entry.path):
         if elem.is_dir():
@@ -27,7 +33,7 @@ def crawling_entry(entry: os.DirEntry, current: Folder) -> Folder:
     return current
 
 
-def async_crawle_folder(config: UserConfig, entry: os.DirEntry, parent: Optional[Folder]) -> Folder:
+def async_crawle_folder(config: UserConfig, entry: os.DirEntry, parent: Folder | None) -> Folder:
     current = Folder.from_path(entry.path, parent)
     prefix = f'{config.name} Crawling {entry.path}'
     with concurrent.futures.ThreadPoolExecutor(thread_name_prefix=prefix) as executor:
@@ -37,7 +43,7 @@ def async_crawle_folder(config: UserConfig, entry: os.DirEntry, parent: Optional
             try:
                 current = future.result()
             except Exception as exc:
-                print('%r Exception: %s' % (root_folder.path, exc))
+                log.error("%r Exception: %s", root_folder.path, exc)
     return current
 
 
@@ -60,11 +66,11 @@ def _async_crawling(config: UserConfig, root: SearchFolder) -> Folder:
             try:
                 current = future.result()
             except Exception as exc:
-                print('%r Exception: %s' % (root_folder.path, exc))
+                log.error("%r Exception: %s", root_folder.path, exc)
     return current
 
 
-def async_crawling_folders(config: UserConfig, roots: Sequence[IconSearchFolder]) -> List[Folder]:
+def async_crawling_folders(config: UserConfig, roots: Sequence[IconSearchFolder]) -> list[Folder]:
     folders = []
     prefix = f'Crawler {config.name}'
     with concurrent.futures.ThreadPoolExecutor(thread_name_prefix=prefix) as executor:
@@ -76,7 +82,7 @@ def async_crawling_folders(config: UserConfig, roots: Sequence[IconSearchFolder]
                 folder = future.result()
                 folders.append(folder)
             except Exception as exc:
-                print('%r Exception: %s' % (root_folder.path, exc))
+                log.error("%r Exception: %s", root_folder.path, exc)
     return folders
 
 
@@ -90,15 +96,8 @@ def _crawling(root: SearchFolder) -> Folder:
     return current
 
 
-def crawling_folders(roots: Sequence[IconSearchFolder]) -> List[Folder]:
-    folders = []
-    for root in roots:
-        folders.append(_crawling(root))
-    return folders
-
-
-def _group_by_extension(files: Iterable[File], extensions: Sequence[str]) -> Dict[str, List[File]]:
-    grouped: Dict[str, List[File]] = {}
+def _group_by_extension(files: Iterable[File], extensions: Sequence[str]) -> dict[str, list[File]]:
+    grouped: dict[str, list[File]] = {}
     for file in files:
         if file.ext is None:
             continue

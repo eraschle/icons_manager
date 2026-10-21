@@ -2,8 +2,7 @@ import logging
 import os
 from collections.abc import Iterable, Sequence
 
-from icon_manager.interfaces.path import (FileModel, Folder, FolderModel,
-                                          JsonFile, PathModel)
+from icon_manager.interfaces.path import FileModel, Folder, FolderModel, JsonFile, PathModel
 from icon_manager.rules.manager import RuleManager
 
 log = logging.getLogger(__name__)
@@ -80,7 +79,7 @@ class IconSetting:
     def is_config_for(self, entry: Folder) -> bool:
         return self.manager.is_allowed(entry)
 
-    def set_before_or_after(self, before_or_after: Iterable[str]) -> None:
+    def setup_rules(self, before_or_after: Iterable[str]) -> None:
         self.manager.setup_rules(before_or_after)
 
     def is_empty(self) -> bool:

@@ -1,18 +1,7 @@
 import os
-from typing import List, Optional
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable
 
-from icon_manager.interfaces.path import File, Folder
-
-
-def crawle_folder(entry: os.DirEntry, parent: Folder | None) -> Folder:
-    current = Folder.from_path(entry.path, parent)
-    for elem in os.scandir(entry.path):
-        if elem.is_dir():
-            current.folders.append(crawle_folder(elem, current))
-        else:
-            current.files.append(File.from_path(elem.path, current))
-    return current
+from icon_manager.interfaces.path import Folder
 
 
 def is_file(path: str, name: str, extension: str | None = None) -> bool:
@@ -23,10 +12,6 @@ def is_file(path: str, name: str, extension: str | None = None) -> bool:
     if not extension.startswith("."):
         extension = f".{extension}"
     return name.endswith(extension)
-
-
-def is_file_extensions(file: File, extensions: Sequence[str]) -> bool:
-    return file.ext is not None and file.ext in extensions
 
 
 def get_files(path: str, extension: str | None = None) -> list[str]:

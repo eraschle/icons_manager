@@ -1,6 +1,6 @@
 import logging
+from collections.abc import Sequence
 from datetime import datetime
-from typing import Sequence
 
 from icon_manager.helpers.logs import log_begin, log_end
 from icon_manager.helpers.string import ALIGN_RIGHT, THOUSAND, list_value
