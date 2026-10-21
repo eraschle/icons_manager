@@ -125,8 +125,13 @@ to its sections.
 
 ### `excluded_rules.config`
 
-The same rule sections, but a list of them, and a folder matching any of them
-is skipped together with everything below it.
+The same rule sections, but a list of them. A folder matching any of them is
+not searched any deeper — but it stays eligible for an icon itself, which is
+also how `exclude_folders` behaves (it matches on the parent's name, so it
+drops the children of a folder, not the folder). Only `code_folders` would
+make a folder ineligible, and in practice it does not either: see
+`TestWhatExcludingMeans` in `tests/test_apply_icons_behaviour.py`, which
+pins all three.
 
 ## Architecture
 

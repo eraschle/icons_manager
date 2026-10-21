@@ -25,34 +25,38 @@ def _is_clean_recursive(entry: Folder, options: FilterOptions) -> bool:
 
 
 def filter_folder(entry: Folder, options: FilterOptions) -> Folder | None:
+    """Prune ``entry``'s subtree, or drop ``entry`` itself by returning None.
+
+    Three outcomes, which is what the three exclusion mechanisms mean:
+
+    - an exclude rule matches, or a sibling marks a code project: do not
+      search inside ``entry``, but ``entry`` itself stays eligible for an
+      icon. This is also what ``exclude_folders`` does, since it matches on
+      the *parent's* name: the children of an excluded folder are dropped,
+      the folder is not.
+    - ``entry`` is itself named in ``code_folders``: it is metadata like
+      ``.git``, so it is dropped with everything below it.
+    - otherwise: recurse, keeping the children that survive.
+    """
     if _is_exclude_rule(entry, options) or _is_clean_recursive(entry, options):
         entry.mark_children()
         return entry
     if _is_excluded(entry, options) or _is_project(entry, options):
         entry.mark_and_clean()
         return None
-    filtered = []
-    for folder in entry.folders:
-        cleaned = filter_folder(folder, options)
-        if cleaned is None:
-            folder.mark_and_clean()
-            continue
-        filtered.append(cleaned)
-    entry.folders = filtered
+    entry.folders = [kept for folder in entry.folders if (kept := filter_folder(folder, options)) is not None]
     return entry
 
 
 def filter_folders(folders: list[Folder], options: FilterOptions) -> list[Folder]:
+    """Prune every crawled search folder.
+
+    Nothing re-marks a dropped folder here: filter_folder already called
+    mark_and_clean() before returning None, so both callers did it twice.
+    """
     if not options.clean_excluded and not options.clean_project and not options.clean_recursive:
         return folders
-    filtered = []
-    for folder in folders:
-        cleaned = filter_folder(folder, options)
-        if cleaned is None:
-            folder.mark_and_clean()
-            continue
-        filtered.append(cleaned)
-    return filtered
+    return [kept for folder in folders if (kept := filter_folder(folder, options)) is not None]
 
 
 def is_folder_with_name(folder: Folder, names: Sequence[str]) -> bool:

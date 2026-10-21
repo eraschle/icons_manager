@@ -128,9 +128,20 @@ def get_attr_bit_dict(attributes: Iterable[str], is_enable: bool) -> dict[str, s
 
 
 class PathModel(ABC):
+    """A single path plus the operations that touch the disk for it.
+
+    The counterpart to the Node/File/Folder dataclasses: those hold a crawl
+    result, this acts on one path.
+    """
+
     @classmethod
+    @abstractmethod
     def is_model(cls, path: str) -> bool:
-        return False
+        """Whether ``path`` is one of these.
+
+        Was a concrete ``return False`` on this base, so a subclass that
+        forgot to override it silently matched nothing.
+        """
 
     def __init__(self, path: str) -> None:
         super().__init__()
@@ -235,8 +246,9 @@ class FileModel(PathModel):
         return cls._extension()
 
     @classmethod
+    @abstractmethod
     def _extension(cls) -> str:
-        raise NotImplementedError
+        """The extension without its dot, e.g. ``"json"``."""
 
     def __init__(self, path: str) -> None:
         super().__init__(path)

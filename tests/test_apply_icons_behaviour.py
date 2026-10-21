@@ -182,6 +182,87 @@ class TestExcluding:
         assert not (workspace / "obj" / "docs" / "desktop.ini").exists()
 
 
+class TestWhatExcludingMeans:
+    """Pinned because the three mechanisms differ, and silently.
+
+    All three mean "do not search inside this folder"; none of them except
+    code_folders makes the folder itself ineligible for an icon. If that is
+    not what you want from an exclude rule, this is the test to change.
+    """
+
+    def test_a_folder_matching_an_exclude_rule_can_still_get_its_own_icon(
+        self, user_config: UserConfig, library: Path, workspace: Path, tmp_path: Path
+    ):
+        add_icon(library, "docs", name={"rules": [{"equals": ["docs", "sub"]}]})
+        make_tree(workspace, ["docs/sub/"])
+        exclude = exclude_manager(tmp_path / "exclude.config", {"name": {"rules": [{"equals": ["docs"]}]}})
+
+        build_service(user_config, exclude).find_and_apply_matches()
+
+        assert (workspace / "docs" / "desktop.ini").is_file()
+        assert not (workspace / "docs" / "sub" / "desktop.ini").exists()
+
+    def test_an_excluded_folder_name_can_still_get_its_own_icon(self, library: Path, workspace: Path):
+        add_icon(library, "icon", name={"rules": [{"equals": ["obj", "sub"]}]})
+        make_tree(workspace, ["obj/sub/"])
+        config = UserConfig(
+            name="excluding",
+            icons_path=SearchFolder(str(library)),
+            search_folders=[IconSearchFolder(str(workspace), copy_icon=False)],
+            code_folders=[],
+            exclude_folders=["obj"],
+            before_or_after=[],
+            copy_icon=False,
+        )
+
+        build_service(config).find_and_apply_matches()
+
+        assert (workspace / "obj" / "desktop.ini").is_file()
+        assert not (workspace / "obj" / "sub" / "desktop.ini").exists()
+
+    def test_a_code_folder_stops_the_search_below_it(self, library: Path, workspace: Path):
+        # code_folders is also what stops the walk at the top of a repository:
+        # a folder whose sibling is a code folder is not descended into
+        add_icon(library, "icon", name={"rules": [{"equals": [".git", "src", "deep"]}]})
+        make_tree(workspace, [".git/hooks/", "src/deep/"])
+        config = UserConfig(
+            name="project",
+            icons_path=SearchFolder(str(library)),
+            search_folders=[IconSearchFolder(str(workspace), copy_icon=False)],
+            code_folders=[".git"],
+            exclude_folders=[],
+            before_or_after=[],
+            copy_icon=False,
+        )
+
+        build_service(config).find_and_apply_matches()
+
+        assert not (workspace / "src" / "deep" / "desktop.ini").exists()
+
+    def test_a_code_folder_itself_is_still_matched(self, library: Path, workspace: Path):
+        # Surprising, and pinned so it is a decision rather than an accident:
+        # _is_project() would drop the folder, but _is_clean_recursive() is
+        # checked first and always matches a code folder, because a folder is
+        # in its own parent's folder list. So .git can get an icon, which is
+        # why RuleFolderCommand has its own Git check before setting
+        # attributes. Change filters.filter_folder if that is not wanted.
+        add_icon(library, "icon", name={"rules": [{"equals": [".git"]}]})
+        make_tree(workspace, [".git/hooks/"])
+        config = UserConfig(
+            name="project",
+            icons_path=SearchFolder(str(library)),
+            search_folders=[IconSearchFolder(str(workspace), copy_icon=False)],
+            code_folders=[".git"],
+            exclude_folders=[],
+            before_or_after=[],
+            copy_icon=False,
+        )
+
+        build_service(config).find_and_apply_matches()
+
+        assert folders_with_icon(workspace) == {".git"}
+
+
 class TestDeletingAndReApplying:
     def test_delete_removes_what_apply_wrote(self, library: Path, workspace: Path):
         add_icon(library, "docs", name={"rules": [{"equals": ["docs"]}]})

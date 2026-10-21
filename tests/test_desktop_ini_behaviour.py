@@ -19,7 +19,7 @@ from icon_manager.content.controller.desktop import (
     RuleFolderCommand,
     get_commands,
 )
-from icon_manager.content.models.desktop import DesktopIniFile, Git
+from icon_manager.content.models.desktop import DesktopIniFile, is_git_folder
 from icon_manager.content.models.matched import MatchedIconFolder, MatchedRuleFolder
 from icon_manager.crawler.crawler import crawling_icons
 from icon_manager.data.ini_source import TextLineSource
@@ -101,8 +101,8 @@ class TestRecognisingPaths:
         assert not DesktopIniFile.is_model("/home/u/settings.ini")
 
     def test_a_git_folder_is_recognised(self):
-        assert Git.is_model("/home/u/project/.git")
-        assert not Git.is_model("/home/u/project/src")
+        assert is_git_folder("/home/u/project/.git")
+        assert not is_git_folder("/home/u/project/src")
 
     def test_an_icon_folder_is_recognised_by_name(self):
         assert MatchedIconFolder.is_model(f"/home/u/docs/{MatchedIconFolder.folder_name}")

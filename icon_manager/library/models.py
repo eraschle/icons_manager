@@ -98,10 +98,6 @@ class IconSetting:
         return self.__str__()
 
 
-class ArchiveFile(FileModel):
-    pass
-
-
 class ArchiveFolder(FolderModel):
     folder_name: str = "__archive__"
 
@@ -121,9 +117,9 @@ class ArchiveFolder(FolderModel):
     def get_archive_path(self, model: FileModel) -> str:
         return os.path.join(self.path, model.name)
 
-    def get_archive_file(self, file: FileModel) -> ArchiveFile:
-        archive_path = self.get_archive_path(file)
-        return ArchiveFile(archive_path)
+    def get_archive_file(self, file: FileModel) -> FileModel:
+        """Where ``file`` goes inside this archive folder."""
+        return type(file)(self.get_archive_path(file))
 
     def is_archive(self, path: str) -> bool:
         return path.startswith(self.path)

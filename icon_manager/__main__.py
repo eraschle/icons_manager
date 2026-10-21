@@ -1,8 +1,6 @@
 import argparse
 import logging
-import os
 from datetime import datetime
-from logging.handlers import RotatingFileHandler
 
 from icon_manager.config.app import AppConfig, AppConfigFactory
 from icon_manager.data.json_source import JsonSource
@@ -26,22 +24,8 @@ def console(level) -> logging.Handler:
     return handler
 
 
-def log_file(level) -> logging.Handler:
-    file_path = os.path.join(os.getcwd(), "icon_manager.log")
-    handler = RotatingFileHandler(filename=file_path, mode="a", maxBytes=10240, backupCount=3, encoding="UTF-8")
-    handler.setLevel(level)
-    # formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s',
-    #                               '%d-%b-%y %H:%M:%S')
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s", "%d-%b-%y %H:%M:%S")
-    handler.setFormatter(formatter)
-    return handler
-
-
 def config_logger(level):
     logging.basicConfig(handlers=[console(level)], level=level)
-    logger = logging.getLogger("Icon Manager Logger")
-    # logger.addHandler(log_file(logging.DEBUG))
-    logger.info("Logger configured")
 
 
 def build_parser() -> argparse.ArgumentParser:

@@ -1,12 +1,15 @@
 from icon_manager.interfaces.path import FileModel
 
+GIT_FOLDER_NAME = ".git"
 
-class Git(FileModel):
-    file_name = ".git"
 
-    @classmethod
-    def is_model(cls, path: str) -> bool:
-        return path.endswith(cls.file_name)
+def is_git_folder(path: str) -> bool:
+    """Whether ``path`` is a repository's .git folder.
+
+    Was a FileModel subclass that was never instantiated, had no extension
+    to report and described a folder - a predicate in class clothing.
+    """
+    return path.endswith(GIT_FOLDER_NAME)
 
 
 class DesktopIniFile(FileModel):

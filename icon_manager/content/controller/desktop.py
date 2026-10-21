@@ -5,7 +5,7 @@ from collections.abc import Iterable, Sequence
 
 from icon_manager.config.user import UserConfig
 from icon_manager.content.controller.base import ContentController
-from icon_manager.content.models.desktop import DesktopIniFile, Git
+from icon_manager.content.models.desktop import DesktopIniFile, is_git_folder
 from icon_manager.content.models.matched import (
     MatchedIconFile,
     MatchedIconFolder,
@@ -126,7 +126,7 @@ class RuleFolderCommand(ConfigCommand):
         self.rule_folder = rule_folder
 
     def can_change_attribute(self) -> bool:
-        if Git.is_model(self.rule_folder.path):
+        if is_git_folder(self.rule_folder.path):
             return False
         if not self.copy_icon:
             return True
