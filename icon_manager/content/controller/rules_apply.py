@@ -87,7 +87,7 @@ class RulesApplyController:
         self.builder.setup(settings=settings)
         self.folders = self.builder.build_models(folders)
 
-    @ execution_action(message='Created matched icons', start_message='Creating matched icons')
+    @execution_action(message="Created matched icons", start_message="Creating matched icons")
     def creating_found_matches(self, exclude: ExcludeManager) -> Action:
         action = CreateIconAction(self.folders, self.user_config)
         action.async_execute()

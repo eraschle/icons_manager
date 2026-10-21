@@ -25,7 +25,6 @@ log = logging.getLogger(__name__)
 
 
 class AttributeCheckerFactory(ContentFactory[dict[str, Any], AttributeRuleHandler]):
-
     def __init__(self) -> None:
         super().__init__()
         self.builders = get_builders()
@@ -39,9 +38,8 @@ class AttributeCheckerFactory(ContentFactory[dict[str, Any], AttributeRuleHandle
 
     def create_rules(self, config: dict[str, Any], **kwargs) -> Sequence[FolderMatcher]:
         rules = []
-        for config in config.get(ConfigKeys.RULES, []):
-            rule = self.create_rule(config, **kwargs)
-            rules.append(rule)
+        for rule_config in config.get(ConfigKeys.RULES, []):
+            rules.append(self.create_rule(rule_config, **kwargs))
         return rules
 
     def create(self, config: dict[str, Any], **kwargs) -> AttributeRuleHandler:
@@ -62,7 +60,6 @@ def get_rule_attribute(value) -> RuleAttribute:
 
 
 class SourceCheckerBuilder(ContentFactory[dict[str, Any], ConfigRuleController]):
-
     def __init__(self, source: Source | None = None) -> None:
         self.source = source or JsonSource()
         self.factory = AttributeCheckerFactory()
@@ -85,7 +82,7 @@ TModel = TypeVar("TModel", bound=object, covariant=True)
 TContent = TypeVar("TContent", bound=Iterable)
 
 
-class AManagerFactory(FileFactory[JsonFile, TModel], Generic[TModel, TContent]):
+class AManagerFactory(FileFactory[JsonFile, TModel], Generic[TModel, TContent]):  # noqa: UP046 - TModel is covariant
     def __init__(self, source: Source | None = None) -> None:
         self.source = source or JsonSource()
         self.builder = SourceCheckerBuilder()

@@ -4,7 +4,6 @@ import shutil
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Optional
 from uuid import uuid4
 
 log = logging.getLogger(__name__)
@@ -33,7 +32,6 @@ class Node:
     excluded: bool = field(default=False, init=False)
 
     def __post_init__(self):
-        self.excluded = False
         _, name = get_parent_and_name(self.path)
         self.name = name
 
@@ -76,8 +74,8 @@ class File(Node):
         self.ext = ext
 
     @classmethod
-    def from_path(cls, path: str, parent: Optional["Folder"]) -> "File":
-        return File(parent=parent, path=path, excluded=False)
+    def from_path(cls, path: str, parent: "Folder | None") -> "File":
+        return File(parent=parent, path=path)
 
 
 @dataclass()
@@ -87,7 +85,7 @@ class Folder(Node):
     files: list[File] = field(default_factory=list)
 
     @classmethod
-    def from_path(cls, path: str, parent: Optional["Folder"]) -> "Folder":
+    def from_path(cls, path: str, parent: "Folder | None") -> "Folder":
         return Folder(parent=parent, path=path)
 
     def mark_children(self) -> None:

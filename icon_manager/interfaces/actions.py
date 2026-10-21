@@ -3,7 +3,6 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Lock
-from typing import Generic, TypeVar
 
 from icon_manager.config.user import UserConfig
 from icon_manager.helpers.string import (
@@ -19,10 +18,7 @@ from icon_manager.interfaces.path import PathModel
 log = logging.getLogger(__name__)
 
 
-TEntry = TypeVar("TEntry", bound=PathModel)
-
-
-class Action(ABC, Generic[TEntry]):
+class Action[TEntry: PathModel](ABC):
     """Abstract base class for path operations.
 
     This class provides a framework for executing actions on collections of
@@ -52,19 +48,27 @@ class Action(ABC, Generic[TEntry]):
             self.action_execute(entry)
 
     def async_execute(self) -> None:
-        prefix = 'execute action'
+        """Execute on all entries concurrently.
+
+        Falls back to :meth:`execute` for fewer than two entries: a pool
+        sized ``len(self.entries)`` raised ValueError on an empty match and
+        spawned one thread per entry for a large one.
+        """
+        if len(self.entries) < 2:
+            self.execute()
+            return
+        prefix = "execute action"
         if self.config is not None:
-            prefix = f'execute action {self.config.name}'
-        with ThreadPoolExecutor(thread_name_prefix=prefix,
-                                max_workers=len(self.entries)) as executor:
-            task = {executor.submit(
-                self.action_execute, entry): entry for entry in self.entries}
+            prefix = f"execute action {self.config.name}"
+        workers = min(len(self.entries), 32)
+        with ThreadPoolExecutor(thread_name_prefix=prefix, max_workers=workers) as executor:
+            task = {executor.submit(self.action_execute, entry): entry for entry in self.entries}
             for future in as_completed(task):
-                setting = task[future]
+                entry = task[future]
                 try:
                     future.result()
                 except Exception as exc:
-                    log.exception("%r Exception: %s" % (setting, exc))
+                    log.exception("%r Exception: %s", entry, exc)
 
     def action_execute(self, entry: TEntry) -> None:
         if not self.can_execute(entry):
@@ -156,7 +160,7 @@ class DeleteAction(Action[PathModel]):
     """
 
     def __init__(self, config: UserConfig | None, entries: Sequence[PathModel]) -> None:
-        super().__init__(config, entries, 'Deleted')
+        super().__init__(config, entries, "Deleted")
 
     def can_execute(self, entry: PathModel) -> bool:
         """Check if entry can be deleted.

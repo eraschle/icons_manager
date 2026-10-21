@@ -27,12 +27,12 @@ def execution(message, start_message=None):
 
 def log_files(files: Sequence, message, width: int = THOUSAND, align: str = ALIGN_RIGHT) -> str:
     files_log = list_value(files, width=width, align=align)
-    return f'{message} Files: {files_log}'
+    return f"{message} Files: {files_log}"
 
 
 def log_folders(folders: Sequence, message, width: int = THOUSAND, align: str = ALIGN_RIGHT) -> str:
     folders_log = list_value(folders, width=width, align=align)
-    return f'{message} Folders: {folders_log}'
+    return f"{message} Folders: {folders_log}"
 
 
 def execution_action(message, start_message=None):

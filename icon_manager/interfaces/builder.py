@@ -9,7 +9,7 @@ TModel = TypeVar("TModel", bound=object)
 TEntry = TypeVar("TEntry", PathModel, Node, contravariant=True)
 
 
-class Builder(Protocol, Generic[TEntry, TModel]):
+class Builder(Protocol, Generic[TEntry, TModel]):  # noqa: UP046 - TEntry is constrained and contravariant
     def setup(self, **kwargs) -> None: ...
 
     def build_models(self, nodes: Iterable[TEntry], **kwargs) -> list[TModel]: ...
@@ -26,33 +26,24 @@ class CrawlerBuilder(ABC, Builder[Node, TModel]):
         pass
 
     def build_models(self, nodes: Iterable[Node], **kwargs) -> list[TModel]:
-        models = []
+        """Build a model for every node below ``nodes`` that yields one.
+
+        Descending does not depend on the current node yielding a model: the
+        recursion used to sit behind ``if model is None: continue``, so a
+        search folder - which never matches an icon rule itself - stopped the
+        walk at the top level and no nested folder was ever matched.
+        """
+        models: list[TModel] = []
         for entry in nodes:
             if entry.excluded:
                 continue
             model = self.build_model(entry, **kwargs)
-            if model is None:
-                continue
-            models.append(model)
+            if model is not None:
+                models.append(model)
             if isinstance(entry, Folder):
-                models.extend(self.build_models(entry.files))
-                models.extend(self.build_models(entry.folders))
+                models.extend(self.build_models(entry.files, **kwargs))
+                models.extend(self.build_models(entry.folders, **kwargs))
         return models
-
-    # def build_models_async(self, nodes: Iterable[Node], **kwargs) -> List[TModel]:
-    #     models: List[TModel] = []
-    #     with concurrent.futures.ThreadPoolExecutor() as executor:
-    #         task = {executor.submit(self.build_models, node): node for node in nodes}
-    #         for future in concurrent.futures.as_completed(task):
-    #             entry = task[future]
-    #             try:
-    #                 model = future.result()
-    #                 if model is None:
-    #                     continue
-    #                 models.extend(model)
-    #             except Exception as exc:
-    #                 print('%r Exception: %s' % (entry.path, exc))
-    #     return models
 
     def build_model(self, node: Node, **kwargs) -> TModel | None:
         if node.is_dir():

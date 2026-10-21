@@ -8,9 +8,7 @@ log = logging.getLogger(__name__)
 
 
 class AttributeRuleHandler:
-
-    def __init__(self, attribute: RuleAttribute, operator: Operator,
-                 rules: Sequence[FolderMatcher]) -> None:
+    def __init__(self, attribute: RuleAttribute, operator: Operator, rules: Sequence[FolderMatcher]) -> None:
         self.attribute = attribute
         self.operator = operator
         self.rules = rules
@@ -47,17 +45,14 @@ class AttributeRuleHandler:
 
 
 class ConfigRuleController:
-
-    def __init__(self, controllers: Sequence[FolderMatcher],
-                 operator: Operator) -> None:
+    def __init__(self, controllers: Sequence[FolderMatcher], operator: Operator) -> None:
         self.controllers = controllers
         self.operator = operator
 
     @property
     def name(self) -> str:
-        attributes = ', '.join([checker.attribute.name
-                               for checker in self.controllers])
-        return f'Rule Checker [{attributes}]'
+        attributes = ", ".join([checker.attribute.name for checker in self.controllers])
+        return f"Rule Checker [{attributes}]"
 
     def is_empty(self) -> bool:
         return all(checker.is_empty() for checker in self.controllers)
@@ -88,9 +83,7 @@ class ConfigRuleController:
 
 
 class RuleManager:
-
-    def __init__(self, config: JsonFile, checker: FolderMatcher,
-                 weight: int, copy_icon: bool | None) -> None:
+    def __init__(self, config: JsonFile, checker: FolderMatcher, weight: int, copy_icon: bool | None) -> None:
         self.config = config
         self.checker = checker
         self.weight = weight
@@ -121,7 +114,6 @@ class RuleManager:
 
 
 class ExcludeManager:
-
     def __init__(self, checkers: Sequence[FolderMatcher]) -> None:
         self.checkers = checkers
 

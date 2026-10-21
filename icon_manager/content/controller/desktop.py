@@ -57,7 +57,6 @@ class DesktopIniBuilder(FileCrawlerBuilder[DesktopIniFile]):
 
 
 class DesktopDeleteAction(DeleteAction):
-
     def __init__(self, config: UserConfig | None, entries: Sequence[PathModel], checker: DesktopFileChecker) -> None:
         super().__init__(config, entries)
         self.checker = checker
@@ -82,11 +81,10 @@ class DesktopIniController(ContentController[DesktopIniFile]):
         files = files_by_extension(folders, extensions)
         self.desktop_files = self.builder.build_models(files)
 
-    @execution_action(message='Deleted DESKTOP.INI-files')
+    @execution_action(message="Deleted DESKTOP.INI-files")
     def delete_content(self) -> Action:
         checker = DesktopFileChecker(DesktopFileSource())
-        action = DesktopDeleteAction(self.user_config, self.desktop_files,
-                                     checker)
+        action = DesktopDeleteAction(self.user_config, self.desktop_files, checker)
         action.execute()
         if not action.any_executed():
             return action
@@ -284,14 +282,14 @@ class DesktopIniCreator:
     def write(self, folder: MatchedRuleFolder, copy_icon: bool) -> None:
         commands = get_commands(folder, copy_icon)
         self.order_commands(commands, reverse=False)
-        self.execute_commands(commands, 'pre_command')
+        self.execute_commands(commands, "pre_command")
         try:
             with lock:
-                self.source.write(folder.desktop_ini,
-                                  self.create_content(folder))
+                self.source.write(folder.desktop_ini, self.create_content(folder))
         except Exception as ex:
-            log.exception(error_message(folder, 'Write desktop.ini'), ex)
+            log.exception(error_message(folder, "Write desktop.ini"), ex)
         self.order_commands(commands, reverse=True)
-        self.execute_commands(commands, 'post_command')
+        self.execute_commands(commands, "post_command")
+
 
 # endregion

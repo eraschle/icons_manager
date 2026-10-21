@@ -223,9 +223,7 @@ def get_single_builders() -> Iterable[AAttributeRuleBuilder]:
     return builders
 
 
-def create_single_rule(
-    rules: Iterable[AAttributeRuleBuilder], config: dict[str, Any], **kwargs
-) -> FolderMatcher:
+def create_single_rule(rules: Iterable[AAttributeRuleBuilder], config: dict[str, Any], **kwargs) -> FolderMatcher:
     for builder in rules:
         if not builder.can_build(config):
             continue

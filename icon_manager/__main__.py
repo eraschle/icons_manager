@@ -44,7 +44,7 @@ def config_logger(level):
     logger.info("Logger configured")
 
 
-def get_namespace_from_args() -> argparse.Namespace:
+def build_parser() -> argparse.ArgumentParser:
     description = "Helper to add icons to folders defined in a external JSON file."
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument(
@@ -90,7 +90,11 @@ def get_namespace_from_args() -> argparse.Namespace:
         action="store_true",
         help='Moves the library configs without rules into subfolder "archive"',
     )
-    return parser.parse_args()
+    return parser
+
+
+def get_namespace_from_args(argv: list[str] | None = None) -> argparse.Namespace:
+    return build_parser().parse_args(argv)
 
 
 def get_app_config(config_file: ConfigFile) -> AppConfig:
@@ -111,33 +115,57 @@ def get_service() -> IconsAppService:
     return service
 
 
-def main():
-    config_logger(logging.INFO)
-    namespace = get_namespace_from_args()
-    start_time = datetime.now()
-    service = get_service()
-    service.setup()
+def run_library_options(service: IconsAppService, args: argparse.Namespace) -> None:
+    """Operations on the icon library itself.
 
+    Run in this order so a single invocation stays meaningful: new icons get
+    a config, existing configs are refreshed against the template, icons
+    without rules are archived, and only then are configs deleted.
+    """
+    if args.create:
+        service.create_library_configs()
+    if args.update:
+        service.update_library_configs()
+    if args.archive:
+        service.archive_icons_and_configs()
+    if args.delete:
+        service.delete_library_configs()
+
+
+def run_content_options(service: IconsAppService, args: argparse.Namespace) -> None:
+    """Operations on the searched folders.
+
+    Deleting and re-applying both work from what is already on disk, so they
+    need find_existing_content first; applying matches crawls on its own.
+    """
+    service.setup_and_merge_user_service()
+    if args.delete or args.re_create:
+        service.find_existing_content()
+    if args.delete:
+        service.delete_icon_settings()
+    if args.re_create:
+        service.re_apply_matched_icons()
+    if args.create:
+        service.find_and_apply_matches()
+
+
+def run(service: IconsAppService, args: argparse.Namespace) -> None:
+    """Read the icon library, then apply the requested options."""
+    service.setup()
     service.create_settings()
-    if namespace.library:
-        if namespace.delete:
-            service.delete_library_configs()
-        if namespace.update:
-            service.update_library_configs()
-        elif namespace.create:
-            service.create_library_configs()
-        if namespace.archive:
-            service.archive_icons_and_configs()
-    elif namespace.content:
-        service.setup_and_merge_user_service()
-        if namespace.delete or namespace.re_create:
-            service.async_find_existing_content()
-        if namespace.delete:
-            service.async_delete_icon_settings()
-        if namespace.re_create:
-            service.re_apply_matched_icons()
-        if namespace.create:
-            service.async_find_and_apply_matches()
+    if args.library:
+        run_library_options(service, args)
+    elif args.content:
+        run_content_options(service, args)
+    else:
+        log.warning("Nothing to do: pass --library or --content (see --help)")
+
+
+def main(argv: list[str] | None = None) -> None:
+    config_logger(logging.INFO)
+    args = get_namespace_from_args(argv)
+    start_time = datetime.now()
+    run(get_service(), args)
     log.info(log_time("Execution-Time".upper(), start_time))
 
 

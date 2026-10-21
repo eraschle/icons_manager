@@ -36,7 +36,7 @@ class IconFolderController(ContentController[MatchedIconFolder]):
         folders = folders_by_name(folders, [MatchedIconFolder.folder_name])
         self.folders = self.builder.build_models(folders)
 
-    @execution_action(message='Deleted existing __icon__ folder')
+    @execution_action(message="Deleted existing __icon__ folder")
     def delete_content(self) -> Action:
         action = DeleteAction(self.user_config, self.folders)
         action.execute()

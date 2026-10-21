@@ -90,7 +90,7 @@ class AFolderRule(ABC):
     def name(self) -> str:
         return f"Rule {self.attribute.name} [{self.operator.name}]"
 
-    def clean_empty(self) -> None:
+    def clean_empty(self) -> None:  # noqa: B027 - a leaf rule has no children
         """A single rule has no children to clean."""
 
     @abstractmethod

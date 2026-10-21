@@ -1,7 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import Generic, TypeVar
 
 from icon_manager.config.user import UserConfig
 from icon_manager.interfaces.builder import CrawlerBuilder
@@ -12,10 +11,7 @@ from icon_manager.rules.manager import ExcludeManager
 log = logging.getLogger(__name__)
 
 
-TModel = TypeVar("TModel", bound=object)
-
-
-class ContentController(ABC, Generic[TModel]):
+class ContentController[TModel](ABC):
     def __init__(self, user_config: UserConfig, builder: CrawlerBuilder[TModel]) -> None:
         self.user_config = user_config
         self.builder = builder

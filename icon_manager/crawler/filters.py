@@ -3,6 +3,7 @@ from collections.abc import Sequence
 from icon_manager.crawler.options import FilterOptions
 from icon_manager.interfaces.path import File, Folder
 
+
 def _is_excluded(folder: Folder, options: FilterOptions) -> bool:
     return options.clean_excluded and folder.parent_name in options.excluded_folders
 

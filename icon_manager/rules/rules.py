@@ -105,7 +105,6 @@ class FolderRule(AAttributeRule):
 
 
 class EqualsRule(FolderRule):
-
     def is_value_allowed(self, _: Folder, value: str, rule_value: str) -> bool:
         return rule_value == value
 
@@ -153,12 +152,17 @@ class StartsOrEndsWithRule(FolderRule):
 
 
 class ContainsFileRule(FolderRule):
-
-    def __init__(self, attribute: RuleAttribute, operator: Operator, values: Collection[str],
-                 case_sensitive: bool, before_or_after: bool,
-                 before_or_after_values: Collection[str], level: int) -> None:
-        super().__init__(attribute, operator, values, case_sensitive,
-                         before_or_after, before_or_after_values)
+    def __init__(
+        self,
+        attribute: RuleAttribute,
+        operator: Operator,
+        values: Collection[str],
+        case_sensitive: bool,
+        before_or_after: bool,
+        before_or_after_values: Collection[str],
+        level: int,
+    ) -> None:
+        super().__init__(attribute, operator, values, case_sensitive, before_or_after, before_or_after_values)
         self.max_level = level
         self.replace_values = ["*", "."]
 
@@ -177,8 +181,7 @@ class ContainsFileRule(FolderRule):
         return super().prepare_rule_values(values)
 
     def get_extensions_of(self, folder: Folder) -> set[str]:
-        extensions = [file.ext for file in folder.files]
-        return set([ext for ext in extensions if ext is not None])
+        return {file.ext for file in folder.files if file.ext is not None}
 
     def get_extensions(self, entry: Folder, level: int) -> Iterable[str]:
         extensions = self.get_extensions_of(entry)

@@ -13,7 +13,7 @@ def get_time_log(message: str, width: int = 12) -> str:
 
 def get_time_msg(start: datetime) -> str:
     diff = (datetime.now() - start).total_seconds()
-    return get_time_log(f'{diff: .2f} sec')
+    return get_time_log(f"{diff: .2f} sec")
 
 
 def log_time(message: str, start: datetime) -> str:
@@ -36,7 +36,7 @@ def _config_message(
 def log_begin(config: UserConfig | None, message: str, start_time: datetime):
     message = _config_message(config, message)
     start_value = start_time.strftime("%H:%M:%S")
-    return f'{message} at {get_time_log(start_value)}'
+    return f"{message} at {get_time_log(start_value)}"
 
 
 def log_end(config: UserConfig | None, message: str, start_time: datetime):

@@ -49,7 +49,7 @@ class ConfigService:
             raise ValueError(message)
         return self.__exclude
 
-    @execution(message='Created icon settings')
+    @execution(message="Created icon settings")
     def create_settings(self):
         """Read the icon library from disk and pair icons with their rules."""
         extensions = IconLibraryController.icons_extensions
@@ -83,7 +83,7 @@ class ConfigService:
         exclude.clean_empty()
         self.__exclude = exclude
 
-    @execution(message='Found & applied icons', start_message='Start find & apply icons')
+    @execution(message="Found & applied icons", start_message="Start find & apply icons")
     def find_and_apply_matches(self):
         """Crawl the search folders, match them against the icon settings and
         write a desktop.ini for every match."""
@@ -99,9 +99,9 @@ class ConfigService:
     )
     def crawling_search_folders(self) -> list[Folder]:
         folders = self.user_config.search_folders
-        return async_crawling_folders(self.user_config, folders)
+        return async_crawling_folders(self.user_config.name, folders)
 
-    @execution(message='Crawled through content')
+    @execution(message="Crawled through content")
     def find_existing_content(self):
         """Catalog what this tool previously wrote: desktop.ini files,
         __icon__ folders and the icon files copied into them."""
@@ -121,7 +121,7 @@ class ConfigService:
         controller = ReApplyController(self.settings, self.icon_folders)
         self.rules.re_apply_matches(controller)
 
-    @ execution(message='Deleted content', start_message='Start delete content')
+    @execution(message="Deleted content", start_message="Start delete content")
     def delete_content(self):
         """Remove everything this tool wrote, found by :meth:`find_existing_content`."""
         self.desktop.delete_content()
