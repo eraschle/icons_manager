@@ -15,9 +15,9 @@ from icon_manager.rules.factory.manager import (
 )
 from icon_manager.rules.factory.rules import ConfigKeys
 from icon_manager.rules.manager import (
-    AttributeChecker,
+    AttributeRuleHandler,
     ExcludeManager,
-    RuleChecker,
+    ConfigRuleController,
     RuleManager,
 )
 
@@ -99,7 +99,7 @@ class TestAttributeCheckerFactory:
 
             result = factory.create(config, attribute=RuleAttribute.PATH)
 
-            assert isinstance(result, AttributeChecker)
+            assert isinstance(result, AttributeRuleHandler)
             assert result.attribute == RuleAttribute.PATH
             assert result.operator == Operator.ANY
             assert result.rules == mock_rules
@@ -136,8 +136,8 @@ class TestSourceCheckerBuilder:
         mock_name_attr = RuleAttribute.NAME
         mock_get_rule_attr.side_effect = [mock_path_attr, mock_name_attr]
 
-        mock_checker1 = Mock(spec=AttributeChecker)
-        mock_checker2 = Mock(spec=AttributeChecker)
+        mock_checker1 = Mock(spec=AttributeRuleHandler)
+        mock_checker2 = Mock(spec=AttributeRuleHandler)
         builder.factory.create = Mock(side_effect=[mock_checker1, mock_checker2])
 
         result = builder.get_attribute_checkers(config)
@@ -150,14 +150,14 @@ class TestSourceCheckerBuilder:
         config = {"operator": "all", "path": {}, "name": {}}
         mock_pop_operator.return_value = Operator.ALL
 
-        mock_checkers = [Mock(spec=AttributeChecker)]
+        mock_checkers = [Mock(spec=AttributeRuleHandler)]
         with patch.object(builder, "get_attribute_checkers") as mock_get_checkers:
             mock_get_checkers.return_value = mock_checkers
 
             result = builder.create(config)
 
-            assert isinstance(result, RuleChecker)
-            assert result.checkers == mock_checkers
+            assert isinstance(result, ConfigRuleController)
+            assert result.controllers == mock_checkers
             assert result.operator == Operator.ALL
 
 
@@ -230,7 +230,7 @@ class TestRuleManagerFactory:
         }
         mock_file = Mock(spec=JsonFile)
 
-        mock_rule_checker = Mock(spec=RuleChecker)
+        mock_rule_checker = Mock(spec=ConfigRuleController)
         factory.builder.create = Mock(return_value=mock_rule_checker)
 
         result = factory.create_with_content(config, file=mock_file)
@@ -245,7 +245,7 @@ class TestRuleManagerFactory:
         config = {"path": {}}
         mock_file = Mock(spec=JsonFile)
 
-        mock_rule_checker = Mock(spec=RuleChecker)
+        mock_rule_checker = Mock(spec=ConfigRuleController)
         factory.builder.create = Mock(return_value=mock_rule_checker)
 
         result = factory.create_with_content(config, file=mock_file)
@@ -292,8 +292,8 @@ class TestExcludeManagerFactory:
     def test_create_with_content_builds_exclude_manager(self, factory):
         config = [{"operator": "any", "path": {}}, {"operator": "all", "name": {}}]
 
-        mock_checker1 = Mock(spec=RuleChecker)
-        mock_checker2 = Mock(spec=RuleChecker)
+        mock_checker1 = Mock(spec=ConfigRuleController)
+        mock_checker2 = Mock(spec=ConfigRuleController)
         factory.builder.create = Mock(side_effect=[mock_checker1, mock_checker2])
 
         result = factory.create_with_content(config)
@@ -355,7 +355,7 @@ class TestExcludeManagerFactory:
         factory.source.read = Mock(return_value=mock_content)
 
         with patch.object(factory.builder, "create") as mock_builder_create:
-            mock_checker = Mock(spec=RuleChecker)
+            mock_checker = Mock(spec=ConfigRuleController)
             mock_builder_create.return_value = mock_checker
 
             result = factory.create(mock_file)

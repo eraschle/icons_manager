@@ -2,13 +2,13 @@ from unittest.mock import Mock
 
 import pytest
 
-from icon_manager.interfaces.managers import IRuleChecker
+from icon_manager.interfaces.managers import IRuleController
 from icon_manager.interfaces.path import Folder, JsonFile
 from icon_manager.rules.base import ISingleRule, Operator, RuleAttribute
 from icon_manager.rules.manager import (
-    AttributeChecker,
+    AttributeRuleHandler,
     ExcludeManager,
-    RuleChecker,
+    ConfigRuleController,
     RuleManager,
 )
 
@@ -23,10 +23,10 @@ class TestAttributeChecker:
 
     @pytest.fixture
     def checker(self, mock_rule):
-        return AttributeChecker(RuleAttribute.PATH, Operator.ANY, [mock_rule])
+        return AttributeRuleHandler(RuleAttribute.PATH, Operator.ANY, [mock_rule])
 
     def test_init_creates_checker_with_params(self, mock_rule):
-        checker = AttributeChecker(RuleAttribute.PATH, Operator.ANY, [mock_rule])
+        checker = AttributeRuleHandler(RuleAttribute.PATH, Operator.ANY, [mock_rule])
 
         assert checker.attribute == RuleAttribute.PATH
         assert checker.operator == Operator.ANY
@@ -41,7 +41,7 @@ class TestAttributeChecker:
         rule2 = Mock(spec=ISingleRule)
         rule2.is_empty.return_value = True
 
-        checker = AttributeChecker(RuleAttribute.PATH, Operator.ANY, [rule1, rule2])
+        checker = AttributeRuleHandler(RuleAttribute.PATH, Operator.ANY, [rule1, rule2])
 
         assert checker.is_empty() is True
 
@@ -51,7 +51,7 @@ class TestAttributeChecker:
         rule2 = Mock(spec=ISingleRule)
         rule2.is_empty.return_value = False
 
-        checker = AttributeChecker(RuleAttribute.PATH, Operator.ANY, [rule1, rule2])
+        checker = AttributeRuleHandler(RuleAttribute.PATH, Operator.ANY, [rule1, rule2])
 
         assert checker.is_empty() is False
 
@@ -61,7 +61,7 @@ class TestAttributeChecker:
         rule2 = Mock(spec=ISingleRule)
         rule2.is_empty.return_value = False
 
-        checker = AttributeChecker(RuleAttribute.PATH, Operator.ANY, [rule1, rule2])
+        checker = AttributeRuleHandler(RuleAttribute.PATH, Operator.ANY, [rule1, rule2])
         checker.clean_empty()
 
         assert checker.rules == [rule2]
@@ -72,7 +72,7 @@ class TestAttributeChecker:
         rule2 = Mock(spec=ISingleRule)
         rule2.is_allowed.return_value = True
 
-        checker = AttributeChecker(RuleAttribute.PATH, Operator.ALL, [rule1, rule2])
+        checker = AttributeRuleHandler(RuleAttribute.PATH, Operator.ALL, [rule1, rule2])
         folder = Mock(spec=Folder)
 
         assert checker.is_allowed(folder) is True
@@ -83,7 +83,7 @@ class TestAttributeChecker:
         rule2 = Mock(spec=ISingleRule)
         rule2.is_allowed.return_value = False
 
-        checker = AttributeChecker(RuleAttribute.PATH, Operator.ALL, [rule1, rule2])
+        checker = AttributeRuleHandler(RuleAttribute.PATH, Operator.ALL, [rule1, rule2])
         folder = Mock(spec=Folder)
 
         assert checker.is_allowed(folder) is False
@@ -94,7 +94,7 @@ class TestAttributeChecker:
         rule2 = Mock(spec=ISingleRule)
         rule2.is_allowed.return_value = True
 
-        checker = AttributeChecker(RuleAttribute.PATH, Operator.ANY, [rule1, rule2])
+        checker = AttributeRuleHandler(RuleAttribute.PATH, Operator.ANY, [rule1, rule2])
         folder = Mock(spec=Folder)
 
         assert checker.is_allowed(folder) is True
@@ -116,7 +116,7 @@ class TestAttributeChecker:
 class TestRuleChecker:
     @pytest.fixture
     def mock_attribute_checker(self):
-        checker = Mock(spec=AttributeChecker)
+        checker = Mock(spec=AttributeRuleHandler)
         checker.attribute = RuleAttribute.PATH
         checker.is_empty.return_value = False
         checker.is_allowed.return_value = True
@@ -124,55 +124,55 @@ class TestRuleChecker:
 
     @pytest.fixture
     def rule_checker(self, mock_attribute_checker):
-        return RuleChecker([mock_attribute_checker], Operator.ANY)
+        return ConfigRuleController([mock_attribute_checker], Operator.ANY)
 
     def test_init_creates_checker_with_params(self, mock_attribute_checker):
-        checker = RuleChecker([mock_attribute_checker], Operator.ANY)
+        checker = ConfigRuleController([mock_attribute_checker], Operator.ANY)
 
-        assert checker.checkers == [mock_attribute_checker]
+        assert checker.controllers == [mock_attribute_checker]
         assert checker.operator == Operator.ANY
 
     def test_name_returns_formatted_checker_names(self, mock_attribute_checker):
-        checker = RuleChecker([mock_attribute_checker], Operator.ANY)
+        checker = ConfigRuleController([mock_attribute_checker], Operator.ANY)
 
         assert checker.name == "Rule Checker [PATH]"
 
     def test_is_empty_returns_true_when_all_checkers_empty(self):
-        checker1 = Mock(spec=AttributeChecker)
+        checker1 = Mock(spec=AttributeRuleHandler)
         checker1.is_empty.return_value = True
-        checker2 = Mock(spec=AttributeChecker)
+        checker2 = Mock(spec=AttributeRuleHandler)
         checker2.is_empty.return_value = True
 
-        rule_checker = RuleChecker([checker1, checker2], Operator.ANY)
+        rule_checker = ConfigRuleController([checker1, checker2], Operator.ANY)
 
         assert rule_checker.is_empty() is True
 
     def test_clean_empty_removes_empty_checkers(self):
-        checker1 = Mock(spec=AttributeChecker)
+        checker1 = Mock(spec=AttributeRuleHandler)
         checker1.is_empty.return_value = True
-        checker2 = Mock(spec=AttributeChecker)
+        checker2 = Mock(spec=AttributeRuleHandler)
         checker2.is_empty.return_value = False
 
-        rule_checker = RuleChecker([checker1, checker2], Operator.ANY)
+        rule_checker = ConfigRuleController([checker1, checker2], Operator.ANY)
         rule_checker.clean_empty()
 
-        assert rule_checker.checkers == [checker2]
+        assert rule_checker.controllers == [checker2]
 
     def test_is_allowed_with_all_operator_returns_true_when_all_checkers_allow(self):
-        checker1 = Mock(spec=AttributeChecker)
+        checker1 = Mock(spec=AttributeRuleHandler)
         checker1.is_allowed.return_value = True
-        checker2 = Mock(spec=AttributeChecker)
+        checker2 = Mock(spec=AttributeRuleHandler)
         checker2.is_allowed.return_value = True
 
-        rule_checker = RuleChecker([checker1, checker2], Operator.ALL)
+        rule_checker = ConfigRuleController([checker1, checker2], Operator.ALL)
         folder = Mock(spec=Folder)
 
         assert rule_checker.is_allowed(folder) is True
 
     def test_setup_rules_calls_setup_on_all_checkers(self, rule_checker):
-        checker1 = Mock(spec=AttributeChecker)
-        checker2 = Mock(spec=AttributeChecker)
-        rule_checker.checkers = [checker1, checker2]
+        checker1 = Mock(spec=AttributeRuleHandler)
+        checker2 = Mock(spec=AttributeRuleHandler)
+        rule_checker.controllers = [checker1, checker2]
 
         before_or_after = ["before", "after"]
         rule_checker.setup_rules(before_or_after)
@@ -190,7 +190,7 @@ class TestRuleManager:
 
     @pytest.fixture
     def mock_rule_checker(self):
-        checker = Mock(spec=RuleChecker)
+        checker = Mock(spec=ConfigRuleController)
         checker.is_empty.return_value = False
         checker.is_allowed.return_value = True
         return checker
@@ -239,9 +239,8 @@ class TestRuleManager:
 class TestExcludeManager:
     @pytest.fixture
     def mock_rule_checker(self):
-        checker = Mock(spec=IRuleChecker)
+        checker = Mock(spec=IRuleController)
         checker.is_empty.return_value = False
-        checker.is_valid.return_value = True
         checker.is_allowed.return_value = True
         return checker
 
@@ -255,29 +254,19 @@ class TestExcludeManager:
         assert manager.checkers == [mock_rule_checker]
 
     def test_is_empty_returns_true_when_all_checkers_empty(self):
-        checker1 = Mock(spec=IRuleChecker)
+        checker1 = Mock(spec=IRuleController)
         checker1.is_empty.return_value = True
-        checker2 = Mock(spec=IRuleChecker)
+        checker2 = Mock(spec=IRuleController)
         checker2.is_empty.return_value = True
 
         manager = ExcludeManager([checker1, checker2])
 
         assert manager.is_empty() is True
 
-    def test_is_valid_returns_true_when_all_checkers_valid(self):
-        checker1 = Mock(spec=IRuleChecker)
-        checker1.is_valid.return_value = True
-        checker2 = Mock(spec=IRuleChecker)
-        checker2.is_valid.return_value = True
-
-        manager = ExcludeManager([checker1, checker2])
-
-        assert manager.is_valid() is True
-
     def test_clean_empty_removes_empty_checkers(self):
-        checker1 = Mock(spec=IRuleChecker)
+        checker1 = Mock(spec=IRuleController)
         checker1.is_empty.return_value = True
-        checker2 = Mock(spec=IRuleChecker)
+        checker2 = Mock(spec=IRuleController)
         checker2.is_empty.return_value = False
 
         manager = ExcludeManager([checker1, checker2])
@@ -292,9 +281,9 @@ class TestExcludeManager:
         assert manager.is_allowed(folder) is True
 
     def test_is_allowed_returns_true_when_any_checker_allows(self):
-        checker1 = Mock(spec=IRuleChecker)
+        checker1 = Mock(spec=IRuleController)
         checker1.is_allowed.return_value = False
-        checker2 = Mock(spec=IRuleChecker)
+        checker2 = Mock(spec=IRuleController)
         checker2.is_allowed.return_value = True
 
         manager = ExcludeManager([checker1, checker2])
@@ -315,8 +304,8 @@ class TestExcludeManager:
         assert exclude_manager.is_excluded(folder) is True
 
     def test_setup_rules_calls_setup_on_all_checkers(self, exclude_manager):
-        checker1 = Mock(spec=IRuleChecker)
-        checker2 = Mock(spec=IRuleChecker)
+        checker1 = Mock(spec=IRuleController)
+        checker2 = Mock(spec=IRuleController)
         exclude_manager.checkers = [checker1, checker2]
 
         before_or_after = ["before", "after"]

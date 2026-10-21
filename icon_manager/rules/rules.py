@@ -251,7 +251,6 @@ class ContainsFileRule(FolderRule, IPathOperationRule):
 
 
 class NotContainsFileRule(ContainsFileRule):
-    @matched_value()
     def is_value_allowed(self, entry: Folder, value: str, rule_value: str) -> bool:
         return not super().is_value_allowed(entry, value, rule_value)
 
@@ -303,7 +302,6 @@ class ContainsFolderRule(ContainsFileRule):
 
 
 class NotContainsFolderRule(ContainsFolderRule):
-    @matched_value()
     def is_value_allowed(self, entry: Folder, value: str, rule_value: str) -> bool:
         return not super().is_value_allowed(entry, value, rule_value)
 

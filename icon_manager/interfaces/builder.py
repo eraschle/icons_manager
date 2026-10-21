@@ -111,7 +111,7 @@ class ModelBuilder(ABC, Builder[PathModel, TModel]):
             model = self.build_model(entry, **kwargs)
             if model is None:
                 continue
-            models.append(model, **kwargs)
+            models.append(model)
         return models
 
     @abstractmethod

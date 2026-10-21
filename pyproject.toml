@@ -50,6 +50,5 @@ fixable = ["ALL"]
 "**/jrsin/*" = ["UP"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = ["."]
 testpaths = ["tests"]
->>>>>>> master

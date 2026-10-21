@@ -2,13 +2,13 @@ import logging
 from collections.abc import Iterable, Sequence
 
 from icon_manager.config.user import UserConfig
-from icon_manager.content.models.matched import IconSetting
+
 from icon_manager.helpers.resource import icon_setting_template
 from icon_manager.interfaces.actions import DeleteAction
 from icon_manager.interfaces.builder import FileCrawlerBuilder, ModelBuilder
 from icon_manager.interfaces.controller import IConfigHandler, ISettingsHandler
 from icon_manager.interfaces.path import File, FileModel, JsonFile, PathModel
-from icon_manager.library.models import (ArchiveFolder, IconFile,
+from icon_manager.library.models import (ArchiveFolder, IconFile, IconSetting,
                                          LibraryIconFile)
 from icon_manager.rules.factory.manager import RuleManagerFactory
 from icon_manager.rules.manager import RuleManager
@@ -216,7 +216,7 @@ class IconLibraryController(IConfigHandler, ISettingsHandler):
             setting.set_before_or_after(before_or_after)
         return settings
 
-    def remove_archived_files(self, files: Iterable[File]) -> List[File]:
+    def remove_archived_files(self, files: Iterable[File]) -> list[File]:
         library_path = self.user_config.icons_path
         archive = ArchiveFolder.get_archive_folder(library_path)
         return list(filter(lambda file: not archive.is_archive(file.path), files))
@@ -297,8 +297,7 @@ class IconLibraryController(IConfigHandler, ISettingsHandler):
         Returns:
             ArchiveFolder instance.
         """
-        folder_path = ArchiveFolder.get_folder_path(icon)
-        folder = ArchiveFolder(folder_path)
+        folder = ArchiveFolder.get_archive_folder(icon)
         if not folder.exists():
             folder.create()
         return folder

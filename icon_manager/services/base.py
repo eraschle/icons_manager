@@ -169,21 +169,13 @@ class IServiceProtocol(Protocol):
         """
         ...
 
-    def find_and_apply_matches(self, overwrite: bool) -> None:
+    def find_and_apply_matches(self) -> None:
         """Find and apply icon matches across all configurations.
-
-        Parameters
-        ----------
-        overwrite : bool
-            Whether to overwrite existing icon configurations.
-            If True, existing configurations will be replaced.
-            If False, existing configurations will be preserved.
 
         Notes
         -----
         This method coordinates the icon application process across
-        all managed user configurations, applying the specified
-        overwrite policy consistently.
+        all managed user configurations.
         """
         ...
 

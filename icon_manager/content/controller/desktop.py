@@ -58,7 +58,7 @@ class DesktopIniBuilder(FileCrawlerBuilder[DesktopIniFile]):
 
 class DesktopDeleteAction(DeleteAction):
 
-    def __init__(self, config: Optional[UserConfig], entries: Sequence[PathModel], checker: DesktopFileChecker) -> None:
+    def __init__(self, config: UserConfig | None, entries: Sequence[PathModel], checker: DesktopFileChecker) -> None:
         super().__init__(config, entries)
         self.checker = checker
 
@@ -273,10 +273,10 @@ class DesktopIniCreator:
             "FolderType=Generic",
         ]
 
-    def order_commands(self, commands: List[ConfigCommand], reverse: bool) -> None:
+    def order_commands(self, commands: list[ConfigCommand], reverse: bool) -> None:
         commands.sort(key=lambda cmd: cmd.order, reverse=reverse)
 
-    def execute_commands(self, commands: List[ConfigCommand], func_name: str) -> None:
+    def execute_commands(self, commands: list[ConfigCommand], func_name: str) -> None:
         for command in commands:
             function = getattr(command, func_name)
             function()

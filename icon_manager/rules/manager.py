@@ -94,7 +94,7 @@ class ConfigRuleController(IConfigRuleController[Folder]):
 class RuleManager(IConfigManager[Folder]):
 
     def __init__(self, config: JsonFile, checker: IConfigRuleController,
-                 weight: int, copy_icon: Optional[bool]) -> None:
+                 weight: int, copy_icon: bool | None) -> None:
         self.config = config
         self.checker = checker
         self.weight = weight

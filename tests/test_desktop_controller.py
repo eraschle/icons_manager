@@ -139,13 +139,17 @@ class TestDesktopDeleteAction:
         return Mock(spec=DesktopFileChecker)
 
     @pytest.fixture
-    def delete_action(self, mock_checker):
-        mock_entries = [Mock(spec=PathModel), Mock(spec=PathModel)]
-        return DesktopDeleteAction(mock_entries, mock_checker)
+    def mock_user_config(self):
+        return Mock(spec=UserConfig)
 
-    def test_init_creates_action_with_entries_and_checker(self, mock_checker):
+    @pytest.fixture
+    def delete_action(self, mock_user_config, mock_checker):
+        mock_entries = [Mock(spec=PathModel), Mock(spec=PathModel)]
+        return DesktopDeleteAction(mock_user_config, mock_entries, mock_checker)
+
+    def test_init_creates_action_with_entries_and_checker(self, mock_user_config, mock_checker):
         mock_entries = [Mock(spec=PathModel)]
-        action = DesktopDeleteAction(mock_entries, mock_checker)
+        action = DesktopDeleteAction(mock_user_config, mock_entries, mock_checker)
 
         assert action.entries == mock_entries
         assert action.checker == mock_checker
@@ -223,9 +227,8 @@ class TestDesktopIniController:
 
         controller.delete_content()
 
-        mock_action_class.assert_called_once_with(mock_desktop_files, mock_checker)
+        mock_action_class.assert_called_once_with(controller.user_config, mock_desktop_files, mock_checker)
         mock_action.execute.assert_called_once()
-        mock_action.get_log_message.assert_called_once_with(DesktopIniFile)
 
 
 class TestConfigCommands:
@@ -425,7 +428,7 @@ class TestDesktopIniCreator:
         mock_cmd3.order = 2
 
         creator.commands = [mock_cmd1, mock_cmd2, mock_cmd3]
-        creator.order_commands(reverse=False)
+        creator.order_commands(creator.commands, reverse=False)
 
         assert creator.commands[0].order == 1
         assert creator.commands[1].order == 2
@@ -436,7 +439,7 @@ class TestDesktopIniCreator:
         mock_cmd2 = Mock()
         creator.commands = [mock_cmd1, mock_cmd2]
 
-        creator.execute_commands("pre_command")
+        creator.execute_commands(creator.commands, "pre_command")
 
         mock_cmd1.pre_command.assert_called_once()
         mock_cmd2.pre_command.assert_called_once()

@@ -86,7 +86,8 @@ class TestConfigService:
         assert service.icon_folders == mock_icon_folders
         assert service.icon_files == mock_icon_files
         assert service.rules == mock_rules
-        assert service.exclude is None
+        with pytest.raises(ValueError):
+            service.exclude
         assert service._before_or_after == set()
 
     def test_exclude_property_raises_error_when_not_set(self, config_service):
@@ -107,7 +108,7 @@ class TestConfigService:
         with patch.object(IconLibraryController, "icons_extensions", [".ico", ".png"]):
             config_service.create_settings()
 
-            mock_crawling.assert_called_once_with("/test/icons", [".ico", ".png"])
+            mock_crawling.assert_called_once_with(config_service.user_config.icons_path, [".ico", ".png"])
             config_service.settings.create_settings.assert_called_once_with(mock_content)
 
     def test_create_icon_configs_delegates_to_settings(self, config_service):
@@ -155,7 +156,7 @@ class TestConfigService:
 
         result = config_service.crawling_search_folders()
 
-        mock_async_crawling.assert_called_once_with(["/test/search1", "/test/search2"])
+        mock_async_crawling.assert_called_once_with(config_service.user_config, config_service.user_config.search_folders)
         assert result == mock_folders
 
     @patch("icon_manager.services.config_service.async_crawling_folders")
@@ -176,7 +177,7 @@ class TestConfigService:
 
         # Verify workflow execution
         config_service.settings.create_icon_settings.assert_called_once_with({"before", "after"})
-        mock_async_crawling.assert_called_once_with(["/test/search1", "/test/search2"])
+        mock_async_crawling.assert_called_once_with(config_service.user_config, config_service.user_config.search_folders)
         config_service.rules.crawle_and_build_result.assert_called_once_with(mock_folders, mock_exclude)
         config_service.rules.search_and_find_matches.assert_called_once_with(mock_filtered_entries, mock_settings)
         config_service.rules.creating_found_matches.assert_called_once_with(mock_exclude)
@@ -191,7 +192,7 @@ class TestConfigService:
 
         config_service.find_existing_content()
 
-        mock_async_crawling.assert_called_once_with(["/test/search1", "/test/search2"])
+        mock_async_crawling.assert_called_once_with(config_service.user_config, config_service.user_config.search_folders)
         config_service.settings.settings.assert_called_once_with(clean_empty=True)
         config_service.desktop.crawle_and_build_result.assert_called_once_with(mock_folders, mock_settings)
         config_service.icon_folders.crawle_and_build_result.assert_called_once_with(mock_folders, mock_settings)

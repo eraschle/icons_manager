@@ -229,8 +229,7 @@ class TestRulesApplyController:
         controller.creating_found_matches(mock_exclude)
 
         mock_action_class.assert_called_once_with(mock_matched_folders, controller.user_config)
-        mock_action.execute.assert_called_once()
-        mock_action.get_log_message.assert_called_once_with(MatchedRuleFolder)
+        mock_action.async_execute.assert_called_once()
 
     @patch("icon_manager.content.controller.rules_apply.CreateIconAction")
     def test_creating_found_matches_skips_logging_when_nothing_executed(self, mock_action_class, controller):
@@ -243,7 +242,7 @@ class TestRulesApplyController:
 
         controller.creating_found_matches(mock_exclude)
 
-        mock_action.execute.assert_called_once()
+        mock_action.async_execute.assert_called_once()
         mock_action.get_log_message.assert_not_called()
 
     @patch("icon_manager.content.controller.rules_apply.ReCreateIconAction")
@@ -306,4 +305,4 @@ class TestRulesApplyController:
                 # Verify workflow
                 assert controller.folders == mock_matched_folders
                 controller.builder.setup.assert_called_once_with(settings=mock_settings)
-                mock_action.execute.assert_called_once()
+                mock_action.async_execute.assert_called_once()

@@ -47,7 +47,7 @@ class IconsAppService(IServiceProtocol):
 
     def create_settings(self):
         for service in self.services:
-            service.create_icon_settings()
+            service.create_settings()
 
     def create_library_configs(self):
         for service in self.services:
@@ -71,14 +71,14 @@ class IconsAppService(IServiceProtocol):
             exclude = self.config.create_exclude_rules()
             service.set_exclude_manager(exclude)
 
-    def find_and_apply_matches(self, overwrite):
+    def find_and_apply_matches(self):
         for service in self.services:
-            service.find_and_apply()
+            service.find_and_apply_matches()
 
     def async_find_and_apply_matches(self):
         with ThreadPoolExecutor(thread_name_prefix='find_and_apply_matches',
                                 max_workers=thread_count(self.services)) as executor:
-            task = {executor.submit(service.find_and_apply): service for service in self.services}
+            task = {executor.submit(service.find_and_apply_matches): service for service in self.services}
             for future in as_completed(task):
                 user_service = task[future]
                 try:
@@ -88,12 +88,12 @@ class IconsAppService(IServiceProtocol):
 
     def find_existing_content(self):
         for service in self.services:
-            service.find_existing()
+            service.find_existing_content()
 
     def async_find_existing_content(self):
         with ThreadPoolExecutor(thread_name_prefix='find_existing_content',
                                 max_workers=thread_count(self.services)) as executor:
-            task = {executor.submit(service.find_existing): service for service in self.services}
+            task = {executor.submit(service.find_existing_content): service for service in self.services}
             for future in as_completed(task):
                 user_service = task[future]
                 try:
@@ -107,12 +107,12 @@ class IconsAppService(IServiceProtocol):
 
     def delete_icon_settings(self):
         for config_service in self.services:
-            config_service.delete_setting()
+            config_service.delete_content()
 
     def async_delete_icon_settings(self):
         with ThreadPoolExecutor(thread_name_prefix='delete_icon_settings',
                                 max_workers=thread_count(self.services)) as executor:
-            task = {executor.submit(service.delete_setting): service for service in self.services}
+            task = {executor.submit(service.delete_content): service for service in self.services}
             for future in as_completed(task):
                 user_service = task[future]
                 try:

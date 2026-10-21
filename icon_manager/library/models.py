@@ -100,11 +100,14 @@ class ArchiveFile(FileModel):
 class ArchiveFolder(FolderModel):
     folder_name: str = "__archive__"
 
-    @ classmethod
-    def get_archive_folder(cls, entry: PathModel) -> 'ArchiveFolder':
-        if entry.is_dir():
-            return ArchiveFolder(os.path.join(entry.path, cls.folder_name))
-        return ArchiveFolder(os.path.join(entry.parent_path, cls.folder_name))
+    @classmethod
+    def get_folder_path(cls, entry: PathModel) -> str:
+        base = entry.path if entry.is_dir() else entry.parent_path
+        return os.path.join(base, cls.folder_name)
+
+    @classmethod
+    def get_archive_folder(cls, entry: PathModel) -> "ArchiveFolder":
+        return ArchiveFolder(cls.get_folder_path(entry))
 
     @classmethod
     def is_model(cls, path: str) -> bool:

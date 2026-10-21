@@ -3,7 +3,8 @@ from unittest.mock import Mock, patch
 import pytest
 
 from icon_manager.content.models.matched import IconSetting
-from icon_manager.interfaces.path import File, FileModel, JsonFile
+from icon_manager.config.user import UserConfig
+from icon_manager.interfaces.path import File, FileModel, JsonFile, SearchFolder
 from icon_manager.library.controller import (
     IconLibraryController,
     IconSettingBuilder,
@@ -252,19 +253,24 @@ class TestIconLibraryController:
         return Mock(spec=IconSettingBuilder)
 
     @pytest.fixture
-    def controller(self, mock_builder):
-        controller = IconLibraryController(mock_builder)
-        return controller
+    def mock_user_config(self):
+        config = Mock(spec=UserConfig)
+        config.icons_path = SearchFolder("/test/icons")
+        return config
 
-    def test_init_creates_controller_with_builder(self, mock_builder):
-        controller = IconLibraryController(mock_builder)
+    @pytest.fixture
+    def controller(self, mock_user_config, mock_builder):
+        return IconLibraryController(mock_user_config, mock_builder)
+
+    def test_init_creates_controller_with_builder(self, mock_user_config, mock_builder):
+        controller = IconLibraryController(mock_user_config, mock_builder)
 
         assert controller.builder == mock_builder
         assert list(controller.library_icons) == []
         assert controller._settings == []
 
-    def test_init_uses_default_builder_when_not_provided(self):
-        controller = IconLibraryController()
+    def test_init_uses_default_builder_when_not_provided(self, mock_user_config):
+        controller = IconLibraryController(mock_user_config)
 
         assert isinstance(controller.builder, IconSettingBuilder)
 
@@ -314,8 +320,8 @@ class TestIconLibraryController:
         assert len(result) == 2
 
     def test_create_settings_builds_complete_settings(self, controller):
-        mock_rules = [Mock(spec=File)]
-        mock_icons = [Mock(spec=File)]
+        mock_rules = [Mock(spec=File, path="/test/icons/rule.json")]
+        mock_icons = [Mock(spec=File, path="/test/icons/icon.ico")]
         mock_library_icons = [Mock(spec=LibraryIconFile)]
         icon_setting_template = Mock(spec=IconSetting)
         icon_setting_template.manager = Mock(spec=RuleManager)
@@ -408,7 +414,7 @@ class TestIconLibraryController:
         controller.delete_icon_configs()
 
         expected_configs = [mock_setting1.manager.config, mock_setting2.manager.config]
-        mock_action_class.assert_called_once_with(expected_configs)
+        mock_action_class.assert_called_once_with(None, expected_configs)
         mock_action.execute.assert_called_once()
 
     def test_archive_library_archives_empty_settings(self, controller):
