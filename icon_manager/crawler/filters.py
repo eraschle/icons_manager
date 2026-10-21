@@ -2,49 +2,69 @@ from collections.abc import Sequence
 
 from icon_manager.crawler.options import FilterOptions
 from icon_manager.interfaces.path import File, Folder
+from icon_manager.rules.base import FolderAction
 
 
-def _is_excluded(folder: Folder, options: FilterOptions) -> bool:
-    return options.clean_excluded and folder.parent_name in options.excluded_folders
+def _starts_project(entry: Folder, options: FilterOptions) -> bool:
+    """Whether ``entry`` is a code project, i.e. contains a marker folder.
 
-
-def _is_project(folder: Folder, options: FilterOptions) -> bool:
-    return options.clean_project and folder.name in options.project_folders
-
-
-def _is_exclude_rule(entry: Folder, options: FilterOptions) -> bool:
-    if options.exclude.is_empty():
-        return False
-    return options.exclude.is_excluded(entry)
-
-
-def _is_clean_recursive(entry: Folder, options: FilterOptions) -> bool:
-    if not options.clean_recursive or entry.parent is None:
-        return False
-    return any(folder.name in options.project_folders for folder in entry.parent.folders)
-
-
-def filter_folder(entry: Folder, options: FilterOptions) -> Folder | None:
-    """Prune ``entry``'s subtree, or drop ``entry`` itself by returning None.
-
-    Three outcomes, which is what the three exclusion mechanisms mean:
-
-    - an exclude rule matches, or a sibling marks a code project: do not
-      search inside ``entry``, but ``entry`` itself stays eligible for an
-      icon. This is also what ``exclude_folders`` does, since it matches on
-      the *parent's* name: the children of an excluded folder are dropped,
-      the folder is not.
-    - ``entry`` is itself named in ``code_folders``: it is metadata like
-      ``.git``, so it is dropped with everything below it.
-    - otherwise: recurse, keeping the children that survive.
+    Asks about ``entry``'s own children. The predicate this replaces looked
+    at ``entry.parent.folders`` - its siblings - so a single ``.venv``
+    anywhere on a level stopped the search for every folder on that level,
+    and a marker folder always matched it first, which is why ``.git`` used
+    to get an icon.
     """
-    if _is_exclude_rule(entry, options) or _is_clean_recursive(entry, options):
-        entry.mark_children()
-        return entry
-    if _is_excluded(entry, options) or _is_project(entry, options):
+    return any(folder.name in options.project_markers for folder in entry.folders)
+
+
+def depth_left_at(entry: Folder, options: FilterOptions, inherited: int | None) -> int | None:
+    """How many levels may still be searched below ``entry``.
+
+    None means "not inside a project, no limit". ``entry`` starts the
+    countdown when it is a project and we are not already inside one.
+    """
+    if inherited is not None:
+        return inherited
+    if _starts_project(entry, options):
+        return options.project_depth
+    return None
+
+
+def action_for(entry: Folder, options: FilterOptions, depth_left: int | None) -> FolderAction:
+    """What should happen to ``entry``, in the order the questions are asked.
+
+    A name in ``skip_names`` wins over everything, then the exclude rules,
+    then the project depth.
+    """
+    if entry.name in options.skip_names:
+        return FolderAction.SKIP
+    rule_action = options.exclude.action_for(entry)
+    if rule_action is not None:
+        return rule_action
+    if depth_left is not None and depth_left <= 0:
+        return FolderAction.LEAF
+    return FolderAction.SEARCH
+
+
+def filter_folder(entry: Folder, options: FilterOptions, inherited_depth: int | None = None) -> Folder | None:
+    """Prune ``entry``'s subtree, or drop ``entry`` by returning None.
+
+    Returning None is SKIP: no icon, nothing below it. Returning ``entry``
+    with its children marked is LEAF: ``entry`` is still offered to the icon
+    rules, nothing below it is.
+    """
+    depth_left = depth_left_at(entry, options, inherited_depth)
+    action = action_for(entry, options, depth_left)
+    if action is FolderAction.SKIP:
         entry.mark_and_clean()
         return None
-    entry.folders = [kept for folder in entry.folders if (kept := filter_folder(folder, options)) is not None]
+    if action is FolderAction.LEAF:
+        entry.mark_children()
+        return entry
+    child_depth = None if depth_left is None else depth_left - 1
+    entry.folders = [
+        kept for folder in entry.folders if (kept := filter_folder(folder, options, child_depth)) is not None
+    ]
     return entry
 
 
@@ -54,7 +74,7 @@ def filter_folders(folders: list[Folder], options: FilterOptions) -> list[Folder
     Nothing re-marks a dropped folder here: filter_folder already called
     mark_and_clean() before returning None, so both callers did it twice.
     """
-    if not options.clean_excluded and not options.clean_project and not options.clean_recursive:
+    if options.filters_nothing():
         return folders
     return [kept for folder in folders if (kept := filter_folder(folder, options)) is not None]
 

@@ -47,6 +47,41 @@ class TestReadingAUserConfig:
         assert config.before_or_after == {"_", "-"}
         assert config.copy_icon is True
 
+    def test_project_depth_defaults_to_one(self, tmp_path: Path, library: Path, workspace: Path):
+        file = user_config_file(
+            tmp_path / "me.config", icons_path=str(library), search_folders=[{"path": str(workspace)}]
+        )
+
+        config = UserConfigFactory(JsonSource()).create(file)
+
+        assert config.project_depth == 1
+
+    def test_project_depth_is_read_from_the_file(self, tmp_path: Path, library: Path, workspace: Path):
+        file = user_config_file(
+            tmp_path / "me.config",
+            icons_path=str(library),
+            search_folders=[{"path": str(workspace)}],
+            project_depth=0,
+        )
+
+        config = UserConfigFactory(JsonSource()).create(file)
+
+        assert config.project_depth == 0
+
+    def test_the_skipped_names_are_both_lists(self, tmp_path: Path, library: Path, workspace: Path):
+        file = user_config_file(
+            tmp_path / "me.config",
+            icons_path=str(library),
+            search_folders=[{"path": str(workspace)}],
+            code_folders=[".git"],
+            exclude_folders=["obj"],
+        )
+
+        config = UserConfigFactory(JsonSource()).create(file)
+
+        # a marker folder gets no icon either, so both lists are skipped
+        assert config.skip_folder_names == frozenset({".git", "obj"})
+
     def test_a_search_folder_that_does_not_exist_is_skipped(self, tmp_path: Path, library: Path, workspace: Path):
         file = user_config_file(
             tmp_path / "me.config",
@@ -158,7 +193,7 @@ class TestReadingTheAppConfig:
 
         # each user config prepares its own copy with its own affixes
         assert first is not second
-        assert first.checkers[0] is not second.checkers[0]
+        assert first.rules[0] is not second.rules[0]
 
     def test_a_folder_without_any_user_config_is_rejected(self, tmp_path: Path):
         config_folder = tmp_path / "empty"

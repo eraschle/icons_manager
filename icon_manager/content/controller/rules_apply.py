@@ -55,19 +55,14 @@ class RulesApplyBuilder(FolderCrawlerBuilder[MatchedRuleFolder]):
 
 
 class RulesApplyOptions(FilterOptions):
+    """The filter options of one user configuration."""
+
     def __init__(self, exclude: ExcludeManager, user_config: UserConfig) -> None:
         super().__init__(
             exclude,
-            clean_excluded=True,
-            clean_project=True,
-            clean_recursive=True,
-            excluded_folders=user_config.exclude_folders,
-            project_folders=user_config.code_folders,
-        )
-
-    def no_filter_options(self) -> bool:
-        return (
-            not self.clean_excluded and not self.clean_project and not self.clean_recursive and self.exclude.is_empty()
+            skip_names=user_config.skip_folder_names,
+            project_markers=user_config.code_folders,
+            project_depth=user_config.project_depth,
         )
 
 

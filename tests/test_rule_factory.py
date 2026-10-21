@@ -6,7 +6,7 @@ import pytest
 
 from icon_manager.data.base import Source
 from icon_manager.interfaces.path import ConfigFile, JsonFile
-from icon_manager.rules.base import FolderMatcher, Operator, RuleAttribute
+from icon_manager.rules.base import FolderAction, FolderMatcher, Operator, RuleAttribute
 from icon_manager.rules.factory.manager import (
     AManagerFactory,
     AttributeCheckerFactory,
@@ -277,7 +277,7 @@ class TestExcludeManagerFactory:
         result = factory.create_with_content(config, Mock(spec=JsonFile))
 
         assert isinstance(result, ExcludeManager)
-        assert result.checkers == [mock_checker1, mock_checker2]
+        assert [rule.matcher for rule in result.rules] == [mock_checker1, mock_checker2]
         assert factory.builder.create.call_count == 2
 
     def test_create_with_content_returns_empty_manager_for_empty_config(self, factory):
@@ -286,7 +286,7 @@ class TestExcludeManagerFactory:
         result = factory.create_with_content(config, Mock(spec=JsonFile))
 
         assert isinstance(result, ExcludeManager)
-        assert result.checkers == []
+        assert result.rules == []
 
     def test_copy_template_copies_the_bundled_template(self, factory, tmp_path):
         target = ConfigFile(str(tmp_path / "excluded_rules.config"))
@@ -337,5 +337,6 @@ class TestExcludeManagerFactory:
             result = factory.create(mock_file)
 
             assert isinstance(result, ExcludeManager)
-            assert len(result.checkers) == 1
-            assert result.checkers[0] == mock_checker
+            assert len(result.rules) == 1
+            assert result.rules[0].matcher == mock_checker
+            assert result.rules[0].action is FolderAction.SKIP

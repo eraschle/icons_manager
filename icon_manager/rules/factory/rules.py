@@ -26,6 +26,7 @@ class ConfigKeys(str, Enum):
     RULES = "rules"
     ORDER = "order"
     SEARCH_LEVEL = "level"
+    ACTION = "action"
 
 
 class ConfigValues(str, Enum):

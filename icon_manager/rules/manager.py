@@ -2,7 +2,7 @@ import logging
 from collections.abc import Iterable, Sequence
 
 from icon_manager.interfaces.path import Folder, JsonFile
-from icon_manager.rules.base import FolderMatcher, Operator, RuleAttribute
+from icon_manager.rules.base import FolderAction, FolderMatcher, Operator, RuleAttribute
 
 log = logging.getLogger(__name__)
 
@@ -119,41 +119,78 @@ class RuleManager:
         return self.__str__()
 
 
-class ExcludeManager:
-    def __init__(self, checkers: Sequence[FolderMatcher]) -> None:
-        self.checkers = checkers
+class ExcludeRule:
+    """One section of ``excluded_rules.config`` and the action it asks for.
+
+    ``action`` is the section's ``"action"`` key: ``skip`` (the default, no
+    icon and nothing below it is looked at) or ``leaf`` (the folder may get
+    an icon, but nothing below it is looked at).
+    """
+
+    def __init__(self, matcher: FolderMatcher, action: FolderAction = FolderAction.SKIP) -> None:
+        self.matcher = matcher
+        self.action = action
 
     @property
     def name(self) -> str:
-        return f"Exclude Manager [{len(self.checkers)}]"
+        return f"{self.matcher.name} [{self.action.value}]"
 
     def is_empty(self) -> bool:
-        return all(checker.is_empty() for checker in self.checkers)
+        return self.matcher.is_empty()
 
     def clean_empty(self) -> None:
-        checkers = []
-        for checker in self.checkers:
-            checker.clean_empty()
-            if checker.is_empty():
-                continue
-            checkers.append(checker)
-        self.checkers = checkers
+        self.matcher.clean_empty()
 
-    def is_excluded(self, entry: Folder) -> bool:
-        """Whether ``entry`` matches any of the exclude configurations.
-
-        The only question this class answers. It also had an is_allowed()
-        that no caller used and that returned True for an empty manager,
-        i.e. the opposite of is_excluded() in exactly the case where the two
-        differed.
-        """
-        if self.is_empty():
-            return False
-        return any(checker.is_allowed(entry) for checker in self.checkers)
+    def is_allowed(self, entry: Folder) -> bool:
+        return self.matcher.is_allowed(entry)
 
     def setup_rules(self, before_or_after: Iterable[str]) -> None:
-        for checker in self.checkers:
-            checker.setup_rules(before_or_after)
+        self.matcher.setup_rules(before_or_after)
+
+    def __str__(self) -> str:
+        return self.name
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+
+class ExcludeManager:
+    """The rule sections of ``excluded_rules.config``, in file order."""
+
+    def __init__(self, rules: Sequence[ExcludeRule]) -> None:
+        self.rules = rules
+
+    @property
+    def name(self) -> str:
+        return f"Exclude Manager [{len(self.rules)}]"
+
+    def is_empty(self) -> bool:
+        return all(rule.is_empty() for rule in self.rules)
+
+    def clean_empty(self) -> None:
+        kept = []
+        for rule in self.rules:
+            rule.clean_empty()
+            if rule.is_empty():
+                continue
+            kept.append(rule)
+        self.rules = kept
+
+    def action_for(self, entry: Folder) -> FolderAction | None:
+        """The action of the first section matching ``entry``, else None.
+
+        First match wins, in the order the sections appear in the file, so
+        two sections disagreeing about the same folder is decided by where
+        they are written rather than silently.
+        """
+        for rule in self.rules:
+            if rule.is_allowed(entry):
+                return rule.action
+        return None
+
+    def setup_rules(self, before_or_after: Iterable[str]) -> None:
+        for rule in self.rules:
+            rule.setup_rules(before_or_after)
 
     def __str__(self) -> str:
         return self.name

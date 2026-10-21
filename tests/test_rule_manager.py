@@ -3,11 +3,12 @@ from unittest.mock import Mock
 import pytest
 
 from icon_manager.interfaces.path import Folder, JsonFile
-from icon_manager.rules.base import FolderMatcher, Operator, RuleAttribute
+from icon_manager.rules.base import FolderAction, FolderMatcher, Operator, RuleAttribute
 from icon_manager.rules.manager import (
     AttributeRuleHandler,
     ConfigRuleController,
     ExcludeManager,
+    ExcludeRule,
     RuleManager,
 )
 
@@ -234,80 +235,71 @@ class TestRuleManager:
 
 
 class TestExcludeManager:
-    @pytest.fixture
-    def mock_rule_checker(self):
-        checker = Mock(spec=FolderMatcher)
-        checker.is_empty.return_value = False
-        checker.is_allowed.return_value = True
-        return checker
+    """First matching section wins, and each carries its own action."""
 
-    @pytest.fixture
-    def exclude_manager(self, mock_rule_checker):
-        return ExcludeManager([mock_rule_checker])
+    @staticmethod
+    def matcher(matches: bool = False, empty: bool = False) -> Mock:
+        mock = Mock(spec=FolderMatcher)
+        mock.is_empty.return_value = empty
+        mock.is_allowed.return_value = matches
+        return mock
 
-    def test_init_creates_manager_with_checkers(self, mock_rule_checker):
-        manager = ExcludeManager([mock_rule_checker])
+    @classmethod
+    def rule(cls, matches: bool, action: FolderAction = FolderAction.SKIP) -> ExcludeRule:
+        return ExcludeRule(cls.matcher(matches=matches), action)
 
-        assert manager.checkers == [mock_rule_checker]
+    def test_no_section_matching_means_no_action(self):
+        manager = ExcludeManager([self.rule(matches=False)])
 
-    def test_is_empty_returns_true_when_all_checkers_empty(self):
-        checker1 = Mock(spec=FolderMatcher)
-        checker1.is_empty.return_value = True
-        checker2 = Mock(spec=FolderMatcher)
-        checker2.is_empty.return_value = True
+        assert manager.action_for(Mock(spec=Folder)) is None
 
-        manager = ExcludeManager([checker1, checker2])
+    def test_an_empty_manager_has_no_action(self):
+        assert ExcludeManager([]).action_for(Mock(spec=Folder)) is None
 
-        assert manager.is_empty() is True
+    def test_the_matching_section_decides_the_action(self):
+        manager = ExcludeManager([self.rule(matches=True, action=FolderAction.LEAF)])
 
-    def test_clean_empty_removes_empty_checkers(self):
-        checker1 = Mock(spec=FolderMatcher)
-        checker1.is_empty.return_value = True
-        checker2 = Mock(spec=FolderMatcher)
-        checker2.is_empty.return_value = False
+        assert manager.action_for(Mock(spec=Folder)) is FolderAction.LEAF
 
-        manager = ExcludeManager([checker1, checker2])
+    def test_the_first_matching_section_wins(self):
+        manager = ExcludeManager(
+            [
+                self.rule(matches=False, action=FolderAction.LEAF),
+                self.rule(matches=True, action=FolderAction.SKIP),
+                self.rule(matches=True, action=FolderAction.LEAF),
+            ]
+        )
+
+        assert manager.action_for(Mock(spec=Folder)) is FolderAction.SKIP
+
+    def test_skip_is_the_default_action(self):
+        matcher = Mock(spec=FolderMatcher)
+        matcher.is_allowed.return_value = True
+
+        assert ExcludeRule(matcher).action is FolderAction.SKIP
+
+    def test_is_empty_when_every_section_is_empty(self):
+        rules = [ExcludeRule(self.matcher(empty=True)), ExcludeRule(self.matcher(empty=True))]
+
+        assert ExcludeManager(rules).is_empty() is True
+
+    def test_clean_empty_drops_the_empty_sections(self):
+        empty = ExcludeRule(self.matcher(empty=True))
+        kept = ExcludeRule(self.matcher())
+
+        manager = ExcludeManager([empty, kept])
         manager.clean_empty()
 
-        assert manager.checkers == [checker2]
+        assert manager.rules == [kept]
 
-    def test_is_excluded_returns_false_when_empty(self):
-        manager = ExcludeManager([])
-        folder = Mock(spec=Folder)
+    def test_setup_rules_reaches_every_section(self):
+        first, second = self.matcher(), self.matcher()
+        manager = ExcludeManager([ExcludeRule(first), ExcludeRule(second)])
 
-        assert manager.is_excluded(folder) is False
+        manager.setup_rules(["_", "-"])
 
-    def test_is_excluded_when_any_checker_matches(self):
-        # is_empty() must be stubbed: a bare Mock returns a truthy Mock, which
-        # made the manager look empty and short-circuit before any checker ran
-        checker1 = Mock(spec=FolderMatcher)
-        checker1.is_empty.return_value = False
-        checker1.is_allowed.return_value = False
-        checker2 = Mock(spec=FolderMatcher)
-        checker2.is_empty.return_value = False
-        checker2.is_allowed.return_value = True
+        first.setup_rules.assert_called_once_with(["_", "-"])
+        second.setup_rules.assert_called_once_with(["_", "-"])
 
-        manager = ExcludeManager([checker1, checker2])
-        folder = Mock(spec=Folder)
-
-        assert manager.is_excluded(folder) is True
-
-    def test_is_excluded_asks_its_checkers(self, exclude_manager):
-        folder = Mock(spec=Folder)
-        exclude_manager.checkers[0].is_allowed.return_value = True
-
-        assert exclude_manager.is_excluded(folder) is True
-
-    def test_setup_rules_calls_setup_on_all_checkers(self, exclude_manager):
-        checker1 = Mock(spec=FolderMatcher)
-        checker2 = Mock(spec=FolderMatcher)
-        exclude_manager.checkers = [checker1, checker2]
-
-        before_or_after = ["before", "after"]
-        exclude_manager.setup_rules(before_or_after)
-
-        checker1.setup_rules.assert_called_once_with(before_or_after)
-        checker2.setup_rules.assert_called_once_with(before_or_after)
-
-    def test_str_returns_formatted_count(self, exclude_manager):
-        assert str(exclude_manager) == "Exclude Manager [1]"
+    def test_str_reports_the_section_count(self):
+        assert str(ExcludeManager([self.rule(matches=False)])) == "Exclude Manager [1]"

@@ -71,6 +71,7 @@ a rule for `docs` can also match `_docs` or `docs-`. A rule opts in with
     "search_folders": [{ "path": "C:\\workspace", "copy_icon": true }],
     "code_folders": [".git", ".venv"],
     "exclude_folders": ["__pycache__", "obj"],
+    "project_depth": 1,
     "before_or_after": [],
     "copy_icon": true
   }
@@ -79,13 +80,52 @@ a rule for `docs` can also match `_docs` or `docs-`. A rule opts in with
 
 - `icons_path` – the icon library
 - `search_folders` – where to apply icons; `copy_icon` overrides the global one
-- `code_folders` – folder names marking a project, not searched further
-- `exclude_folders` – folder names never searched
+- `code_folders` – folder names that mark their **parent** as a code project
+- `exclude_folders` – folder names that get no icon and are never searched
+- `project_depth` – how deep to look inside a project (see below)
 - `copy_icon` – copy the icon into a hidden `__icon__` folder next to
   `desktop.ini` instead of referencing the library. A copied icon is
   referenced relative to the folder, so it survives the folder being moved.
 
 Paths may use `%VARIABLE%`; unset variables are left as-is.
+
+### How far the search goes
+
+Every crawled folder gets exactly one of three outcomes:
+
+| | icon? | children searched? | when |
+| --- | --- | --- | --- |
+| **skip** | no | no | name is in `exclude_folders` or `code_folders`, or an exclude rule says so |
+| **leaf** | yes | no | `project_depth` is used up, or an exclude rule says so |
+| **search** | yes | yes | everything else |
+
+A folder is a *project* when it **contains** one of the `code_folders`, and a
+project is searched `project_depth` levels deep:
+
+```
+workspace/              search
+  myproject/            search   <- contains .git, so a project
+    .git/               skip
+    docs/               leaf     <- depth 1 reaches here
+      api/              not looked at
+    src/                leaf
+  plain/                search   <- no marker, so searched all the way
+    child/              search
+      grandchild/       search
+```
+
+`project_depth: 0` makes the project itself a leaf: an icon on `myproject`
+and nothing below it. The default is 1, which is what lets `docs` inside a
+project still get an icon.
+
+Note that "may get an icon" is not "gets one" — the icon rules still decide.
+The outcome above only controls which folders are offered to them.
+
+Two things are deliberately separate, and conflating them is the easiest way
+to get lost here: `order` in an icon config decides **which** icon a folder
+gets when several match, and the table above decides **whether** the search
+continues below it. A rule cannot say "and stop here"; that is a property of
+the folder, not of the rule.
 
 ### An icon config, e.g. `docs.json` beside `docs.ico`
 
@@ -125,13 +165,32 @@ to its sections.
 
 ### `excluded_rules.config`
 
-The same rule sections, but a list of them. A folder matching any of them is
-not searched any deeper — but it stays eligible for an icon itself, which is
-also how `exclude_folders` behaves (it matches on the parent's name, so it
-drops the children of a folder, not the folder). Only `code_folders` would
-make a folder ineligible, and in practice it does not either: see
-`TestWhatExcludingMeans` in `tests/test_apply_icons_behaviour.py`, which
-pins all three.
+The same rule sections, but a list of them, and each may carry an `action`:
+
+```json
+{
+  "config": [
+    { "action": "skip", "name": { "rules": [{ "equals": ["node_modules"] }] } },
+    { "action": "leaf", "name": { "rules": [{ "equals": ["backup", "archive"] }] } }
+  ]
+}
+```
+
+- `skip` (the default) — no icon, nothing below it is searched
+- `leaf` — the folder may still get an icon, nothing below it is searched
+
+The first section matching a folder decides, in the order they are written,
+so two sections disagreeing is resolved by where they sit rather than
+silently.
+
+A section matching on `parent_name` or `parent_path` matches a folder's
+*children*, so `{"parent_name": {"rules": [{"equals": ["backup"]}]}}` with
+the default `skip` gives `backup` an icon and leaves everything under it
+alone — the same result as `leaf` on `backup` itself. Both idioms work;
+`leaf` is the one that says what it means.
+
+`TestTheThreeOutcomes` and `TestExcludeRuleActions` in
+`tests/test_apply_icons_behaviour.py` pin all of this.
 
 ## Architecture
 

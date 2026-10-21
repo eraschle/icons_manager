@@ -7,7 +7,7 @@ from icon_manager.data.base import Source
 from icon_manager.data.json_source import JsonSource
 from icon_manager.helpers.resource import exclude_rules_template_path
 from icon_manager.interfaces.path import ConfigFile, JsonFile
-from icon_manager.rules.base import FolderMatcher, Operator, RuleAttribute
+from icon_manager.rules.base import FolderAction, FolderMatcher, Operator, RuleAttribute
 from icon_manager.rules.factory.rules import (
     ConfigKeys,
     get_builders,
@@ -17,6 +17,7 @@ from icon_manager.rules.manager import (
     AttributeRuleHandler,
     ConfigRuleController,
     ExcludeManager,
+    ExcludeRule,
     RuleManager,
 )
 
@@ -114,9 +115,31 @@ class RuleManagerFactory(AManagerFactory[RuleManager, dict[str, Any]]):
         log.info(f"Updated config {config.name_wo_extension}")
 
 
+def get_folder_action(value: Any, default: FolderAction = FolderAction.SKIP) -> FolderAction:
+    """Read a section's ``"action"`` key, rejecting anything unknown.
+
+    ``search`` is not a valid exclude action: a section that asked for it
+    would say "match this folder and then do what you would have done
+    anyway", which is a typo, not an instruction.
+    """
+    if value is None:
+        return default
+    if not isinstance(value, str):
+        raise ValueError(f'"{ConfigKeys.ACTION.value}" must be a string, got {value!r}')
+    for action in (FolderAction.SKIP, FolderAction.LEAF):
+        if value.lower() == action.value:
+            return action
+    allowed = ", ".join(a.value for a in (FolderAction.SKIP, FolderAction.LEAF))
+    raise ValueError(f'Unknown "{ConfigKeys.ACTION.value}" {value!r}; use one of: {allowed}')
+
+
 class ExcludeManagerFactory(AManagerFactory[ExcludeManager, Iterable[dict[str, Any]]]):
     def create_with_content(self, config: Iterable[dict[str, Any]], file: JsonFile) -> ExcludeManager:
-        return ExcludeManager([self.builder.create(checker_config) for checker_config in config])
+        return ExcludeManager([self.create_rule(section) for section in config])
+
+    def create_rule(self, section: dict[str, Any]) -> ExcludeRule:
+        action = get_folder_action(section.pop(ConfigKeys.ACTION, None))
+        return ExcludeRule(self.builder.create(section), action)
 
     def copy_template(self, config: ConfigFile) -> None:
         template = ConfigFile(exclude_rules_template_path())

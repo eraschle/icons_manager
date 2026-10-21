@@ -13,6 +13,8 @@ touching the file contents asserted here.
 import configparser
 from pathlib import Path
 
+import pytest
+
 from icon_manager.config.user import UserConfig
 from icon_manager.content.controller.desktop import DesktopIniController
 from icon_manager.content.controller.icon_file import IconFileController
@@ -182,85 +184,138 @@ class TestExcluding:
         assert not (workspace / "obj" / "docs" / "desktop.ini").exists()
 
 
-class TestWhatExcludingMeans:
-    """Pinned because the three mechanisms differ, and silently.
+def project_config(library: Path, workspace: Path, *, markers=(".git", ".venv"), skip=(), depth: int = 1) -> UserConfig:
+    return UserConfig(
+        name="project",
+        icons_path=SearchFolder(str(library)),
+        search_folders=[IconSearchFolder(str(workspace), copy_icon=False)],
+        code_folders=list(markers),
+        exclude_folders=list(skip),
+        before_or_after=[],
+        copy_icon=False,
+        project_depth=depth,
+    )
 
-    All three mean "do not search inside this folder"; none of them except
-    code_folders makes the folder itself ineligible for an icon. If that is
-    not what you want from an exclude rule, this is the test to change.
+
+class TestTheThreeOutcomes:
+    """SKIP, LEAF and SEARCH, the whole filtering contract.
+
+    - ``exclude_folders`` and ``code_folders``: no icon, never searched.
+    - a folder containing a marker is a project: searched ``project_depth``
+      levels deep, so its direct children can still get an icon.
+    - everything else: icon, and searched all the way down.
     """
 
-    def test_a_folder_matching_an_exclude_rule_can_still_get_its_own_icon(
+    def test_an_excluded_folder_gets_no_icon_and_is_not_searched(self, library: Path, workspace: Path):
+        add_icon(library, "icon", name={"rules": [{"equals": ["obj", "sub"]}]})
+        make_tree(workspace, ["obj/sub/"])
+
+        build_service(project_config(library, workspace, skip=["obj"])).find_and_apply_matches()
+
+        assert folders_with_icon(workspace) == set()
+
+    def test_a_marker_folder_gets_no_icon_either(self, library: Path, workspace: Path):
+        # .git used to get one, which is why RuleFolderCommand still carries
+        # its own .git check before setting attributes
+        add_icon(library, "icon", name={"rules": [{"equals": [".git", "hooks"]}]})
+        make_tree(workspace, ["repo/.git/hooks/"])
+
+        build_service(project_config(library, workspace)).find_and_apply_matches()
+
+        assert folders_with_icon(workspace) == set()
+
+    def test_a_project_is_searched_one_level_by_default(self, library: Path, workspace: Path):
+        add_icon(library, "icon", name={"rules": [{"equals": ["repo", "docs", "api", "deep"]}]})
+        make_tree(workspace, ["repo/.git/", "repo/docs/api/", "repo/src/deep/"])
+
+        build_service(project_config(library, workspace)).find_and_apply_matches()
+
+        # the project and its direct children, nothing below them
+        assert folders_with_icon(workspace) == {"repo", "docs"}
+
+    def test_project_depth_zero_makes_the_project_a_leaf(self, library: Path, workspace: Path):
+        add_icon(library, "icon", name={"rules": [{"equals": ["repo", "docs"]}]})
+        make_tree(workspace, ["repo/.git/", "repo/docs/"])
+
+        build_service(project_config(library, workspace, depth=0)).find_and_apply_matches()
+
+        assert folders_with_icon(workspace) == {"repo"}
+
+    def test_a_higher_project_depth_reaches_further(self, library: Path, workspace: Path):
+        add_icon(library, "icon", name={"rules": [{"equals": ["repo", "docs", "api"]}]})
+        make_tree(workspace, ["repo/.git/", "repo/docs/api/"])
+
+        build_service(project_config(library, workspace, depth=2)).find_and_apply_matches()
+
+        assert folders_with_icon(workspace) == {"repo", "docs", "api"}
+
+    def test_a_folder_without_a_marker_is_searched_all_the_way_down(self, library: Path, workspace: Path):
+        add_icon(library, "icon", name={"rules": [{"equals": ["plain", "child", "grandchild"]}]})
+        make_tree(workspace, ["plain/child/grandchild/"])
+
+        build_service(project_config(library, workspace)).find_and_apply_matches()
+
+        assert folders_with_icon(workspace) == {"plain", "child", "grandchild"}
+
+    def test_a_stray_marker_does_not_limit_its_siblings(self, library: Path, workspace: Path):
+        # the predicate this replaces looked at an entry's siblings, so one
+        # .venv on a level stopped the search for every folder on that level
+        add_icon(library, "icon", name={"rules": [{"equals": ["plain", "child"]}]})
+        make_tree(workspace, ["repo/.venv/", "plain/child/"])
+
+        build_service(project_config(library, workspace)).find_and_apply_matches()
+
+        assert folders_with_icon(workspace) == {"plain", "child"}
+
+
+class TestExcludeRuleActions:
+    """Each section of excluded_rules.config carries its own action."""
+
+    def test_the_default_action_skips_the_folder_and_its_children(
         self, user_config: UserConfig, library: Path, workspace: Path, tmp_path: Path
     ):
-        add_icon(library, "docs", name={"rules": [{"equals": ["docs", "sub"]}]})
-        make_tree(workspace, ["docs/sub/"])
-        exclude = exclude_manager(tmp_path / "exclude.config", {"name": {"rules": [{"equals": ["docs"]}]}})
+        add_icon(library, "icon", name={"rules": [{"equals": ["backup", "old"]}]})
+        make_tree(workspace, ["backup/old/"])
+        exclude = exclude_manager(tmp_path / "e.config", {"name": {"rules": [{"equals": ["backup"]}]}})
 
         build_service(user_config, exclude).find_and_apply_matches()
 
-        assert (workspace / "docs" / "desktop.ini").is_file()
-        assert not (workspace / "docs" / "sub" / "desktop.ini").exists()
+        assert folders_with_icon(workspace) == set()
 
-    def test_an_excluded_folder_name_can_still_get_its_own_icon(self, library: Path, workspace: Path):
-        add_icon(library, "icon", name={"rules": [{"equals": ["obj", "sub"]}]})
-        make_tree(workspace, ["obj/sub/"])
-        config = UserConfig(
-            name="excluding",
-            icons_path=SearchFolder(str(library)),
-            search_folders=[IconSearchFolder(str(workspace), copy_icon=False)],
-            code_folders=[],
-            exclude_folders=["obj"],
-            before_or_after=[],
-            copy_icon=False,
+    def test_the_leaf_action_keeps_the_icon_and_stops_below_it(
+        self, user_config: UserConfig, library: Path, workspace: Path, tmp_path: Path
+    ):
+        add_icon(library, "icon", name={"rules": [{"equals": ["backup", "old"]}]})
+        make_tree(workspace, ["backup/old/"])
+        exclude = exclude_manager(
+            tmp_path / "e.config", {"action": "leaf", "name": {"rules": [{"equals": ["backup"]}]}}
         )
 
-        build_service(config).find_and_apply_matches()
+        build_service(user_config, exclude).find_and_apply_matches()
 
-        assert (workspace / "obj" / "desktop.ini").is_file()
-        assert not (workspace / "obj" / "sub" / "desktop.ini").exists()
+        assert folders_with_icon(workspace) == {"backup"}
 
-    def test_a_code_folder_stops_the_search_below_it(self, library: Path, workspace: Path):
-        # code_folders is also what stops the walk at the top of a repository:
-        # a folder whose sibling is a code folder is not descended into
-        add_icon(library, "icon", name={"rules": [{"equals": [".git", "src", "deep"]}]})
-        make_tree(workspace, [".git/hooks/", "src/deep/"])
-        config = UserConfig(
-            name="project",
-            icons_path=SearchFolder(str(library)),
-            search_folders=[IconSearchFolder(str(workspace), copy_icon=False)],
-            code_folders=[".git"],
-            exclude_folders=[],
-            before_or_after=[],
-            copy_icon=False,
-        )
+    def test_a_parent_name_rule_still_works_as_before(
+        self, user_config: UserConfig, library: Path, workspace: Path, tmp_path: Path
+    ):
+        # the idiom the old semantics forced: match the children to stop the
+        # search inside their parent. It keeps working - the parent gets an
+        # icon because nothing matched it, and its children are skipped.
+        add_icon(library, "icon", name={"rules": [{"equals": ["backup", "old"]}]})
+        make_tree(workspace, ["backup/old/"])
+        exclude = exclude_manager(tmp_path / "e.config", {"parent_name": {"rules": [{"equals": ["backup"]}]}})
 
-        build_service(config).find_and_apply_matches()
+        build_service(user_config, exclude).find_and_apply_matches()
 
-        assert not (workspace / "src" / "deep" / "desktop.ini").exists()
+        assert folders_with_icon(workspace) == {"backup"}
 
-    def test_a_code_folder_itself_is_still_matched(self, library: Path, workspace: Path):
-        # Surprising, and pinned so it is a decision rather than an accident:
-        # _is_project() would drop the folder, but _is_clean_recursive() is
-        # checked first and always matches a code folder, because a folder is
-        # in its own parent's folder list. So .git can get an icon, which is
-        # why RuleFolderCommand has its own Git check before setting
-        # attributes. Change filters.filter_folder if that is not wanted.
-        add_icon(library, "icon", name={"rules": [{"equals": [".git"]}]})
-        make_tree(workspace, [".git/hooks/"])
-        config = UserConfig(
-            name="project",
-            icons_path=SearchFolder(str(library)),
-            search_folders=[IconSearchFolder(str(workspace), copy_icon=False)],
-            code_folders=[".git"],
-            exclude_folders=[],
-            before_or_after=[],
-            copy_icon=False,
-        )
+    def test_an_unknown_action_is_rejected(self, tmp_path: Path):
+        with pytest.raises(ValueError, match="Unknown"):
+            exclude_manager(tmp_path / "e.config", {"action": "nonsense", "name": {"rules": []}})
 
-        build_service(config).find_and_apply_matches()
-
-        assert folders_with_icon(workspace) == {".git"}
+    def test_search_is_not_a_valid_exclude_action(self, tmp_path: Path):
+        with pytest.raises(ValueError, match="Unknown"):
+            exclude_manager(tmp_path / "e.config", {"action": "search", "name": {"rules": []}})
 
 
 class TestDeletingAndReApplying:

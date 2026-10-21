@@ -5,6 +5,7 @@ from typing import Any
 from uuid import uuid4
 
 from icon_manager.config.base import Config
+from icon_manager.crawler.options import DEFAULT_PROJECT_DEPTH
 from icon_manager.data.json_source import JsonSource
 from icon_manager.helpers.environment import get_converted_env_path
 from icon_manager.helpers.resource import user_config_template_path
@@ -32,6 +33,7 @@ class UserConfig(Config):
         exclude_folders: Iterable[str],
         before_or_after: Iterable[str],
         copy_icon: bool,
+        project_depth: int = DEFAULT_PROJECT_DEPTH,
     ) -> None:
         super().__init__()
         self.uuid = uuid4()
@@ -42,6 +44,18 @@ class UserConfig(Config):
         self.exclude_folders = exclude_folders
         self.before_or_after: set[str] = set(before_or_after)
         self.copy_icon = copy_icon
+        self.project_depth = project_depth
+
+    @property
+    def skip_folder_names(self) -> frozenset[str]:
+        """Folder names that get no icon and are never searched.
+
+        Both lists: ``exclude_folders`` because that is what it is for, and
+        ``code_folders`` because a marker folder like ``.git`` or ``.venv``
+        is not a folder you give an icon to either - it only marks its
+        parent as a project.
+        """
+        return frozenset(self.exclude_folders) | frozenset(self.code_folders)
 
     def validate(self) -> None:
         """Raise if this configuration cannot be used to apply icons.
@@ -76,6 +90,7 @@ class UserConfigs(StrEnum):
     ICONS_PATH = "icons_path"
     COPY_ICONS = "copy_icon"
     BEFORE_OR_AFTER = "before_or_after"
+    PROJECT_DEPTH = "project_depth"
 
 
 def get_icons_path(file: ConfigFile, content: dict[str, Any]) -> SearchFolder:
@@ -126,6 +141,7 @@ class UserConfigFactory:
         before_or_after = content.get(UserConfigs.BEFORE_OR_AFTER, [])
         code_folders = content.get(UserConfigs.CODE_FOLDERS, [])
         exclude_folders = content.get(UserConfigs.EXCLUDE_FOLDERS, [])
+        project_depth = content.get(UserConfigs.PROJECT_DEPTH, DEFAULT_PROJECT_DEPTH)
         config_name = file.name
         return UserConfig(
             config_name,
@@ -135,6 +151,7 @@ class UserConfigFactory:
             exclude_folders,
             before_or_after,
             copy_icon,
+            project_depth,
         )
 
     def copy_user_config_template(self, user_config: ConfigFile) -> None:

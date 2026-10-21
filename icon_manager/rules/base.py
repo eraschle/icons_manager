@@ -6,6 +6,28 @@ from typing import Protocol, runtime_checkable
 from icon_manager.interfaces.path import Folder
 
 
+class FolderAction(str, Enum):
+    """What should happen to a crawled folder.
+
+    The three outcomes the tool needs, which used to be spread over three
+    differently-keyed predicates in the crawler's filters:
+
+    - ``SKIP``: no icon, and nothing below it is looked at. For ``.git``,
+      ``.venv``, ``node_modules``, ``__pycache__`` and the like.
+    - ``LEAF``: the folder may get an icon, but nothing below it is looked
+      at. For a code project, once ``project_depth`` is used up.
+    - ``SEARCH``: the folder may get an icon and its children are looked at.
+      The default for everything else.
+
+    It lives here, with the other rule vocabulary, because an exclude rule
+    carries the action it asks for and the crawler sits above the rules.
+    """
+
+    SKIP = "skip"
+    LEAF = "leaf"
+    SEARCH = "search"
+
+
 class Operator(str, Enum):
     UNKNOWN = "unknown"
     ANY = "any"

@@ -45,10 +45,12 @@
                     ]
                 }
             ]
-        }
+        },
+        "action": "'skip' (default) for no icon and no search below the folder, or 'leaf' to let the folder keep an icon while nothing below it is searched"
     },
     "config": [
         {
+            "action": "skip",
             "path": {
                 "rules": []
             },
