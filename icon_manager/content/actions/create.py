@@ -13,10 +13,11 @@ log = logging.getLogger(__name__)
 class CreateIconAction(Action[MatchedRuleFolder]):
 
     def __init__(self, entries: Sequence[MatchedRuleFolder], user_config: UserConfig,
-                 action_log: str = 'Added Icons to Folders', controller: DesktopIniCreator = DesktopIniCreator()) -> None:
+                 action_log: str = 'Added Icons to Folders',
+                 controller: DesktopIniCreator | None = None) -> None:
         super().__init__(user_config, entries, action_log)
         self.user_config = user_config
-        self.controller = controller
+        self.controller = controller or DesktopIniCreator()
 
     def can_execute(self, entry: MatchedRuleFolder) -> bool:
         if not entry.desktop_ini.exists():
@@ -47,7 +48,7 @@ class ReCreateIconAction(CreateIconAction):
         self,
         re_apply: ReApplyController,
         user_config: UserConfig,
-        controller: DesktopIniCreator = DesktopIniCreator(),
+        controller: DesktopIniCreator | None = None,
     ) -> None:
         super().__init__(
             re_apply.get_rule_folders(),

@@ -71,9 +71,9 @@ class DesktopIniController(ContentController[DesktopIniFile]):
     def __init__(
         self,
         user_config: UserConfig,
-        builder: DesktopIniBuilder = DesktopIniBuilder(DesktopFileSource()),
+        builder: DesktopIniBuilder | None = None,
     ) -> None:
-        super().__init__(user_config, builder)
+        super().__init__(user_config, builder or DesktopIniBuilder(DesktopFileSource()))
         self.desktop_files: list[DesktopIniFile] = []
 
     @execution(message="Crawle & build DESKTOP.INI-files")
@@ -252,7 +252,8 @@ def get_commands(rule_folder: MatchedRuleFolder, copy_icon: bool) -> list[Config
 
 
 class DesktopIniCreator:
-    def __init__(self, source: DesktopFileSource = DesktopFileSource()) -> None:
+    def __init__(self, source: DesktopFileSource | None = None) -> None:
+        source = source or DesktopFileSource()
         self.source = source
         self.checker = DesktopFileChecker(source)
 

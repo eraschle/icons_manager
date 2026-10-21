@@ -27,7 +27,8 @@ class TestUserConfig:
 
     @pytest.fixture
     def user_config(self, mock_search_folders):
-        icons_path = Mock(spec=SearchFolder)
+        icons_path = Mock(spec=SearchFolder, path="/icons")
+        icons_path.exists.return_value = True
         return UserConfig(
             name="test_config",
             icons_path=icons_path,
@@ -50,12 +51,23 @@ class TestUserConfig:
     def test_file_name_returns_config_pattern(self):
         assert UserConfig.file_name() == "*.config"
 
-    def test_validate_sets_filter_globals(self, user_config):
-        with patch("icon_manager.config.user.filters") as mock_filters:
+    def test_validate_accepts_a_usable_configuration(self, user_config):
+        user_config.icons_path.exists.return_value = True
+
+        user_config.validate()
+
+    def test_validate_rejects_a_missing_icon_library(self, user_config):
+        user_config.icons_path.exists.return_value = False
+
+        with pytest.raises(ValueError, match="does not exist"):
             user_config.validate()
 
-            assert mock_filters.EXCLUDED_FOLDERS == ["exclude1", "exclude2"]
-            assert mock_filters.PROJECT_FOLDERS == ["code1", "code2"]
+    def test_validate_rejects_a_config_without_search_folders(self, user_config):
+        user_config.icons_path.exists.return_value = True
+        user_config.search_folders = []
+
+        with pytest.raises(ValueError, match="No existing search folder"):
+            user_config.validate()
 
     def test_has_search_folders_returns_true_when_folders_exist(self, user_config):
         assert user_config.has_search_folders() is True

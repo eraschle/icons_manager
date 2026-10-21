@@ -32,8 +32,8 @@ class IconFileBuilder(FileCrawlerBuilder[MatchedIconFile]):
 
 
 class IconFileController(ContentController[MatchedIconFile]):
-    def __init__(self, user_config: UserConfig, builder: FileCrawlerBuilder = IconFileBuilder()) -> None:
-        super().__init__(user_config, builder)
+    def __init__(self, user_config: UserConfig, builder: FileCrawlerBuilder | None = None) -> None:
+        super().__init__(user_config, builder or IconFileBuilder())
         self.files: list[MatchedIconFile] = []
 
     @execution(message="Crawle & build icons (__icon__ folder)")

@@ -117,10 +117,10 @@ class TestRulesApplyOptions:
 
     @pytest.fixture
     def options(self, mock_exclude_manager):
-        return RulesApplyOptions(mock_exclude_manager)
+        return RulesApplyOptions(mock_exclude_manager, Mock(spec=UserConfig, exclude_folders=[], code_folders=[]))
 
     def test_init_creates_options_with_exclude_manager(self, mock_exclude_manager):
-        options = RulesApplyOptions(mock_exclude_manager)
+        options = RulesApplyOptions(mock_exclude_manager, Mock(spec=UserConfig, exclude_folders=[], code_folders=[]))
 
         assert options.exclude == mock_exclude_manager
         assert options.clean_excluded is True
@@ -161,7 +161,7 @@ class TestRulesApplyOptions:
 class TestRulesApplyController:
     @pytest.fixture
     def mock_user_config(self):
-        user_config = Mock(spec=UserConfig)
+        user_config = Mock(spec=UserConfig, exclude_folders=[], code_folders=[])
         user_config.name = "TestUserConfig"
         return user_config
 

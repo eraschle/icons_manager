@@ -1,20 +1,14 @@
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 
 from icon_manager.crawler.options import FilterOptions
 from icon_manager.interfaces.path import File, Folder
 
-EXCLUDED_FOLDERS: Iterable[str] = []
-
-
 def _is_excluded(folder: Folder, options: FilterOptions) -> bool:
-    return options.clean_excluded and folder.parent_name in EXCLUDED_FOLDERS
-
-
-PROJECT_FOLDERS: Iterable[str] = []
+    return options.clean_excluded and folder.parent_name in options.excluded_folders
 
 
 def _is_project(folder: Folder, options: FilterOptions) -> bool:
-    return options.clean_project and folder.name in PROJECT_FOLDERS
+    return options.clean_project and folder.name in options.project_folders
 
 
 def _is_exclude_rule(entry: Folder, options: FilterOptions) -> bool:
@@ -26,7 +20,7 @@ def _is_exclude_rule(entry: Folder, options: FilterOptions) -> bool:
 def _is_clean_recursive(entry: Folder, options: FilterOptions) -> bool:
     if not options.clean_recursive or entry.parent is None:
         return False
-    return any(folder.name in PROJECT_FOLDERS for folder in entry.parent.folders)
+    return any(folder.name in options.project_folders for folder in entry.parent.folders)
 
 
 def filter_folder(entry: Folder, options: FilterOptions) -> Folder | None:

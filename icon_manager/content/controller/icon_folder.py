@@ -26,9 +26,9 @@ class IconFolderController(ContentController[MatchedIconFolder]):
     def __init__(
         self,
         user_config: UserConfig,
-        builder: FolderCrawlerBuilder = IconFolderBuilder(),
+        builder: FolderCrawlerBuilder | None = None,
     ) -> None:
-        super().__init__(user_config, builder)
+        super().__init__(user_config, builder or IconFolderBuilder())
         self.folders: list[MatchedIconFolder] = []
 
     @execution(message="Crawle & build __icon__ folder")

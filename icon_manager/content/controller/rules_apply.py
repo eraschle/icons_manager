@@ -52,8 +52,15 @@ class RulesApplyBuilder(FolderCrawlerBuilder[MatchedRuleFolder]):
 
 
 class RulesApplyOptions(FilterOptions):
-    def __init__(self, exclude: ExcludeManager) -> None:
-        super().__init__(exclude, clean_excluded=True, clean_project=True, clean_recursive=True)
+    def __init__(self, exclude: ExcludeManager, user_config: UserConfig) -> None:
+        super().__init__(
+            exclude,
+            clean_excluded=True,
+            clean_project=True,
+            clean_recursive=True,
+            excluded_folders=user_config.exclude_folders,
+            project_folders=user_config.code_folders,
+        )
 
     def no_filter_options(self) -> bool:
         return (
@@ -65,15 +72,15 @@ class RulesApplyController:
     def __init__(
         self,
         user_config: UserConfig,
-        builder: FolderCrawlerBuilder = RulesApplyBuilder(),
+        builder: FolderCrawlerBuilder | None = None,
     ) -> None:
         self.user_config = user_config
-        self.builder = builder
+        self.builder = builder or RulesApplyBuilder()
         self.folders: list[MatchedRuleFolder] = []
 
     @execution(message="Crawle and filter result")
     def crawle_and_build_result(self, folders: list[Folder], exclude: ExcludeManager) -> list[Folder]:
-        return filter_folders(folders, RulesApplyOptions(exclude))
+        return filter_folders(folders, RulesApplyOptions(exclude, self.user_config))
 
     @execution(message="Searched for matches", start_message="Searching for matches")
     def search_and_find_matches(self, folders: list[Folder], settings: Iterable[IconSetting]):

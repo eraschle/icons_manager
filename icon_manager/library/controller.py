@@ -16,13 +16,15 @@ log = logging.getLogger(__name__)
 class RuleManagerBuilder(FileCrawlerBuilder[RuleManager]):
     """Builder for creating RuleManager instances from files."""
 
-    def __init__(self, factory: RuleManagerFactory = RuleManagerFactory()) -> None:
+    def __init__(self, factory: RuleManagerFactory | None = None) -> None:
         """Initialize RuleManagerBuilder with a factory.
 
         Args:
-            factory: Factory for creating RuleManager instances.
+            factory: Factory for creating RuleManager instances. A fresh one
+                is built when omitted; it caches the config template, so it
+                must not be shared between user configurations.
         """
-        self.factory = factory
+        self.factory = factory or RuleManagerFactory()
 
     def can_build_file(self, file: File, **kwargs) -> bool:
         """Check if file can be built into a RuleManager.
@@ -82,8 +84,8 @@ class IconSettingBuilder(ModelBuilder[IconSetting]):
 
     def __init__(
         self,
-        icon_builder: LibraryIconFileBuilder = LibraryIconFileBuilder(),
-        config_builder: RuleManagerBuilder = RuleManagerBuilder(),
+        icon_builder: LibraryIconFileBuilder | None = None,
+        config_builder: RuleManagerBuilder | None = None,
     ) -> None:
         """Initialize IconSettingBuilder with builders for icons and configurations.
 
@@ -92,8 +94,8 @@ class IconSettingBuilder(ModelBuilder[IconSetting]):
             config_builder: Builder for creating RuleManager instances.
         """
         super().__init__()
-        self.icon_builder = icon_builder
-        self.config_builder = config_builder
+        self.icon_builder = icon_builder or LibraryIconFileBuilder()
+        self.config_builder = config_builder or RuleManagerBuilder()
         self.rule_configs: dict[str, RuleManager] = {}
 
     def update_rules(self, rules: Iterable[File]):
@@ -179,8 +181,8 @@ class IconLibraryController:
         JsonFile.extension(with_point=False),
     ]
 
-    def __init__(self, user_config: UserConfig, builder: IconSettingBuilder = IconSettingBuilder()) -> None:
-        self.builder = builder
+    def __init__(self, user_config: UserConfig, builder: IconSettingBuilder | None = None) -> None:
+        self.builder = builder or IconSettingBuilder()
         self.user_config = user_config
         self.library_icons: Iterable[LibraryIconFile] = []
         self._settings: list[IconSetting] = []

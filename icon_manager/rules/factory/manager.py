@@ -63,8 +63,8 @@ def get_rule_attribute(value) -> RuleAttribute:
 
 class SourceCheckerBuilder(ContentFactory[dict[str, Any], ConfigRuleController]):
 
-    def __init__(self, source: Source = JsonSource()) -> None:
-        self.source = source
+    def __init__(self, source: Source | None = None) -> None:
+        self.source = source or JsonSource()
         self.factory = AttributeCheckerFactory()
 
     def get_attribute_checkers(self, config: dict[str, Any]) -> Sequence[AttributeRuleHandler]:
@@ -86,8 +86,8 @@ TContent = TypeVar("TContent", bound=Iterable)
 
 
 class AManagerFactory(FileFactory[JsonFile, TModel], Generic[TModel, TContent]):
-    def __init__(self, source: Source = JsonSource()) -> None:
-        self.source = source
+    def __init__(self, source: Source | None = None) -> None:
+        self.source = source or JsonSource()
         self.builder = SourceCheckerBuilder()
         self._template: dict[str, Any] = {}
 

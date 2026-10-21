@@ -5,7 +5,6 @@ from typing import Any
 from uuid import uuid4
 
 from icon_manager.config.base import Config
-from icon_manager.crawler import filters
 from icon_manager.data.json_source import JsonSource
 from icon_manager.helpers.environment import get_converted_env_path
 from icon_manager.helpers.resource import user_config_template_file
@@ -45,9 +44,18 @@ class UserConfig(Config):
         self.before_or_after: set[str] = set(before_or_after)
         self.copy_icon = copy_icon
 
-    def validate(self):
-        filters.EXCLUDED_FOLDERS = self.exclude_folders
-        filters.PROJECT_FOLDERS = self.code_folders
+    def validate(self) -> None:
+        """Raise if this configuration cannot be used to apply icons.
+
+        Used to assign the crawler's module globals instead, which silently
+        made the last validated configuration's exclude lists apply to all
+        of them; those lists now travel in
+        :class:`~icon_manager.crawler.options.FilterOptions`.
+        """
+        if not self.icons_path.exists():
+            raise ValueError(f'Icon library "{self.icons_path.path}" does not exist [{self.name}]')
+        if not self.has_search_folders():
+            raise ValueError(f"No existing search folder configured [{self.name}]")
 
     def has_search_folders(self) -> bool:
         return len(self.search_folders) > 0
