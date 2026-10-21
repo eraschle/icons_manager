@@ -15,9 +15,12 @@ from icon_manager.config.user import UserConfigFactory
 from icon_manager.data.json_source import JsonSource
 from icon_manager.helpers import resource
 from icon_manager.helpers.environment import get_converted_env_path
-from icon_manager.interfaces.path import ConfigFile
+from icon_manager.interfaces.path import ConfigFile, JsonFile
+from icon_manager.rules.base import FolderAction
 from icon_manager.rules.factory.manager import ExcludeManagerFactory
 from tests.conftest import write_json
+
+REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
 
 
 def user_config_file(path: Path, **config) -> ConfigFile:
@@ -229,3 +232,40 @@ class TestBundledResources:
 
         assert path.is_file(), f"missing resource: {path}"
         assert json.loads(path.read_text(encoding="utf-8"))
+
+
+class TestTheConfigsCommittedInThisRepository:
+    """Smoke test for the configuration files kept at the repository root.
+
+    They are personal copies under version control, not something the tool
+    reads from here - it reads %APPDATA%/Icon-Manager. The point is that a
+    schema change shows up as a failing test rather than as a surprise on
+    the next run. config.json used to sit next to them with three keys the
+    code no longer knew and no search_folders at all; it could not be read
+    by any code path, because a user config has to end in .config.
+    """
+
+    @pytest.mark.parametrize("name", ["holdrio.config", "rsrg.config"])
+    def test_a_user_config_still_parses(self, name: str):
+        path = REPOSITORY_ROOT / name
+        if not path.is_file():
+            pytest.skip(f"{name} is not in this checkout")
+
+        config = UserConfigFactory(JsonSource()).create(ConfigFile(str(path)))
+
+        # the search folders are Windows paths and do not exist here, so only
+        # what can be checked off Windows is asserted
+        assert config.icons_path.path
+        assert config.project_depth >= 0
+        assert ".git" in config.skip_folder_names
+
+    def test_the_exclude_rules_still_parse_and_every_action_is_known(self):
+        path = REPOSITORY_ROOT / AppConfigFactory.EXCLUDE_NAME
+        if not path.is_file():
+            pytest.skip(f"{AppConfigFactory.EXCLUDE_NAME} is not in this checkout")
+
+        manager = ExcludeManagerFactory(JsonSource()).create(JsonFile(str(path)))
+        manager.setup_rules(["_", "-"])
+
+        assert manager.rules, "the file has sections, so they must have been read"
+        assert all(rule.action in (FolderAction.SKIP, FolderAction.LEAF) for rule in manager.rules)
