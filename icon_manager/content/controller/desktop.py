@@ -76,7 +76,7 @@ class DesktopIniController(ContentController[DesktopIniFile]):
         self.desktop_files: list[DesktopIniFile] = []
 
     @execution(message="Crawle & build DESKTOP.INI-files")
-    def crawle_and_build_result(self, folders: list[Folder], _: Sequence[IconSetting]):
+    def crawle_and_build_result(self, folders: list[Folder], settings: Sequence[IconSetting]) -> None:
         extensions = [DesktopIniFile.extension(with_point=False)]
         files = files_by_extension(folders, extensions)
         self.desktop_files = self.builder.build_models(files)
@@ -86,8 +86,6 @@ class DesktopIniController(ContentController[DesktopIniFile]):
         checker = DesktopFileChecker(DesktopFileSource())
         action = DesktopDeleteAction(self.user_config, self.desktop_files, checker)
         action.execute()
-        if not action.any_executed():
-            return action
         return action
 
 
@@ -139,18 +137,18 @@ class RuleFolderCommand(ConfigCommand):
             return
         try:
             self.rule_folder.icon_folder.create()
-        except Exception as ex:
+        except OSError:
             message = "icon folder create [pre command]"
-            log.exception(error_message(self.rule_folder, message), ex)
+            log.exception(error_message(self.rule_folder, message))
 
     def post_command(self):
         if not self.can_change_attribute():
             return
         try:
             self.rule_folder.set_read_only(is_read_only=True)
-        except Exception as ex:
+        except OSError:
             message = "set attribute [post command]"
-            log.exception(error_message(self.rule_folder, message), ex)
+            log.exception(error_message(self.rule_folder, message))
 
 
 class IconFolderCommand(ConfigCommand):
@@ -163,18 +161,18 @@ class IconFolderCommand(ConfigCommand):
             return
         try:
             self.icon_folder.create()
-        except Exception as ex:
+        except OSError:
             message = "create folder [pre command]"
-            log.exception(error_message(self.icon_folder, message), ex)
+            log.exception(error_message(self.icon_folder, message))
 
     def post_command(self):
         if not self.icon_folder.exists():
             return
         try:
             self.icon_folder.set_hidden(is_hidden=True)
-        except Exception as ex:
+        except OSError:
             message = "set attribute [post command]"
-            log.exception(error_message(self.icon_folder, message), ex)
+            log.exception(error_message(self.icon_folder, message))
 
 
 class IconFileCommand(ConfigCommand):
@@ -195,16 +193,16 @@ class IconFileCommand(ConfigCommand):
         try:
             with lock:
                 self.library.copy_to(self.icon)
-        except Exception as ex:
-            log.exception(error_message(self.icon, "copy library icon"), ex)
+        except OSError:
+            log.exception(error_message(self.icon, "copy library icon"))
 
     def post_command(self):
         if not self.icon.exists():
             return
         try:
             self.icon.set_hidden(is_hidden=True)
-        except Exception as ex:
-            log.exception(error_message(self.icon, "icon file attribute"), ex)
+        except OSError:
+            log.exception(error_message(self.icon, "icon file attribute"))
 
 
 class DesktopIniCommand(ConfigCommand):
@@ -217,18 +215,18 @@ class DesktopIniCommand(ConfigCommand):
             return
         try:
             self.desktop.set_writeable_and_visible()
-        except Exception as ex:
+        except OSError:
             message = "set attribute [pre command]"
-            log.exception(error_message(self.desktop, message), ex)
+            log.exception(error_message(self.desktop, message))
 
     def post_command(self):
         if not self.desktop.exists():
             return
         try:
             self.desktop.set_protected_and_hidden()
-        except Exception as ex:
+        except OSError:
             message = "set attribute [post command]"
-            log.exception(error_message(self.desktop, message), ex)
+            log.exception(error_message(self.desktop, message))
 
 
 # endregion
@@ -286,8 +284,8 @@ class DesktopIniCreator:
         try:
             with lock:
                 self.source.write(folder.desktop_ini, self.create_content(folder))
-        except Exception as ex:
-            log.exception(error_message(folder, "Write desktop.ini"), ex)
+        except OSError:
+            log.exception(error_message(folder, "Write desktop.ini"))
         self.order_commands(commands, reverse=True)
         self.execute_commands(commands, "post_command")
 

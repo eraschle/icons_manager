@@ -1,3 +1,45 @@
+> **Status: superseded.** This plan was written against code that could not
+> be imported (an undefined decorator in `rules/rules.py`, `typing` names used
+> without import in five modules, a merge marker in `pyproject.toml`), so none
+> of the problems it names had been observed running.
+>
+> The refactoring that was carried out went in a different direction, and the
+> reasoning is worth recording:
+>
+> - The plan's premise is that `IconsAppService` has too many responsibilities
+>   and needs splitting into four services plus an event bus, a service
+>   container and a CQRS-style result type. But `IconsAppService` had no
+>   logic to split: its ten methods were `for service in self.services:
+>   service.x()`, three of them duplicated as a sync and an async variant.
+>   They collapsed into a single `_for_each()`. Adding an event bus between
+>   components that only ever call each other once, in a fixed order, in a
+>   single-user CLI tool, would add indirection without removing any.
+>
+> - "Fehlende Abstraktion: Kein Service Container oder Dependency Injection"
+>   had it backwards. The codebase's problem was too much abstraction, not too
+>   little: nine interface types that each re-declared the members of their one
+>   implementation and were then inherited, so they provided neither structural
+>   typing nor a second implementation. 366 further lines of protocol in
+>   `services/base.py` and `interfaces/controller.py` had drifted out of sync
+>   with the classes they described. Removing them made the design clearer than
+>   a container would have.
+>
+> - "Synchrone Verarbeitung: Blockiert bei großen Ordnerstrukturen" described
+>   code that was already threaded - and threaded wrongly: nested unbounded
+>   pools, several threads appending to the same lists, and builders shared
+>   between user configurations through default arguments, so one
+>   configuration's rules were applied to another's folders.
+>
+> What the code actually needed was for the main path to work. It did not: the
+> crawler raised `TypeError` on any folder containing a file, the matcher never
+> descended below the search folder, `ConfigService` called two methods that do
+> not exist, and `--content` died on three renamed methods. The test suite
+> passed throughout, because it asserted on mock calls rather than on behaviour.
+>
+> See `README.md` for the architecture as it now stands, and the git log for
+> the reasoning per step. This file is kept for its record of your thinking;
+> nothing reads it.
+
 # Icon Manager - Comprehensive Refactoring Plan
 
 ## **Architektur-Übersicht**

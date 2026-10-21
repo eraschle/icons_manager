@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from typing import Generic, Protocol, TypeVar
 
-from icon_manager.interfaces.path import Folder, Node, PathModel
+from icon_manager.interfaces.path import File, Folder, Node, PathModel
 
 TModel = TypeVar("TModel", bound=object)
 
@@ -46,64 +46,77 @@ class CrawlerBuilder(ABC, Builder[Node, TModel]):
         return models
 
     def build_model(self, node: Node, **kwargs) -> TModel | None:
-        if node.is_dir():
+        """Dispatch to the folder or the file hooks.
+
+        Decided by the node's type, not by ``is_dir()``: the crawler already
+        knows which it built, so asking the filesystem again was a stat call
+        per node, and it answered wrong for an entry deleted since the crawl.
+        """
+        if isinstance(node, Folder):
             if not self.can_build_folder(node, **kwargs):
                 return None
             return self.build_folder_model(node, **kwargs)
+        if not isinstance(node, File):
+            return None
         if not self.can_build_file(node, **kwargs):
             return None
         return self.build_file_model(node, **kwargs)
 
     @abstractmethod
-    def can_build_folder(self, folder: Node, **kwargs) -> bool:
-        pass
+    def can_build_folder(self, folder: Folder, **kwargs) -> bool:
+        """Whether ``folder`` should become a model."""
 
     @abstractmethod
-    def build_folder_model(self, folder: Node, **kwargs) -> TModel | None:
-        pass
+    def build_folder_model(self, folder: Folder, **kwargs) -> TModel | None:
+        """The model for ``folder``, or None."""
 
     @abstractmethod
-    def can_build_file(self, file: Node, **kwargs) -> bool:
-        pass
+    def can_build_file(self, file: File, **kwargs) -> bool:
+        """Whether ``file`` should become a model."""
 
     @abstractmethod
-    def build_file_model(self, file: Node, **kwargs) -> TModel | None:
-        pass
+    def build_file_model(self, file: File, **kwargs) -> TModel | None:
+        """The model for ``file``, or None."""
 
 
 class FolderCrawlerBuilder(CrawlerBuilder[TModel]):
-    def can_build_file(self, file: Node, **kwargs) -> bool:
+    """A builder that only ever produces models for folders."""
+
+    def can_build_file(self, file: File, **kwargs) -> bool:
         return False
 
-    def build_file_model(self, file: Node, **kwargs) -> TModel | None:
+    def build_file_model(self, file: File, **kwargs) -> TModel | None:
         return None
 
 
 class FileCrawlerBuilder(CrawlerBuilder[TModel]):
-    def can_build_folder(self, folder: Node, **kwargs) -> bool:
+    """A builder that only ever produces models for files."""
+
+    def can_build_folder(self, folder: Folder, **kwargs) -> bool:
         return False
 
-    def build_folder_model(self, folder: Node, **kwargs) -> TModel | None:
+    def build_folder_model(self, folder: Folder, **kwargs) -> TModel | None:
         return None
 
 
 class ModelBuilder(ABC, Builder[PathModel, TModel]):
+    """Builds models from path models rather than from a crawl result."""
+
     def setup(self, **kwargs) -> None:
         pass
 
     @abstractmethod
     def can_build(self, entry: PathModel, **kwargs) -> bool: ...
 
+    @abstractmethod
+    def build_model(self, node: PathModel, **kwargs) -> TModel | None: ...
+
     def build_models(self, nodes: Iterable[PathModel], **kwargs) -> list[TModel]:
         models: list[TModel] = []
         for entry in nodes:
-            if not self.can_build(entry):
+            if not self.can_build(entry, **kwargs):
                 continue
             model = self.build_model(entry, **kwargs)
-            if model is None:
-                continue
-            models.append(model)
+            if model is not None:
+                models.append(model)
         return models
-
-    @abstractmethod
-    def build_model(self, node: PathModel, **kwargs) -> TModel | None: ...

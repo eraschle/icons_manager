@@ -45,7 +45,13 @@ class AttributeRuleHandler:
 
 
 class ConfigRuleController:
-    def __init__(self, controllers: Sequence[FolderMatcher], operator: Operator) -> None:
+    """The rule set of one icon config: an attribute handler per section.
+
+    Typed to AttributeRuleHandler rather than FolderMatcher because it reads
+    each child's ``attribute`` to build its own name.
+    """
+
+    def __init__(self, controllers: Sequence[AttributeRuleHandler], operator: Operator) -> None:
         self.controllers = controllers
         self.operator = operator
 

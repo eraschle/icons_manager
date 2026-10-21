@@ -105,7 +105,7 @@ class FolderRule(AAttributeRule):
 
 
 class EqualsRule(FolderRule):
-    def is_value_allowed(self, _: Folder, value: str, rule_value: str) -> bool:
+    def is_value_allowed(self, entry: Folder, value: str, rule_value: str) -> bool:
         return rule_value == value
 
 
@@ -118,7 +118,7 @@ class ContainsRule(FolderRule):
     def get_generators(self) -> Sequence[Generator]:
         return self.before_and_after_generators()
 
-    def is_value_allowed(self, _: Folder, value: str, rule_value: str) -> bool:
+    def is_value_allowed(self, entry: Folder, value: str, rule_value: str) -> bool:
         return rule_value in value
 
 
@@ -131,7 +131,7 @@ class StartsWithRule(FolderRule):
     def get_generators(self) -> Sequence[Generator]:
         return self.before_and_after_generators()
 
-    def is_value_allowed(self, _: Folder, value: str, rule_value: str) -> bool:
+    def is_value_allowed(self, entry: Folder, value: str, rule_value: str) -> bool:
         return value.startswith(rule_value)
 
 
@@ -139,7 +139,7 @@ class EndsWithRule(FolderRule):
     def get_generators(self) -> Sequence[Generator]:
         return self.before_and_after_generators()
 
-    def is_value_allowed(self, _: Folder, value: str, rule_value: str) -> bool:
+    def is_value_allowed(self, entry: Folder, value: str, rule_value: str) -> bool:
         return value.endswith(rule_value)
 
 
@@ -192,7 +192,7 @@ class ContainsFileRule(FolderRule):
             extensions.update(self.get_extensions(folder, level))
         return extensions
 
-    def is_value_allowed(self, entry: Folder, _: str, rule_value: str) -> bool:
+    def is_value_allowed(self, entry: Folder, value: str, rule_value: str) -> bool:
         folder = entry
         if self.attribute == RuleAttribute.PARENT_PATH and entry.parent is not None:
             folder = entry.parent
@@ -243,7 +243,7 @@ class ContainsFolderRule(ContainsFileRule):
             folders.update(self.get_folders(folder, level))
         return folders
 
-    def is_value_allowed(self, entry: Folder, _: str, rule_value: str) -> bool:
+    def is_value_allowed(self, entry: Folder, value: str, rule_value: str) -> bool:
         folder = entry
         if self.attribute == RuleAttribute.PARENT_PATH and entry.parent is not None:
             folder = entry.parent

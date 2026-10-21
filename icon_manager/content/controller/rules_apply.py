@@ -91,8 +91,6 @@ class RulesApplyController:
     def creating_found_matches(self, exclude: ExcludeManager) -> Action:
         action = CreateIconAction(self.folders, self.user_config)
         action.async_execute()
-        if not action.any_executed():
-            return action
         return action
 
     def re_apply_matches(self, controller: ReApplyController):

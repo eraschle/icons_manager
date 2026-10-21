@@ -1,6 +1,7 @@
 import logging
 import os
 import shutil
+import subprocess
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass, field
@@ -26,7 +27,7 @@ def get_name_and_extension(path: str) -> tuple[str, str | None]:
 
 @dataclass
 class Node:
-    parent: "Node | None"
+    parent: "Folder | None"
     path: str
     name: str = field(init=False)
     excluded: bool = field(default=False, init=False)
@@ -63,7 +64,6 @@ class Node:
 
 @dataclass()
 class File(Node):
-    parent: "Folder | None"
     name_wo_ext: str = field(init=False)
     ext: str | None = field(init=False)
 
@@ -80,7 +80,6 @@ class File(Node):
 
 @dataclass()
 class Folder(Node):
-    parent: "Folder | None"
     folders: list["Folder"] = field(default_factory=list)
     files: list[File] = field(default_factory=list)
 
@@ -126,12 +125,6 @@ class PathModel(ABC):
         return os.path.basename(self.path)
 
     @property
-    def escape_path(self) -> str:
-        if " " not in self.path:
-            return self.path
-        return f'"{self.path}"'
-
-    @property
     def parent_path(self) -> str:
         head, _ = os.path.split(self.path)
         if head is None or len(head) == 0:
@@ -153,16 +146,28 @@ class PathModel(ABC):
     @abstractmethod
     def is_dir(self) -> bool: ...
 
-    def __command(self, attributes: dict[str, str]) -> str:
-        commands = ["attrib"]
-        for attr, value in attributes.items():
-            commands.append(f"{value}{attr}")
-        commands.append(self.escape_path)
-        return " ".join(commands)
-
     def set_attrib(self, attributes: dict[str, str]) -> None:
-        command = self.__command(attributes)
-        os.system(command)
+        """Set Windows file attributes, e.g. ``{"h": "+"}`` to hide the entry.
+
+        Windows only; elsewhere attrib does not exist and the call is a
+        logged no-op, which is what lets the rest of the tool be tested off
+        Windows.
+
+        Passed to subprocess as an argument list rather than to os.system as
+        a string: the path went through the shell before, so a folder whose
+        name contained shell metacharacters was interpreted rather than
+        quoted, and a failure was silently discarded along with the exit
+        code.
+        """
+        command = ["attrib", *(f"{value}{attr}" for attr, value in attributes.items()), self.path]
+        try:
+            result = subprocess.run(command, capture_output=True, text=True, check=False)
+        except (FileNotFoundError, OSError) as ex:
+            log.debug("attrib is unavailable, cannot set %s on %s: %s", attributes, self.path, ex)
+            return
+        if result.returncode != 0:
+            message = result.stderr.strip() or result.stdout.strip()
+            log.warning("attrib %s failed for %s: %s", attributes, self.path, message)
 
     def set_read_only(self, is_read_only: bool) -> None:
         attr_dict = get_attr_bit_dict(["r"], is_read_only)
@@ -178,9 +183,8 @@ class PathModel(ABC):
                 os.remove(self.path)
             else:
                 shutil.rmtree(self.path, ignore_errors=False)
-        except Exception as ex:
-            message = f"Can not delete {self.name} in {self.parent_path}"
-            log.exception(message, ex)
+        except OSError:
+            log.exception("Can not delete %s in %s", self.name, self.parent_path)
 
     def copy_to(self, destination):
         if not isinstance(destination, PathModel):

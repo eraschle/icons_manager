@@ -32,7 +32,7 @@ class IconFolderController(ContentController[MatchedIconFolder]):
         self.folders: list[MatchedIconFolder] = []
 
     @execution(message="Crawle & build __icon__ folder")
-    def crawle_and_build_result(self, folders: list[Folder], _: Sequence[IconSetting]):
+    def crawle_and_build_result(self, folders: list[Folder], settings: Sequence[IconSetting]) -> None:
         folders = folders_by_name(folders, [MatchedIconFolder.folder_name])
         self.folders = self.builder.build_models(folders)
 
@@ -40,8 +40,6 @@ class IconFolderController(ContentController[MatchedIconFolder]):
     def delete_content(self) -> Action:
         action = DeleteAction(self.user_config, self.folders)
         action.execute()
-        if not action.any_executed():
-            return action
         return action
 
     def folders_with_icon(self) -> Iterable[MatchedIconFolder]:

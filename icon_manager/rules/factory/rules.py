@@ -178,7 +178,7 @@ class FolderRuleBuilder(AAttributeRuleBuilder[FolderRule]):
 
 class ContainsFileRuleBuilder(AAttributeRuleBuilder[ContainsFileRule]):
     @classmethod
-    def builder_for_rules(cls) -> Iterable[str]:
+    def builder_for_rules(cls) -> Iterable[Rule]:
         return [
             Rule.CONTAINS_FILE,
             Rule.NOT_CONTAINS_FILE,
@@ -189,15 +189,15 @@ class ContainsFileRuleBuilder(AAttributeRuleBuilder[ContainsFileRule]):
     def __init__(self, **kwargs) -> None:
         super().__init__(rule_type=ContainsFileRule, **kwargs)
 
-    def create_rule(self, attribute: RuleAttribute, rule_config: dict[str, Any]) -> ContainsFileRule:
-        rule = self.get_rule(rule_config)
-        values = rule_config.get(rule, [])
-        operator = get_operator(rule_config)
-        case_sensitive = self.get_case_sensitive(rule_config)
-        before_or_after = self.add_before_or_after(rule_config)
-        before_or_after_values = self.get_before_or_after_values(rule_config)
-        level = rule_config.pop(ConfigKeys.SEARCH_LEVEL, 1)
-        rule_type = self.get_rule_type(rule_config)
+    def create_rule(self, attribute: RuleAttribute, config: dict[str, Any]) -> ContainsFileRule:
+        rule = self.get_rule(config)
+        values = config.get(rule, [])
+        operator = get_operator(config)
+        case_sensitive = self.get_case_sensitive(config)
+        before_or_after = self.add_before_or_after(config)
+        before_or_after_values = self.get_before_or_after_values(config)
+        level = config.pop(ConfigKeys.SEARCH_LEVEL, 1)
+        rule_type = self.get_rule_type(config)
         return rule_type(
             attribute,
             operator,
@@ -233,7 +233,7 @@ def create_single_rule(rules: Iterable[AAttributeRuleBuilder], config: dict[str,
 
 class ChainedRuleBuilder(ARuleBuilder[ChainedRule]):
     @classmethod
-    def builder_for_rules(cls) -> Iterable[str]:
+    def builder_for_rules(cls) -> Iterable[Rule]:
         return [Rule.CHAINED]
 
     def __init__(self, **kwargs) -> None:

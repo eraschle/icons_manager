@@ -130,33 +130,34 @@ class IconSettingBuilder(ModelBuilder[IconSetting]):
         """
         return self.rule_configs.get(model.name_wo_extension, None)
 
-    def can_build(self, model: PathModel) -> bool:
-        """Check if model can be built into an IconSetting.
+    def can_build(self, entry: PathModel, **kwargs) -> bool:
+        """Whether ``entry`` is a library icon that has a rule config.
 
         Args:
-            model: PathModel to check.
+            entry: PathModel to check.
 
         Returns:
-            True if model is a LibraryIconFile with associated config, False otherwise.
+            True for a LibraryIconFile with an associated config.
         """
-        if not isinstance(model, LibraryIconFile):
+        if not isinstance(entry, LibraryIconFile):
             return False
-        config = self.get_rule_manager(model)
-        return config is not None
+        return self.get_rule_manager(entry) is not None
 
-    def build_model(self, file: LibraryIconFile) -> IconSetting | None:
-        """Build an IconSetting from a LibraryIconFile.
+    def build_model(self, node: PathModel, **kwargs) -> IconSetting | None:
+        """Pair a library icon with its rule config.
 
         Args:
-            file: LibraryIconFile to build from.
+            node: the LibraryIconFile to build from.
 
         Returns:
-            IconSetting instance or None if no config found.
+            IconSetting instance, or None if the icon has no config.
         """
-        config = self.get_rule_manager(file)
+        if not isinstance(node, LibraryIconFile):
+            return None
+        config = self.get_rule_manager(node)
         if config is None:
             return None
-        return IconSetting(file, config)
+        return IconSetting(node, config)
 
     def update_config(self, setting: IconSetting, template_file: JsonFile) -> None:
         """Update configuration for an icon setting.

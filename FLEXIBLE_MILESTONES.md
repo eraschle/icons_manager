@@ -1,3 +1,6 @@
+> **Status: superseded.** See the note at the top of `REFACTORING_PLAN.md`;
+> the refactoring took a different direction and these tasks do not describe it.
+
 # Flexible Milestones für Icon Manager Refactoring
 
 ## 🎯 Milestone-Philosophie

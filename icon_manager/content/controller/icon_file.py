@@ -47,6 +47,4 @@ class IconFileController(ContentController[MatchedIconFile]):
     def delete_content(self) -> Action:
         action = DeleteAction(self.user_config, self.files)
         action.execute()
-        if not action.any_executed():
-            return action
         return action
