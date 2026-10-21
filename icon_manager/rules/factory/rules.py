@@ -2,12 +2,8 @@ import logging
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Iterable, Sequence
 from enum import Enum
-from typing import (
-    Any,
-    TypeVar,
-)
+from typing import Any, ClassVar, cast
 
-from icon_manager.interfaces.factory import ContentFactory
 from icon_manager.rules.base import FolderMatcher, Operator, Rule, RuleAttribute
 from icon_manager.rules.mapping import rule_mapping
 from icon_manager.rules.rules import (
@@ -74,20 +70,21 @@ def get_rule_type(rule_config: dict[str, Any]) -> type[FolderMatcher] | None:
     return RULE_MAPPING[rule]
 
 
-TRule = TypeVar("TRule", bound=FolderMatcher)
+class ARuleBuilder[TRule: FolderMatcher](ABC):
+    """Builds one family of rules from the dicts in a config file.
 
+    ``rule_type`` is the family's base class, used to check that the rule
+    name in the config maps to a rule this builder may produce. It is a
+    class attribute: it used to be pulled out of ``**kwargs`` in __init__
+    and raise AttributeError when missing, which turned a constructor
+    parameter into a runtime surprise.
+    """
 
-class ARuleBuilder(ABC, ContentFactory[dict[str, Any], TRule]):
+    rule_type: ClassVar[type[FolderMatcher]]
+
     @classmethod
     def builder_for_rules(cls) -> Iterable[Rule]:
         return []
-
-    def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
-        rule_type = kwargs.get("rule_type", None)
-        if rule_type is None:
-            raise AttributeError("rule_type is not in kwargs")
-        self.rule_type: type[TRule] = rule_type
 
     def is_builder(self, rule_config: dict[str, Any]) -> bool:
         return any(rule in rule_config.keys() for rule in self.__class__.builder_for_rules())
@@ -100,18 +97,13 @@ class ARuleBuilder(ABC, ContentFactory[dict[str, Any], TRule]):
 
     def get_rule_type(self, rule_config: dict[str, Any]) -> type[TRule]:
         rule_type = get_rule_type(rule_config)
-        if rule_type is None or not issubclass(rule_type, self.rule_type):
-            raise RuntimeError("No Filter rule type found")
+        if rule_type is None:
+            raise RuntimeError(f"No rule type for config {rule_config}")
         if not issubclass(rule_type, self.rule_type):
-            raise RuntimeError(f"Rule is NOT of type {self.rule_type}")
-        return rule_type
-
-    def get_attribute(self, **kwargs) -> RuleAttribute:
-        attribute = kwargs.get(ConfigKeys.ATTRIBUTE, RuleAttribute.UNKNOWN)
-        if attribute == RuleAttribute.UNKNOWN:
-            message = f'Key "{ConfigKeys.ATTRIBUTE}" does NOT exist in Dict'
-            raise ValueError(message)
-        return attribute
+            raise RuntimeError(f"{rule_type.__name__} is not a {self.rule_type.__name__}")
+        # the issubclass check above is what makes this safe; a type checker
+        # cannot narrow a class object to the type parameter from it
+        return cast(type[TRule], rule_type)
 
     def get_case_sensitive(self, rule_config: dict[str, Any]) -> bool:
         return rule_config.pop(ConfigKeys.CASE_SENSITIVE, False)
@@ -121,21 +113,20 @@ class ARuleBuilder(ABC, ContentFactory[dict[str, Any], TRule]):
         return can_build
 
     @abstractmethod
-    def create(self, config: dict[str, Any], **kwargs) -> TRule: ...
+    def create(self, config: dict[str, Any], attribute: RuleAttribute) -> TRule:
+        """Build the rule the config names, for the given folder attribute."""
 
 
-TFolderRule = TypeVar("TFolderRule", bound=FolderRule)
-
-
-class AAttributeRuleBuilder(ARuleBuilder[TFolderRule]):
+class AAttributeRuleBuilder[TFolderRule: FolderRule](ARuleBuilder[TFolderRule]):
     def get_before_or_after_values(self, config: dict[str, Any]) -> Collection[str]:
         return config.get(ConfigValues.BEFORE_OR_AFTER, [])
 
     def add_before_or_after(self, config: dict[str, Any]) -> bool:
         return config.get(ConfigKeys.BEFORE_OR_AFTER, False)
 
-    def create(self, config: dict[str, Any], **kwargs) -> TFolderRule:
-        attribute: str = self.get_attribute(**kwargs)
+    def create(self, config: dict[str, Any], attribute: RuleAttribute) -> TFolderRule:
+        if attribute == RuleAttribute.UNKNOWN:
+            raise ValueError(f"Unknown folder attribute for rule config {config}")
         return self.create_rule(attribute, config)
 
     @abstractmethod
@@ -155,8 +146,7 @@ class FolderRuleBuilder(AAttributeRuleBuilder[FolderRule]):
             Rule.NOT_CONTAINS,
         ]
 
-    def __init__(self, **kwargs) -> None:
-        super().__init__(rule_type=FolderRule, **kwargs)
+    rule_type: ClassVar[type[FolderMatcher]] = FolderRule
 
     def create_rule(self, attribute: RuleAttribute, config: dict[str, Any]) -> FolderRule:
         operator = pop_operator(config)
@@ -186,8 +176,7 @@ class ContainsFileRuleBuilder(AAttributeRuleBuilder[ContainsFileRule]):
             Rule.NOT_CONTAINS_FOLDER,
         ]
 
-    def __init__(self, **kwargs) -> None:
-        super().__init__(rule_type=ContainsFileRule, **kwargs)
+    rule_type: ClassVar[type[FolderMatcher]] = ContainsFileRule
 
     def create_rule(self, attribute: RuleAttribute, config: dict[str, Any]) -> ContainsFileRule:
         rule = self.get_rule(config)
@@ -223,11 +212,13 @@ def get_single_builders() -> Iterable[AAttributeRuleBuilder]:
     return builders
 
 
-def create_single_rule(rules: Iterable[AAttributeRuleBuilder], config: dict[str, Any], **kwargs) -> FolderMatcher:
+def create_single_rule(
+    rules: Iterable[AAttributeRuleBuilder], config: dict[str, Any], attribute: RuleAttribute
+) -> FolderMatcher:
     for builder in rules:
         if not builder.can_build(config):
             continue
-        return builder.create(config, **kwargs)
+        return builder.create(config, attribute)
     raise RuntimeError("No single rule could be created")
 
 
@@ -236,26 +227,26 @@ class ChainedRuleBuilder(ARuleBuilder[ChainedRule]):
     def builder_for_rules(cls) -> Iterable[Rule]:
         return [Rule.CHAINED]
 
-    def __init__(self, **kwargs) -> None:
-        super().__init__(rule_type=ChainedRule, **kwargs)
+    rule_type: ClassVar[type[FolderMatcher]] = ChainedRule
+
+    def __init__(self) -> None:
         self.single_builders = get_single_builders()
 
     def get_rule_configs(self, rule_config: dict[str, Any]) -> Collection[dict[str, Any]]:
         rule = self.get_rule(rule_config)
         return rule_config.get(rule, [])
 
-    def get_single_rules(self, rule_config: dict[str, Any], **kwargs) -> Sequence[FolderRule]:
-        rules = []
-        for config in self.get_rule_configs(rule_config):
-            rule = create_single_rule(self.single_builders, config, **kwargs)
-            rules.append(rule)
-        return rules
+    def get_single_rules(self, rule_config: dict[str, Any], attribute: RuleAttribute) -> Sequence[FolderMatcher]:
+        return [
+            create_single_rule(self.single_builders, config, attribute) for config in self.get_rule_configs(rule_config)
+        ]
 
-    def create(self, config: dict[str, Any], **kwargs) -> ChainedRule:
+    def create(self, config: dict[str, Any], attribute: RuleAttribute) -> ChainedRule:
+        if attribute == RuleAttribute.UNKNOWN:
+            raise ValueError(f"Unknown folder attribute for rule config {config}")
         operator = pop_operator(config)
         rule_type = self.get_rule_type(config)
-        rules = self.get_single_rules(config, **kwargs)
-        attribute: str = self.get_attribute(**kwargs)
+        rules = self.get_single_rules(config, attribute)
         return rule_type(attribute, operator, rules)
 
 

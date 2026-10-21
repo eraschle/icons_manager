@@ -1,5 +1,5 @@
 import logging
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Sequence
 
 from icon_manager.config.user import UserConfig
 from icon_manager.content.actions.create import CreateIconAction, ReCreateIconAction
@@ -19,12 +19,15 @@ log = logging.getLogger(__name__)
 
 
 class RulesApplyBuilder(FolderCrawlerBuilder[MatchedRuleFolder]):
-    def __init__(self) -> None:
-        super().__init__()
-        self.settings: Sequence[IconSetting] = []
+    """Matches folders against the icon settings they could get.
 
-    def setup(self, **kwargs) -> None:
-        self.settings = kwargs.get("settings", [])
+    The settings arrive in the constructor rather than through a setup()
+    call before build_models: a builder parameterised after construction is
+    a builder whose state can be read by the wrong user configuration.
+    """
+
+    def __init__(self, settings: Sequence[IconSetting]) -> None:
+        self.settings = settings
 
     def icon_setting_for(self, model: Folder) -> IconSetting | None:
         for setting in self.settings:
@@ -44,10 +47,10 @@ class RulesApplyBuilder(FolderCrawlerBuilder[MatchedRuleFolder]):
         folder = FolderModel(model.path)
         return MatchedRuleFolder(folder, config)
 
-    def can_build_folder(self, folder: Folder, **kwargs) -> bool:
+    def can_build_folder(self, folder: Folder) -> bool:
         return True
 
-    def build_folder_model(self, folder: Folder, **kwargs) -> MatchedRuleFolder | None:
+    def build_folder_model(self, folder: Folder) -> MatchedRuleFolder | None:
         return self.get_matched_folder(folder)
 
 
@@ -72,10 +75,10 @@ class RulesApplyController:
     def __init__(
         self,
         user_config: UserConfig,
-        builder: FolderCrawlerBuilder | None = None,
+        make_builder: Callable[[Sequence[IconSetting]], FolderCrawlerBuilder[MatchedRuleFolder]] = RulesApplyBuilder,
     ) -> None:
         self.user_config = user_config
-        self.builder = builder or RulesApplyBuilder()
+        self.make_builder = make_builder
         self.folders: list[MatchedRuleFolder] = []
 
     @execution(message="Crawle and filter result")
@@ -83,9 +86,8 @@ class RulesApplyController:
         return filter_folders(folders, RulesApplyOptions(exclude, self.user_config))
 
     @execution(message="Searched for matches", start_message="Searching for matches")
-    def search_and_find_matches(self, folders: list[Folder], settings: Iterable[IconSetting]):
-        self.builder.setup(settings=settings)
-        self.folders = self.builder.build_models(folders)
+    def search_and_find_matches(self, folders: list[Folder], settings: Sequence[IconSetting]):
+        self.folders = self.make_builder(settings).build_models(folders)
 
     @execution_action(message="Created matched icons", start_message="Creating matched icons")
     def creating_found_matches(self, exclude: ExcludeManager) -> Action:

@@ -1,5 +1,5 @@
 import logging
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Sequence
 
 from icon_manager.config.user import UserConfig
 from icon_manager.content.controller.base import ContentController
@@ -15,33 +15,33 @@ log = logging.getLogger(__name__)
 
 
 class IconFileBuilder(FileCrawlerBuilder[MatchedIconFile]):
-    def __init__(self) -> None:
-        super().__init__()
-        self.icons_names: Iterable[str] = []
+    """Finds the icon files this tool copied into __icon__ folders."""
 
-    def setup(self, **kwargs) -> None:
-        settings = kwargs.get("settings", [])
-        library_icons = [setting.icon for setting in settings]
-        self.icons_names = [icon.name for icon in library_icons]
+    def __init__(self, settings: Sequence[IconSetting]) -> None:
+        self.icon_names = {setting.icon.name for setting in settings}
 
-    def can_build_file(self, file: File, **kwargs) -> bool:
-        return file.name in self.icons_names
+    def can_build_file(self, file: File) -> bool:
+        return file.name in self.icon_names
 
-    def build_file_model(self, file: File, **kwargs) -> MatchedIconFile | None:
+    def build_file_model(self, file: File) -> MatchedIconFile | None:
         return MatchedIconFile(file.path)
 
 
 class IconFileController(ContentController[MatchedIconFile]):
-    def __init__(self, user_config: UserConfig, builder: FileCrawlerBuilder | None = None) -> None:
-        super().__init__(user_config, builder or IconFileBuilder())
+    def __init__(
+        self,
+        user_config: UserConfig,
+        make_builder: Callable[[Sequence[IconSetting]], FileCrawlerBuilder[MatchedIconFile]] = IconFileBuilder,
+    ) -> None:
+        self.user_config = user_config
+        self.make_builder = make_builder
         self.files: list[MatchedIconFile] = []
 
     @execution(message="Crawle & build icons (__icon__ folder)")
-    def crawle_and_build_result(self, folders: list[Folder], settings: Sequence[IconSetting]):
+    def crawle_and_build_result(self, folders: list[Folder], settings: Sequence[IconSetting]) -> None:
         extensions = [MatchedIconFile.extension(with_point=False)]
         files = files_by_extension(folders, extensions)
-        self.builder.setup(settings=settings)
-        self.files = self.builder.build_models(files)
+        self.files = self.make_builder(settings).build_models(files)
 
     @execution_action(message="Crawle & build icons (__icon__ folder)")
     def delete_content(self) -> Action:

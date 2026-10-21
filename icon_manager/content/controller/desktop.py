@@ -49,10 +49,10 @@ class DesktopIniBuilder(FileCrawlerBuilder[DesktopIniFile]):
         super().__init__()
         self.checker = DesktopFileChecker(source)
 
-    def can_build_file(self, file: File, **kwargs) -> bool:
+    def can_build_file(self, file: File) -> bool:
         return DesktopIniFile.is_model(file.path) and self.checker.is_app_file(file)
 
-    def build_file_model(self, file: File, **kwargs) -> DesktopIniFile | None:
+    def build_file_model(self, file: File) -> DesktopIniFile | None:
         return DesktopIniFile(file.path)
 
 

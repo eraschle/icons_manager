@@ -15,10 +15,10 @@ log = logging.getLogger(__name__)
 
 
 class IconFolderBuilder(FolderCrawlerBuilder[MatchedIconFolder]):
-    def can_build_folder(self, folder: Folder, **kwargs) -> bool:
+    def can_build_folder(self, folder: Folder) -> bool:
         return folder.name == MatchedIconFolder.folder_name
 
-    def build_folder_model(self, folder: Folder, **kwargs) -> MatchedIconFolder | None:
+    def build_folder_model(self, folder: Folder) -> MatchedIconFolder | None:
         return MatchedIconFolder(folder.path)
 
 

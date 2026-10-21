@@ -26,24 +26,22 @@ class RuleManagerBuilder(FileCrawlerBuilder[RuleManager]):
         """
         self.factory = factory or RuleManagerFactory()
 
-    def can_build_file(self, file: File, **kwargs) -> bool:
+    def can_build_file(self, file: File) -> bool:
         """Check if file can be built into a RuleManager.
 
         Args:
             file: File to check.
-            **kwargs: Additional arguments.
 
         Returns:
             True if file is a JSON file, False otherwise.
         """
         return JsonFile.is_model(file.path)
 
-    def build_file_model(self, file: File, **kwargs) -> RuleManager | None:
+    def build_file_model(self, file: File) -> RuleManager | None:
         """Build a RuleManager from a file.
 
         Args:
             file: File to build from.
-            **kwargs: Additional arguments.
 
         Returns:
             RuleManager instance or None if creation fails.
@@ -54,24 +52,22 @@ class RuleManagerBuilder(FileCrawlerBuilder[RuleManager]):
 class LibraryIconFileBuilder(FileCrawlerBuilder[LibraryIconFile]):
     """Builder for creating LibraryIconFile instances from files."""
 
-    def can_build_file(self, file: File, **kwargs) -> bool:
+    def can_build_file(self, file: File) -> bool:
         """Check if file can be built into a LibraryIconFile.
 
         Args:
             file: File to check.
-            **kwargs: Additional arguments.
 
         Returns:
             True if file is a valid icon file, False otherwise.
         """
         return LibraryIconFile.is_model(file.name)
 
-    def build_file_model(self, file: File, **kwargs) -> LibraryIconFile | None:
+    def build_file_model(self, file: File) -> LibraryIconFile | None:
         """Build a LibraryIconFile from a file.
 
         Args:
             file: File to build from.
-            **kwargs: Additional arguments.
 
         Returns:
             LibraryIconFile instance or None if creation fails.
@@ -130,7 +126,7 @@ class IconSettingBuilder(ModelBuilder[IconSetting]):
         """
         return self.rule_configs.get(model.name_wo_extension, None)
 
-    def can_build(self, entry: PathModel, **kwargs) -> bool:
+    def can_build(self, entry: PathModel) -> bool:
         """Whether ``entry`` is a library icon that has a rule config.
 
         Args:
@@ -143,7 +139,7 @@ class IconSettingBuilder(ModelBuilder[IconSetting]):
             return False
         return self.get_rule_manager(entry) is not None
 
-    def build_model(self, node: PathModel, **kwargs) -> IconSetting | None:
+    def build_model(self, node: PathModel) -> IconSetting | None:
         """Pair a library icon with its rule config.
 
         Args:

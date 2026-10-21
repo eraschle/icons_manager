@@ -8,7 +8,6 @@ from icon_manager.config.base import Config
 from icon_manager.data.json_source import JsonSource
 from icon_manager.helpers.environment import get_converted_env_path
 from icon_manager.helpers.resource import user_config_template_path
-from icon_manager.interfaces.factory import FileFactory
 from icon_manager.interfaces.path import (
     ConfigFile,
     IconSearchFolder,
@@ -114,12 +113,12 @@ def get_search_folders(file: ConfigFile, content: dict[str, Any]) -> Sequence[Ic
     return search_folders
 
 
-class UserConfigFactory(FileFactory[ConfigFile, UserConfig]):
+class UserConfigFactory:
     def __init__(self, source: JsonSource) -> None:
         self.source = source
 
-    def create(self, file: ConfigFile, **kwargs) -> UserConfig:
-        content = self.source.read(file, **kwargs)
+    def create(self, file: ConfigFile) -> UserConfig:
+        content = self.source.read(file)
         content = content.get(UserConfigs.CONFIG_SECTION, {})
         icons_path = get_icons_path(file, content)
         search_folders = get_search_folders(file, content)

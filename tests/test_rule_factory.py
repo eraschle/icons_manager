@@ -5,7 +5,6 @@ from unittest.mock import Mock, patch
 import pytest
 
 from icon_manager.data.base import Source
-from icon_manager.data.json_source import JsonSource
 from icon_manager.interfaces.path import ConfigFile, JsonFile
 from icon_manager.rules.base import FolderMatcher, Operator, RuleAttribute
 from icon_manager.rules.factory.manager import (
@@ -15,7 +14,6 @@ from icon_manager.rules.factory.manager import (
     RuleManagerFactory,
     SourceCheckerBuilder,
 )
-from icon_manager.rules.factory.rules import ConfigKeys
 from icon_manager.rules.manager import (
     AttributeRuleHandler,
     ConfigRuleController,
@@ -47,11 +45,11 @@ class TestAttributeCheckerFactory:
         mock_get_builders.return_value = [mock_builder1, mock_builder2]
         factory.builders = [mock_builder1, mock_builder2]
 
-        result = factory.create_rule(rule_config)
+        result = factory.create_rule(rule_config, RuleAttribute.PATH)
 
         mock_builder1.can_build.assert_called_once_with(rule_config)
         mock_builder2.can_build.assert_called_once_with(rule_config)
-        mock_builder2.create.assert_called_once_with(rule_config)
+        mock_builder2.create.assert_called_once_with(rule_config, RuleAttribute.PATH)
         assert result == mock_rule
 
     def test_create_rule_raises_error_when_no_builder_found(self, factory):
@@ -61,8 +59,8 @@ class TestAttributeCheckerFactory:
         mock_builder.can_build.return_value = False
         factory.builders = [mock_builder]
 
-        with pytest.raises(RuntimeError, match="No Folder builder could be created"):
-            factory.create_rule(rule_config)
+        with pytest.raises(RuntimeError, match="No rule builder for config"):
+            factory.create_rule(rule_config, RuleAttribute.PATH)
 
     def test_create_rules_creates_list_of_rules(self, factory):
         config = {
@@ -78,7 +76,7 @@ class TestAttributeCheckerFactory:
         with patch.object(factory, "create_rule") as mock_create_rule:
             mock_create_rule.side_effect = [mock_rule1, mock_rule2]
 
-            result = factory.create_rules(config)
+            result = factory.create_rules(config, RuleAttribute.PATH)
 
             assert result == [mock_rule1, mock_rule2]
             assert mock_create_rule.call_count == 2
@@ -86,7 +84,7 @@ class TestAttributeCheckerFactory:
     def test_create_rules_returns_empty_list_when_no_rules(self, factory):
         config = {}
 
-        result = factory.create_rules(config)
+        result = factory.create_rules(config, RuleAttribute.PATH)
 
         assert result == []
 
@@ -114,18 +112,7 @@ class TestSourceCheckerBuilder:
 
     @pytest.fixture
     def builder(self, mock_source):
-        return SourceCheckerBuilder(mock_source)
-
-    def test_init_creates_builder_with_source_and_factory(self, mock_source):
-        builder = SourceCheckerBuilder(mock_source)
-
-        assert builder.source == mock_source
-        assert isinstance(builder.factory, AttributeCheckerFactory)
-
-    def test_init_uses_default_json_source_when_not_provided(self):
-        builder = SourceCheckerBuilder()
-
-        assert isinstance(builder.source, JsonSource)
+        return SourceCheckerBuilder()
 
     @patch("icon_manager.rules.factory.manager.get_rule_attribute")
     def test_get_attribute_checkers_creates_checkers_for_each_attribute(self, mock_get_rule_attr, builder):
@@ -172,7 +159,7 @@ class TestAManagerFactory:
     def concrete_factory(self, mock_source):
         # Create a concrete implementation for testing
         class ConcreteManagerFactory(AManagerFactory):
-            def create_with_content(self, config, **kwargs):
+            def create_with_content(self, config, file):
                 return Mock(spec=RuleManager)
 
         return ConcreteManagerFactory(mock_source)
@@ -184,11 +171,6 @@ class TestAManagerFactory:
         assert isinstance(factory.builder, SourceCheckerBuilder)
         assert factory._template == {}
 
-    def test_init_uses_default_json_source_when_not_provided(self):
-        factory = RuleManagerFactory()
-
-        assert isinstance(factory.source, JsonSource)
-
     def test_get_config_section_returns_config_section(self, concrete_factory):
         content = {"config": {"path": {}, "name": {}}}
 
@@ -199,7 +181,7 @@ class TestAManagerFactory:
     def test_get_config_section_raises_error_when_missing(self, concrete_factory):
         content = {"other_section": {}}
 
-        with pytest.raises(ValueError, match=f'Key "{ConfigKeys.CONFIG}" does NOT'):
+        with pytest.raises(ValueError, match='Key "config" does not exist'):
             concrete_factory.get_config_section(content)
 
     def test_create_reads_file_and_delegates_to_create_with_content(self, concrete_factory):
@@ -215,7 +197,7 @@ class TestAManagerFactory:
             result = concrete_factory.create(mock_file)
 
             concrete_factory.source.read.assert_called_once_with(mock_file)
-            mock_create_with_content.assert_called_once_with({"path": {}}, file=mock_file)
+            mock_create_with_content.assert_called_once_with({"path": {}}, mock_file)
             assert result == mock_result
 
 
@@ -235,7 +217,7 @@ class TestRuleManagerFactory:
         mock_rule_checker = Mock(spec=ConfigRuleController)
         factory.builder.create = Mock(return_value=mock_rule_checker)
 
-        result = factory.create_with_content(config, file=mock_file)
+        result = factory.create_with_content(config, mock_file)
 
         assert isinstance(result, RuleManager)
         assert result.config == mock_file
@@ -250,16 +232,10 @@ class TestRuleManagerFactory:
         mock_rule_checker = Mock(spec=ConfigRuleController)
         factory.builder.create = Mock(return_value=mock_rule_checker)
 
-        result = factory.create_with_content(config, file=mock_file)
+        result = factory.create_with_content(config, mock_file)
 
         assert result.order == 5  # default order
         assert result.copy_icon is None  # default copy_icon
-
-    def test_create_with_content_raises_error_when_no_file(self, factory):
-        config = {"path": {}}
-
-        with pytest.raises(ValueError, match='"file" is not in kwargs or None'):
-            factory.create_with_content(config)
 
     def test_update_updates_config_with_template(self, factory):
         mock_config = Mock(spec=JsonFile)
@@ -298,7 +274,7 @@ class TestExcludeManagerFactory:
         mock_checker2 = Mock(spec=ConfigRuleController)
         factory.builder.create = Mock(side_effect=[mock_checker1, mock_checker2])
 
-        result = factory.create_with_content(config)
+        result = factory.create_with_content(config, Mock(spec=JsonFile))
 
         assert isinstance(result, ExcludeManager)
         assert result.checkers == [mock_checker1, mock_checker2]
@@ -307,7 +283,7 @@ class TestExcludeManagerFactory:
     def test_create_with_content_returns_empty_manager_for_empty_config(self, factory):
         config = []
 
-        result = factory.create_with_content(config)
+        result = factory.create_with_content(config, Mock(spec=JsonFile))
 
         assert isinstance(result, ExcludeManager)
         assert result.checkers == []

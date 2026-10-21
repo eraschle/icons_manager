@@ -15,7 +15,6 @@ from icon_manager.helpers.user_inputs import (
     ask_user_for_path,
     ask_user_yes_no_question,
 )
-from icon_manager.interfaces.factory import FileFactory
 from icon_manager.interfaces.path import ConfigFile, JsonFile, get_files
 from icon_manager.rules.factory.manager import ExcludeManagerFactory
 from icon_manager.rules.manager import ExcludeManager
@@ -53,7 +52,7 @@ class AppConfigs(str, Enum):
     BEFORE_OR_AFTER = "before_or_after"
 
 
-class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
+class AppConfigFactory:
     APP_CONFIG_NAME = "app_config.config"
     EXCLUDE_NAME = "excluded_rules.config"
 
@@ -169,11 +168,11 @@ class AppConfigFactory(FileFactory[ConfigFile, AppConfig]):
             return ExcludeManager([])
         return self.excluded_factory.create(JsonFile(config_path))
 
-    def create(self, file: ConfigFile, **kwargs) -> AppConfig:
+    def create(self, file: ConfigFile) -> AppConfig:
         if not file.exists():
             template_file = ConfigFile(app_config_template_path())
             template_file.copy_to(file)
-        content = self.source.read(file, **kwargs)
+        content = self.source.read(file)
         config_folder_path = content.get(AppConfigs.USER_CONFIGS, "")
         if self.is_user_config_path_empty(config_folder_path):
             information = "No path for the user configuration exists"

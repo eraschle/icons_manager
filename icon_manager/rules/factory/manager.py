@@ -1,12 +1,11 @@
 import logging
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
-from typing import Any, Generic, TypeVar
+from typing import Any
 
 from icon_manager.data.base import Source
 from icon_manager.data.json_source import JsonSource
 from icon_manager.helpers.resource import exclude_rules_template_path
-from icon_manager.interfaces.factory import ContentFactory, FileFactory
 from icon_manager.interfaces.path import ConfigFile, JsonFile
 from icon_manager.rules.base import FolderMatcher, Operator, RuleAttribute
 from icon_manager.rules.factory.rules import (
@@ -24,28 +23,25 @@ from icon_manager.rules.manager import (
 log = logging.getLogger(__name__)
 
 
-class AttributeCheckerFactory(ContentFactory[dict[str, Any], AttributeRuleHandler]):
+class AttributeCheckerFactory:
+    """Builds the rules of one attribute section of a config file."""
+
     def __init__(self) -> None:
-        super().__init__()
         self.builders = get_builders()
 
-    def create_rule(self, rule_config: dict[str, Any], **kwargs) -> FolderMatcher:
+    def create_rule(self, rule_config: dict[str, Any], attribute: RuleAttribute) -> FolderMatcher:
         for builder in self.builders:
             if not builder.can_build(rule_config):
                 continue
-            return builder.create(rule_config, **kwargs)
-        raise RuntimeError("No Folder builder could be created")
+            return builder.create(rule_config, attribute)
+        raise RuntimeError(f"No rule builder for config {rule_config}")
 
-    def create_rules(self, config: dict[str, Any], **kwargs) -> Sequence[FolderMatcher]:
-        rules = []
-        for rule_config in config.get(ConfigKeys.RULES, []):
-            rules.append(self.create_rule(rule_config, **kwargs))
-        return rules
+    def create_rules(self, config: dict[str, Any], attribute: RuleAttribute) -> Sequence[FolderMatcher]:
+        return [self.create_rule(rule_config, attribute) for rule_config in config.get(ConfigKeys.RULES, [])]
 
-    def create(self, config: dict[str, Any], **kwargs) -> AttributeRuleHandler:
-        attribute = kwargs.get(ConfigKeys.ATTRIBUTE, RuleAttribute.UNKNOWN)
+    def create(self, config: dict[str, Any], attribute: RuleAttribute) -> AttributeRuleHandler:
         operator = pop_operator(config, Operator.ANY)
-        rules = self.create_rules(config, **kwargs)
+        rules = self.create_rules(config, attribute)
         return AttributeRuleHandler(attribute, operator, rules)
 
 
@@ -59,30 +55,26 @@ def get_rule_attribute(value) -> RuleAttribute:
     return RuleAttribute.UNKNOWN
 
 
-class SourceCheckerBuilder(ContentFactory[dict[str, Any], ConfigRuleController]):
-    def __init__(self, source: Source | None = None) -> None:
-        self.source = source or JsonSource()
+class SourceCheckerBuilder:
+    """Builds the whole rule set of one config file section."""
+
+    def __init__(self) -> None:
         self.factory = AttributeCheckerFactory()
 
     def get_attribute_checkers(self, config: dict[str, Any]) -> Sequence[AttributeRuleHandler]:
-        managers = []
-        for attribute, rules_configs in config.items():
-            rule_attr = get_rule_attribute(attribute)
-            manager = self.factory.create(rules_configs, attribute=rule_attr)
-            managers.append(manager)
-        return managers
+        return [
+            self.factory.create(rules_config, get_rule_attribute(attribute))
+            for attribute, rules_config in config.items()
+        ]
 
-    def create(self, config: dict[str, Any], **kwargs) -> ConfigRuleController:
+    def create(self, config: dict[str, Any]) -> ConfigRuleController:
         operator = pop_operator(config, Operator.ALL)
-        managers = self.get_attribute_checkers(config)
-        return ConfigRuleController(managers, operator)
+        return ConfigRuleController(self.get_attribute_checkers(config), operator)
 
 
-TModel = TypeVar("TModel", bound=object, covariant=True)
-TContent = TypeVar("TContent", bound=Iterable)
+class AManagerFactory[TModel, TContent: Iterable](ABC):
+    """Reads a rule config file and builds the manager it describes."""
 
-
-class AManagerFactory(FileFactory[JsonFile, TModel], Generic[TModel, TContent]):  # noqa: UP046 - TModel is covariant
     def __init__(self, source: Source | None = None) -> None:
         self.source = source or JsonSource()
         self.builder = SourceCheckerBuilder()
@@ -91,29 +83,23 @@ class AManagerFactory(FileFactory[JsonFile, TModel], Generic[TModel, TContent]):
     def get_config_section(self, config: dict[str, Any]) -> TContent:
         section: TContent | None = config.get(ConfigKeys.CONFIG, None)
         if section is None:
-            message = f'Key "{ConfigKeys.CONFIG}" does NOT'
-            raise ValueError(message)
+            raise ValueError(f'Key "{ConfigKeys.CONFIG.value}" does not exist in the config file')
         return section
 
-    def create(self, file: JsonFile, **kwargs) -> TModel:
+    def create(self, file: JsonFile) -> TModel:
         content = self.source.read(file)
-        config = self.get_config_section(content)
-        return self.create_with_content(config, file=file, **kwargs)
+        return self.create_with_content(self.get_config_section(content), file)
 
     @abstractmethod
-    def create_with_content(self, config: TContent, **kwargs) -> TModel:
-        pass
+    def create_with_content(self, config: TContent, file: JsonFile) -> TModel:
+        """Build the manager from the config section of ``file``."""
 
 
 class RuleManagerFactory(AManagerFactory[RuleManager, dict[str, Any]]):
-    def create_with_content(self, config: dict[str, Any], **kwargs) -> RuleManager:
-        file: JsonFile | None = kwargs.get("file", None)
-        if file is None:
-            raise ValueError('"file" is not in kwargs or None')
+    def create_with_content(self, config: dict[str, Any], file: JsonFile) -> RuleManager:
         copy_icon = config.pop(ConfigKeys.COPY_ICON, None)
         order = config.pop(ConfigKeys.ORDER, 5)
-        manager = self.builder.create(config, **kwargs)
-        return RuleManager(file, manager, order, copy_icon)
+        return RuleManager(file, self.builder.create(config), order, copy_icon)
 
     def update(self, config: JsonFile, template_file: JsonFile) -> None:
         content = self.source.read(config)
@@ -129,12 +115,8 @@ class RuleManagerFactory(AManagerFactory[RuleManager, dict[str, Any]]):
 
 
 class ExcludeManagerFactory(AManagerFactory[ExcludeManager, Iterable[dict[str, Any]]]):
-    def create_with_content(self, config: Iterable[dict[str, Any]], **kwargs) -> ExcludeManager:
-        checkers = []
-        for checker_config in config:
-            checker = self.builder.create(checker_config, **kwargs)
-            checkers.append(checker)
-        return ExcludeManager(checkers)
+    def create_with_content(self, config: Iterable[dict[str, Any]], file: JsonFile) -> ExcludeManager:
+        return ExcludeManager([self.builder.create(checker_config) for checker_config in config])
 
     def copy_template(self, config: ConfigFile) -> None:
         template = ConfigFile(exclude_rules_template_path())
