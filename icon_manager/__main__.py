@@ -1,14 +1,24 @@
 import argparse
 import logging
+import sys
 from datetime import datetime
+from pathlib import Path
 
-from icon_manager.config.app import AppConfig, AppConfigFactory
+from icon_manager.config.app import AppConfig, AppConfigFactory, AppConfigs
 from icon_manager.data.json_source import JsonSource
+from icon_manager.helpers.environment import get_converted_env_path
 from icon_manager.helpers.logs import log_time
 from icon_manager.helpers.resource import app_config_template_path
 from icon_manager.interfaces.path import ConfigFile
 from icon_manager.rules.factory.manager import ExcludeManagerFactory
 from icon_manager.services.app_service import IconsAppService
+from icon_manager.validation.configs import (
+    libraries_of,
+    read_json,
+    validate_config_folder,
+    validate_library,
+)
+from icon_manager.validation.problems import Severity, problem_report
 
 log = logging.getLogger(__name__)
 
@@ -74,6 +84,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help='Moves the library configs without rules into subfolder "archive"',
     )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Reports every problem in the configuration files and the icon library, then exits",
+    )
     return parser
 
 
@@ -97,6 +112,47 @@ def get_service() -> IconsAppService:
     app_config = get_app_config(app_config)
     service = IconsAppService(app_config)
     return service
+
+
+def config_folder_of(app_config: ConfigFile) -> Path | None:
+    """The folder holding the user configs, read straight from the app config.
+
+    Deliberately not through AppConfigFactory: that one asks the user for a
+    path on stdin when something is missing, which is the wrong thing to do
+    while reporting problems.
+    """
+    content, _ = read_json(Path(app_config.path))
+    folder = (content or {}).get(AppConfigs.USER_CONFIGS.value)
+    return Path(folder) if isinstance(folder, str) and folder else None
+
+
+def run_check() -> int:
+    """Report what is wrong with the configuration, and change nothing.
+
+    Returns the exit code: non-zero when something would stop a real run.
+    """
+    app_config = AppConfigFactory.app_config_file()
+    if not app_config.exists():
+        print(f"No application configuration at {app_config.path}")
+        return 1
+
+    folder = config_folder_of(app_config)
+    if folder is None:
+        print(f'{app_config.path}: "{AppConfigs.USER_CONFIGS.value}" is missing or empty')
+        return 1
+
+    problems = list(validate_config_folder(folder, AppConfigFactory.EXCLUDE_NAME, AppConfigFactory.APP_CONFIG_NAME))
+    for library in libraries_of(folder, AppConfigFactory.EXCLUDE_NAME, AppConfigFactory.APP_CONFIG_NAME):
+        problems.extend(validate_library(Path(get_converted_env_path(str(library)))))
+
+    if not problems:
+        print(f"No problems found in {folder}")
+        return 0
+    print(problem_report(problems))
+    errors = sum(1 for problem in problems if problem.severity is Severity.ERROR)
+    warnings = len(problems) - errors
+    print(f"\n{errors} error(s), {warnings} warning(s)")
+    return 1 if errors else 0
 
 
 def run_library_options(service: IconsAppService, args: argparse.Namespace) -> None:
@@ -145,13 +201,17 @@ def run(service: IconsAppService, args: argparse.Namespace) -> None:
         log.warning("Nothing to do: pass --library or --content (see --help)")
 
 
-def main(argv: list[str] | None = None) -> None:
+def main(argv: list[str] | None = None) -> int:
     config_logger(logging.INFO)
     args = get_namespace_from_args(argv)
+    if args.check:
+        # before get_service(), which would create templates and ask for paths
+        return run_check()
     start_time = datetime.now()
     run(get_service(), args)
     log.info(log_time("Execution-Time".upper(), start_time))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

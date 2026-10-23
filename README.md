@@ -19,7 +19,24 @@ python -m icon_manager --library --delete   # delete the configs (icons stay)
 python -m icon_manager --content --create     # apply icons to matching folders
 python -m icon_manager --content --re-create  # restore desktop.ini lost to OneDrive
 python -m icon_manager --content --delete     # remove what this tool wrote
+
+python -m icon_manager --check                # report config problems, change nothing
 ```
+
+`--check` reads every configuration file and the icon library and reports
+what is wrong, with the file and the key it came from:
+
+```
+ERROR   gut.json [config.order]: has to be a whole number, got 'five'
+ERROR   gut.json [config.name.rules[1].operator]: 'beides' is not an operator; use one of: all, any
+WARNING gut.json [config.name.rules[0].equals]: 'docs' is a single value; write ["docs"] so it is
+                                                not read as one value per letter
+WARNING waise.ico []: has no .json beside it, so it is never applied
+```
+
+It collects everything rather than stopping at the first problem, writes
+nothing, and exits non-zero if any ERROR would stop a real run. Warnings are
+things that work but are almost certainly not what was meant.
 
 `--library` works on the icon library, `--content` on the searched folders.
 Short forms: `-l`, `-c`, `-a` (create), `-r` (re-create), `-u`, `-d`,
@@ -259,7 +276,7 @@ before, which made one user config's rules apply to another's folders.
 
 ```bash
 uv sync --all-groups
-uv run pytest                      # 204 tests
+uv run pytest                      # 248 tests
 uv run pytest --cov=icon_manager   # ~89% coverage
 uv run ruff check icon_manager tests
 uv run ruff format icon_manager tests

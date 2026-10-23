@@ -20,6 +20,9 @@ from icon_manager.rules.manager import (
     ExcludeRule,
     RuleManager,
 )
+from icon_manager.validation.problems import ConfigFileError
+
+DEFAULT_ORDER = 5
 
 log = logging.getLogger(__name__)
 
@@ -88,8 +91,19 @@ class AManagerFactory[TModel, TContent: Iterable](ABC):
         return section
 
     def create(self, file: JsonFile) -> TModel:
+        """Read ``file`` and build what it describes.
+
+        Every failure below is re-raised naming the file. Without that the
+        user got messages like ``No rule builder for config {'equal': ['x']}``
+        with no way to tell which of their config files meant it.
+        """
         content = self.source.read(file)
-        return self.create_with_content(self.get_config_section(content), file)
+        try:
+            return self.create_with_content(self.get_config_section(content), file)
+        except ConfigFileError:
+            raise
+        except (ValueError, LookupError, RuntimeError, TypeError) as ex:
+            raise ConfigFileError(file.path, str(ex)) from ex
 
     @abstractmethod
     def create_with_content(self, config: TContent, file: JsonFile) -> TModel:
@@ -99,7 +113,7 @@ class AManagerFactory[TModel, TContent: Iterable](ABC):
 class RuleManagerFactory(AManagerFactory[RuleManager, dict[str, Any]]):
     def create_with_content(self, config: dict[str, Any], file: JsonFile) -> RuleManager:
         copy_icon = config.pop(ConfigKeys.COPY_ICON, None)
-        order = config.pop(ConfigKeys.ORDER, 5)
+        order = get_order(config)
         return RuleManager(file, self.builder.create(config), order, copy_icon)
 
     def update(self, config: JsonFile, template_file: JsonFile) -> None:
@@ -115,6 +129,19 @@ class RuleManagerFactory(AManagerFactory[RuleManager, dict[str, Any]]):
         log.info(f"Updated config {config.name_wo_extension}")
 
 
+def get_order(config: dict[str, Any], default: int = DEFAULT_ORDER) -> int:
+    """The icon's priority, which has to be a whole number.
+
+    A string got through before and only surfaced as
+    ``'<' not supported between instances of 'int' and 'str'`` while sorting
+    the library, naming no file.
+    """
+    value = config.pop(ConfigKeys.ORDER, default)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f'"{ConfigKeys.ORDER.value}" has to be a whole number, got {value!r}')
+    return value
+
+
 def get_folder_action(value: Any, default: FolderAction = FolderAction.SKIP) -> FolderAction:
     """Read a section's ``"action"`` key, rejecting anything unknown.
 
@@ -125,12 +152,12 @@ def get_folder_action(value: Any, default: FolderAction = FolderAction.SKIP) -> 
     if value is None:
         return default
     if not isinstance(value, str):
-        raise ValueError(f'"{ConfigKeys.ACTION.value}" must be a string, got {value!r}')
+        raise ValueError(f"{value!r} is not an action; use one of: skip, leaf")
     for action in (FolderAction.SKIP, FolderAction.LEAF):
         if value.lower() == action.value:
             return action
     allowed = ", ".join(a.value for a in (FolderAction.SKIP, FolderAction.LEAF))
-    raise ValueError(f'Unknown "{ConfigKeys.ACTION.value}" {value!r}; use one of: {allowed}')
+    raise ValueError(f"{value!r} is not an action; use one of: {allowed}")
 
 
 class ExcludeManagerFactory(AManagerFactory[ExcludeManager, Iterable[dict[str, Any]]]):

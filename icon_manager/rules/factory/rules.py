@@ -33,23 +33,50 @@ class ConfigValues(str, Enum):
     BEFORE_OR_AFTER = "before_or_after_values"
 
 
-def get_operator_enum(value: str) -> Operator:
-    value = value.lower()
-    for operator in Operator:
-        if operator.value != value:
-            continue
-        return operator
-    return Operator.UNKNOWN
+KNOWN_OPERATORS = (Operator.ANY, Operator.ALL)
+
+
+def get_operator_enum(value: Any) -> Operator:
+    """The operator ``value`` names, rejecting anything else.
+
+    An unknown value used to come back as ``Operator.UNKNOWN``, which makes
+    every rule using it return False - so a typo like ``"operator":
+    "beides"`` produced a rule that looked configured and matched nothing,
+    without a word.
+    """
+    if isinstance(value, Operator):
+        return value
+    if isinstance(value, str):
+        for operator in KNOWN_OPERATORS:
+            if operator.value == value.lower():
+                return operator
+    allowed = ", ".join(sorted(operator.value for operator in KNOWN_OPERATORS))
+    # the same wording --check uses, so one mistake does not read as two
+    raise ValueError(f"{value!r} is not an operator; use one of: {allowed}")
 
 
 def get_operator(rule_config: dict[str, Any], default: Operator = Operator.ANY) -> Operator:
-    value = rule_config.get(ConfigKeys.OPERATOR, default)
-    return get_operator_enum(value)
+    return get_operator_enum(rule_config.get(ConfigKeys.OPERATOR, default))
 
 
 def pop_operator(rule_config: dict[str, Any], default: Operator = Operator.ANY) -> Operator:
-    value = rule_config.pop(ConfigKeys.OPERATOR, default)
-    return get_operator_enum(value)
+    return get_operator_enum(rule_config.pop(ConfigKeys.OPERATOR, default))
+
+
+def get_rule_values(rule_config: dict[str, Any], rule: Rule) -> list[str]:
+    """The values a rule matches against, as a list.
+
+    A bare string is wrapped rather than used as-is: the rule iterates its
+    values, so ``"equals": "docs"`` used to match folders called ``d``,
+    ``o``, ``c`` and ``s`` and never ``docs``. ``--check`` reports it, and
+    here it is read the way it was obviously meant.
+    """
+    values = rule_config.get(rule, [])
+    if isinstance(values, str):
+        return [values]
+    if not isinstance(values, Iterable):
+        raise ValueError(f'"{rule.value}" needs a list of values, got {values!r}')
+    return list(values)
 
 
 RULE_MAPPING = rule_mapping()
@@ -153,7 +180,7 @@ class FolderRuleBuilder(AAttributeRuleBuilder[FolderRule]):
         operator = pop_operator(config)
         case_sensitive = self.get_case_sensitive(config)
         rule = self.get_rule(config)
-        values = config.get(rule, [])
+        values = get_rule_values(config, rule)
         before_or_after = self.add_before_or_after(config)
         before_or_after_values = self.get_before_or_after_values(config)
         rule_type = self.get_rule_type(config)
@@ -181,7 +208,7 @@ class ContainsFileRuleBuilder(AAttributeRuleBuilder[ContainsFileRule]):
 
     def create_rule(self, attribute: RuleAttribute, config: dict[str, Any]) -> ContainsFileRule:
         rule = self.get_rule(config)
-        values = config.get(rule, [])
+        values = get_rule_values(config, rule)
         operator = get_operator(config)
         case_sensitive = self.get_case_sensitive(config)
         before_or_after = self.add_before_or_after(config)

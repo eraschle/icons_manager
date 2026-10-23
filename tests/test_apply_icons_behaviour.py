@@ -310,11 +310,11 @@ class TestExcludeRuleActions:
         assert folders_with_icon(workspace) == {"backup"}
 
     def test_an_unknown_action_is_rejected(self, tmp_path: Path):
-        with pytest.raises(ValueError, match="Unknown"):
+        with pytest.raises(ValueError, match="is not an action"):
             exclude_manager(tmp_path / "e.config", {"action": "nonsense", "name": {"rules": []}})
 
     def test_search_is_not_a_valid_exclude_action(self, tmp_path: Path):
-        with pytest.raises(ValueError, match="Unknown"):
+        with pytest.raises(ValueError, match="is not an action"):
             exclude_manager(tmp_path / "e.config", {"action": "search", "name": {"rules": []}})
 
 
