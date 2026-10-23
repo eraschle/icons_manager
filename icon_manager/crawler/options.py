@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 
+from icon_manager.rules.base import DepthAware
 from icon_manager.rules.manager import ExcludeManager
 
 DEFAULT_PROJECT_DEPTH = 1
@@ -37,7 +38,24 @@ class FilterOptions:
         ``clean_project``, ``clean_recursive``) were never anything but True
         in production, and the only method that read them,
         ``no_filter_options()``, had no caller.
+    inspect_depth
+        Extra levels the crawler must read below a folder it stops at, so a
+        ``contains_file`` or ``contains_folder`` rule with a ``level`` above
+        1 still sees as far as it needs to. Built by
+        :meth:`inspect_depth_for` from the rules themselves, and 0 unless
+        some rule asks for more - pruning the walk must not change what a
+        rule can see.
     """
+
+    @staticmethod
+    def inspect_depth_for(*matchers: DepthAware) -> int:
+        """The deepest look any of ``matchers`` needs, beyond the first level.
+
+        The crawler always attaches a folder's direct children before
+        deciding, so a ``level`` of 1 costs nothing extra.
+        """
+        deepest = max((matcher.required_depth() for matcher in matchers), default=0)
+        return max(deepest - 1, 0)
 
     def __init__(
         self,
@@ -45,11 +63,13 @@ class FilterOptions:
         skip_names: Iterable[str] = (),
         project_markers: Iterable[str] = (),
         project_depth: int = DEFAULT_PROJECT_DEPTH,
+        inspect_depth: int = 0,
     ) -> None:
         self.exclude = exclude
         self.skip_names = frozenset(skip_names)
         self.project_markers = frozenset(project_markers)
         self.project_depth = max(project_depth, 0)
+        self.inspect_depth = max(inspect_depth, 0)
 
     def filters_nothing(self) -> bool:
         """Whether these options would leave every crawled folder untouched."""

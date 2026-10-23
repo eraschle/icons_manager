@@ -30,13 +30,25 @@ def depth_left_at(entry: Folder, options: FilterOptions, inherited: int | None) 
     return None
 
 
+def is_skipped_name(name: str, options: FilterOptions) -> bool:
+    """Whether a folder of this name is skipped whatever it contains.
+
+    Answerable from the name alone, which is what lets the crawler decide
+    before it reads the folder at all.
+    """
+    return name in options.skip_names
+
+
 def action_for(entry: Folder, options: FilterOptions, depth_left: int | None) -> FolderAction:
     """What should happen to ``entry``, in the order the questions are asked.
 
     A name in ``skip_names`` wins over everything, then the exclude rules,
     then the project depth.
+
+    ``entry`` must have its direct children attached, since both the exclude
+    rules and the project detection may ask about them.
     """
-    if entry.name in options.skip_names:
+    if is_skipped_name(entry.name, options):
         return FolderAction.SKIP
     rule_action = options.exclude.action_for(entry)
     if rule_action is not None:
@@ -44,39 +56,6 @@ def action_for(entry: Folder, options: FilterOptions, depth_left: int | None) ->
     if depth_left is not None and depth_left <= 0:
         return FolderAction.LEAF
     return FolderAction.SEARCH
-
-
-def filter_folder(entry: Folder, options: FilterOptions, inherited_depth: int | None = None) -> Folder | None:
-    """Prune ``entry``'s subtree, or drop ``entry`` by returning None.
-
-    Returning None is SKIP: no icon, nothing below it. Returning ``entry``
-    with its children marked is LEAF: ``entry`` is still offered to the icon
-    rules, nothing below it is.
-    """
-    depth_left = depth_left_at(entry, options, inherited_depth)
-    action = action_for(entry, options, depth_left)
-    if action is FolderAction.SKIP:
-        entry.mark_and_clean()
-        return None
-    if action is FolderAction.LEAF:
-        entry.mark_children()
-        return entry
-    child_depth = None if depth_left is None else depth_left - 1
-    entry.folders = [
-        kept for folder in entry.folders if (kept := filter_folder(folder, options, child_depth)) is not None
-    ]
-    return entry
-
-
-def filter_folders(folders: list[Folder], options: FilterOptions) -> list[Folder]:
-    """Prune every crawled search folder.
-
-    Nothing re-marks a dropped folder here: filter_folder already called
-    mark_and_clean() before returning None, so both callers did it twice.
-    """
-    if options.filters_nothing():
-        return folders
-    return [kept for folder in folders if (kept := filter_folder(folder, options)) is not None]
 
 
 def is_folder_with_name(folder: Folder, names: Sequence[str]) -> bool:

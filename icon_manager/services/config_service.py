@@ -6,8 +6,9 @@ from icon_manager.content.controller.desktop import DesktopIniController
 from icon_manager.content.controller.icon_file import IconFileController
 from icon_manager.content.controller.icon_folder import IconFolderController
 from icon_manager.content.controller.re_apply import ReApplyController
-from icon_manager.content.controller.rules_apply import RulesApplyController
-from icon_manager.crawler.crawler import async_crawling_folders, crawling_icons
+from icon_manager.content.controller.rules_apply import RulesApplyController, RulesApplyOptions
+from icon_manager.crawler.crawler import crawl_search_folders, crawling_folders, crawling_icons
+from icon_manager.crawler.options import FilterOptions
 from icon_manager.helpers.decorator import execution
 from icon_manager.interfaces.path import Folder
 from icon_manager.library.controller import IconLibraryController
@@ -88,24 +89,28 @@ class ConfigService:
         """Crawl the search folders, match them against the icon settings and
         write a desktop.ini for every match."""
         settings = self.settings.create_icon_settings(self._before_or_after)
-        entries = self.crawling_search_folders()
-        entries = self.rules.crawle_and_build_result(entries, self.exclude)
+        options = RulesApplyOptions(self.exclude, self.user_config, settings)
+        entries = self.crawl_search_folders(options)
         self.rules.search_and_find_matches(entries, settings)
         self.rules.creating_found_matches(self.exclude)
 
-    @execution(
-        message="Crawled through folders (No filtering)",
-        start_message="Crawling search folders",
-    )
-    def crawling_search_folders(self) -> list[Folder]:
-        folders = self.user_config.search_folders
-        return async_crawling_folders(self.user_config.name, folders)
+    @execution(message="Crawled search folders", start_message="Crawling search folders")
+    def crawl_search_folders(self, options: FilterOptions) -> list[Folder]:
+        """Crawl the search folders, dropping what ``options`` filters out.
+
+        The filter runs inside the walk, so a skipped folder is never read.
+        """
+        return crawl_search_folders(self.user_config.name, self.user_config.search_folders, options)
 
     @execution(message="Crawled through content")
     def find_existing_content(self):
         """Catalog what this tool previously wrote: desktop.ini files,
         __icon__ folders and the icon files copied into them."""
-        entries = self.crawling_search_folders()
+        # Deliberately unfiltered: delete and re-apply work from what is on
+        # disk, and a folder the rules no longer reach may still hold a
+        # desktop.ini from an earlier run with different rules. Filtering
+        # here would leave those behind.
+        entries = crawling_folders(self.user_config.search_folders)
         settings = self.settings.settings(clean_empty=True)
         self.desktop.crawle_and_build_result(entries, settings)
         self.icon_folders.crawle_and_build_result(entries, settings)

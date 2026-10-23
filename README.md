@@ -121,6 +121,16 @@ project still get an icon.
 Note that "may get an icon" is not "gets one" — the icon rules still decide.
 The outcome above only controls which folders are offered to them.
 
+The decision happens **inside** the walk, so a folder that is skipped is
+never read. It used to run on the finished tree, which meant the skip lists
+and `project_depth` saved no I/O at all: a `node_modules` was crawled in
+full and then thrown away. On a tree of 6756 folders with twelve projects,
+the crawler now issues 37 directory reads instead of 6757.
+
+A rule that inspects folder contents (`contains_file`, `contains_folder`)
+reports how deep it needs to look, and the crawler reads that far even below
+a leaf — pruning changes what the walk costs, not what a rule can see.
+
 Two things are deliberately separate, and conflating them is the easiest way
 to get lost here: `order` in an icon config decides **which** icon a folder
 gets when several match, and the table above decides **whether** the search
@@ -249,7 +259,7 @@ before, which made one user config's rules apply to another's folders.
 
 ```bash
 uv sync --all-groups
-uv run pytest                      # 177 tests
+uv run pytest                      # 204 tests
 uv run pytest --cov=icon_manager   # ~89% coverage
 uv run ruff check icon_manager tests
 uv run ruff format icon_manager tests

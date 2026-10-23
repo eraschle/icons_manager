@@ -58,6 +58,19 @@ class Rule(str, Enum):
     NOT_CONTAINS_FOLDER = "not_contains_folder"
 
 
+class DepthAware(Protocol):
+    """Reports how far below a folder it has to look.
+
+    Narrower than :class:`FolderMatcher` on purpose: the crawler asks this
+    of the exclude manager too, which answers ``action_for`` rather than
+    ``is_allowed`` and is therefore not a matcher.
+    """
+
+    def required_depth(self) -> int:
+        """How many levels below a folder this needs to see; 0 for none."""
+        ...
+
+
 @runtime_checkable
 class FolderMatcher(Protocol):
     """Decides whether a folder matches a rule configuration.
@@ -99,6 +112,17 @@ class FolderMatcher(Protocol):
         """
         ...
 
+    def required_depth(self) -> int:
+        """How many levels below a folder this matcher has to see.
+
+        0 for a matcher that only compares the folder's own name or path.
+        ``contains_file`` and ``contains_folder`` need their ``level``, and a
+        composite needs the deepest of its children. The crawler reads this
+        to know how much it must materialise below a folder it is not going
+        to descend into, so pruning the walk cannot change what a rule sees.
+        """
+        ...
+
 
 class AFolderRule(ABC):
     """Base for a single rule on one folder attribute."""
@@ -114,6 +138,10 @@ class AFolderRule(ABC):
 
     def clean_empty(self) -> None:  # noqa: B027 - a leaf rule has no children
         """A single rule has no children to clean."""
+
+    def required_depth(self) -> int:
+        """A rule on the folder's own attributes needs nothing below it."""
+        return 0
 
     @abstractmethod
     def is_empty(self) -> bool: ...

@@ -169,6 +169,10 @@ class ContainsFileRule(FolderRule):
     def get_generators(self) -> Sequence[Generator]:
         return []
 
+    def required_depth(self) -> int:
+        """This rule inspects the folder's contents down to ``max_level``."""
+        return self.max_level
+
     def get_rule_value(self, value: str) -> str:
         for replace in self.replace_values:
             if not value.startswith(replace):
@@ -277,3 +281,6 @@ class ChainedRule(AFolderRule):
     def setup_rules(self, before_or_after: Iterable[str]) -> None:
         for rule in self.rules:
             rule.setup_rules(before_or_after)
+
+    def required_depth(self) -> int:
+        return max((rule.required_depth() for rule in self.rules), default=0)

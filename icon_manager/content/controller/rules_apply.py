@@ -5,7 +5,6 @@ from icon_manager.config.user import UserConfig
 from icon_manager.content.actions.create import CreateIconAction, ReCreateIconAction
 from icon_manager.content.controller.re_apply import ReApplyController
 from icon_manager.content.models.matched import MatchedRuleFolder
-from icon_manager.crawler.filters import filter_folders
 from icon_manager.crawler.options import FilterOptions
 from icon_manager.helpers.decorator import execution, execution_action
 from icon_manager.helpers.string import ALIGN_LEFT, prefix_value
@@ -57,12 +56,20 @@ class RulesApplyBuilder(FolderCrawlerBuilder[MatchedRuleFolder]):
 class RulesApplyOptions(FilterOptions):
     """The filter options of one user configuration."""
 
-    def __init__(self, exclude: ExcludeManager, user_config: UserConfig) -> None:
+    def __init__(
+        self,
+        exclude: ExcludeManager,
+        user_config: UserConfig,
+        settings: Sequence[IconSetting] = (),
+    ) -> None:
         super().__init__(
             exclude,
             skip_names=user_config.skip_folder_names,
             project_markers=user_config.code_folders,
             project_depth=user_config.project_depth,
+            # the icon rules inspect folder contents too, so the crawler has
+            # to read as deep as the deepest rule asks for
+            inspect_depth=FilterOptions.inspect_depth_for(exclude, *(setting.manager for setting in settings)),
         )
 
 
@@ -75,10 +82,6 @@ class RulesApplyController:
         self.user_config = user_config
         self.make_builder = make_builder
         self.folders: list[MatchedRuleFolder] = []
-
-    @execution(message="Crawle and filter result")
-    def crawle_and_build_result(self, folders: list[Folder], exclude: ExcludeManager) -> list[Folder]:
-        return filter_folders(folders, RulesApplyOptions(exclude, self.user_config))
 
     @execution(message="Searched for matches", start_message="Searching for matches")
     def search_and_find_matches(self, folders: list[Folder], settings: Sequence[IconSetting]):

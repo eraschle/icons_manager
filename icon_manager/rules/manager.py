@@ -37,6 +37,9 @@ class AttributeRuleHandler:
         for rule in self.rules:
             rule.setup_rules(before_or_after)
 
+    def required_depth(self) -> int:
+        return max((rule.required_depth() for rule in self.rules), default=0)
+
     def __str__(self) -> str:
         return self.name
 
@@ -81,6 +84,9 @@ class ConfigRuleController:
         for checker in self.controllers:
             checker.setup_rules(before_or_after)
 
+    def required_depth(self) -> int:
+        return max((checker.required_depth() for checker in self.controllers), default=0)
+
     def __str__(self) -> str:
         return self.name
 
@@ -110,6 +116,9 @@ class RuleManager:
 
     def setup_rules(self, before_or_after: Iterable[str]) -> None:
         self.checker.setup_rules(before_or_after)
+
+    def required_depth(self) -> int:
+        return self.checker.required_depth()
 
     def __str__(self) -> str:
         name = self.config.name_wo_extension.upper()
@@ -146,6 +155,9 @@ class ExcludeRule:
 
     def setup_rules(self, before_or_after: Iterable[str]) -> None:
         self.matcher.setup_rules(before_or_after)
+
+    def required_depth(self) -> int:
+        return self.matcher.required_depth()
 
     def __str__(self) -> str:
         return self.name
@@ -191,6 +203,9 @@ class ExcludeManager:
     def setup_rules(self, before_or_after: Iterable[str]) -> None:
         for rule in self.rules:
             rule.setup_rules(before_or_after)
+
+    def required_depth(self) -> int:
+        return max((rule.required_depth() for rule in self.rules), default=0)
 
     def __str__(self) -> str:
         return self.name
